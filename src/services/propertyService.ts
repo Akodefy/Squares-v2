@@ -1,0 +1,282 @@
+import { toast } from "@/hooks/use-toast";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+export interface Property {
+  _id: string;
+  title: string;
+  description: string;
+  type: 'apartment' | 'house' | 'villa' | 'plot' | 'commercial' | 'office';
+  status: 'available' | 'sold' | 'rented' | 'pending';
+  listingType: 'sale' | 'rent';
+  price: number;
+  area: {
+    builtUp?: number;
+    carpet?: number;
+    plot?: number;
+    unit: 'sqft' | 'sqm' | 'acre';
+  };
+  bedrooms: number;
+  bathrooms: number;
+  address: {
+    street: string;
+    locality: string;
+    city: string;
+    state: string;
+    pincode: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  amenities: string[];
+  images: Array<{
+    url: string;
+    caption?: string;
+    isPrimary: boolean;
+  }>;
+  owner: {
+    _id: string;
+    email: string;
+    profile: {
+      firstName: string;
+      lastName: string;
+      phone: string;
+    };
+  };
+  agent?: {
+    _id: string;
+    email: string;
+    profile: {
+      firstName: string;
+      lastName: string;
+      phone: string;
+    };
+  };
+  views: number;
+  featured: boolean;
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PropertyFilters {
+  page?: number;
+  limit?: number;
+  location?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  propertyType?: string;
+  bedrooms?: number;
+  listingType?: 'sale' | 'rent';
+  search?: string;
+}
+
+export interface PropertyResponse {
+  success: boolean;
+  data: {
+    properties: Property[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalProperties: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
+}
+
+export interface SinglePropertyResponse {
+  success: boolean;
+  data: {
+    property: Property;
+  };
+}
+
+class PropertyService {
+  private async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    
+    const config: RequestInit = {
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    // Add auth token if available
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${token}`,
+      };
+    }
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          success: false,
+          message: `HTTP ${response.status}: ${response.statusText}`,
+        }));
+        throw new Error(errorData.message || "An error occurred");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("API request failed:", error);
+      throw error;
+    }
+  }
+
+  async getProperties(filters: PropertyFilters = {}): Promise<PropertyResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+
+      const endpoint = `/properties${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await this.makeRequest<PropertyResponse>(endpoint);
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch properties";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async getProperty(id: string): Promise<SinglePropertyResponse> {
+    try {
+      const response = await this.makeRequest<SinglePropertyResponse>(`/properties/${id}`);
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async createProperty(propertyData: Partial<Property>): Promise<SinglePropertyResponse> {
+    try {
+      const response = await this.makeRequest<SinglePropertyResponse>("/properties", {
+        method: "POST",
+        body: JSON.stringify(propertyData),
+      });
+
+      toast({
+        title: "Success",
+        description: "Property created successfully!",
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async updateProperty(id: string, propertyData: Partial<Property>): Promise<SinglePropertyResponse> {
+    try {
+      const response = await this.makeRequest<SinglePropertyResponse>(`/properties/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(propertyData),
+      });
+
+      toast({
+        title: "Success",
+        description: "Property updated successfully!",
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async deleteProperty(id: string): Promise<void> {
+    try {
+      await this.makeRequest(`/properties/${id}`, {
+        method: "DELETE",
+      });
+
+      toast({
+        title: "Success",
+        description: "Property deleted successfully!",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  // Helper method to format price
+  formatPrice(price: number, listingType: 'sale' | 'rent'): string {
+    if (listingType === 'rent') {
+      return `₹${price.toLocaleString('en-IN')}/month`;
+    } else {
+      if (price >= 10000000) {
+        return `₹${(price / 10000000).toFixed(1)} Cr`;
+      } else if (price >= 100000) {
+        return `₹${(price / 100000).toFixed(1)} Lac`;
+      } else {
+        return `₹${price.toLocaleString('en-IN')}`;
+      }
+    }
+  }
+
+  // Helper method to get primary image
+  getPrimaryImage(property: Property): string {
+    const primaryImage = property.images.find(img => img.isPrimary);
+    return primaryImage?.url || property.images[0]?.url || '/placeholder-property.jpg';
+  }
+
+  // Helper method to format area
+  formatArea(area: Property['area']): string {
+    if (area.builtUp) {
+      return `${area.builtUp} ${area.unit}`;
+    } else if (area.plot) {
+      return `${area.plot} ${area.unit}`;
+    } else if (area.carpet) {
+      return `${area.carpet} ${area.unit}`;
+    }
+    return 'Area not specified';
+  }
+}
+
+export const propertyService = new PropertyService();
+export default propertyService;

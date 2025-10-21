@@ -1,160 +1,299 @@
 const express = require('express');
-const { supabase } = require('../config/database');
+const User = require('../models/User');
+const Property = require('../models/Property');
+const Favorite = require('../models/Favorite');
+const Message = require('../models/Message');
 const { asyncHandler } = require('../middleware/errorMiddleware');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
+const bcrypt = require('bcrypt');
 const router = express.Router();
+
+// Apply auth middleware to all routes
+router.use(authenticateToken);
+
+// @desc    Get all users (Admin only)
+// @route   GET /api/users
+// @access  Private/Admin
+router.get('/', asyncHandler(async (req, res) => {
+  const { 
+    page = 1, 
+    limit = 10, 
+    search, 
+    role, 
+    status 
+  } = req.query;
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  
+  // Build filter object
+  const filter = {};
+  
+  if (search) {
+    filter.$or = [
+      { email: { $regex: search, $options: 'i' } },
+      { 'profile.firstName': { $regex: search, $options: 'i' } },
+      { 'profile.lastName': { $regex: search, $options: 'i' } }
+    ];
+  }
+  
+  if (role) {
+    filter.role = role;
+  }
+  
+  if (status) {
+    filter.status = status;
+  }
+
+  // Get total count for pagination
+  const totalUsers = await User.countDocuments(filter);
+  
+  // Get users with pagination
+  const users = await User.find(filter)
+    .select('-password -verificationToken')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
+
+  const totalPages = Math.ceil(totalUsers / parseInt(limit));
+
+  res.json({
+    success: true,
+    data: {
+      users,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalUsers,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    }
+  });
+}));
+
+// @desc    Get single user
+// @route   GET /api/users/:id
+// @access  Private
+router.get('/:id', asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).select('-password -verificationToken');
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  res.json({
+    success: true,
+    data: { user }
+  });
+}));
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
 router.get('/profile', asyncHandler(async (req, res) => {
-  const { data: user, error } = await supabase
-    .from('users')
-    .select(`
-      id, email, role, status, created_at,
-      user_profiles (
-        first_name, last_name, phone, avatar, bio, address,
-        date_of_birth, gender, preferences, email_verified,
-        last_login, created_at as profile_created_at
-      )
-    `)
-    .eq('id', req.user.id)
-    .single();
-
-  if (error) {
-    throw error;
+  const user = await User.findById(req.user._id).select('-password -verificationToken');
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
   }
 
   // Get user statistics
-  const [
-    { count: totalProperties },
-    { count: totalFavorites },
-    { count: totalInquiries },
-    { count: totalServiceRequests }
-  ] = await Promise.all([
-    supabase.from('properties').select('*', { count: 'exact', head: true }).eq('owner_id', req.user.id),
-    supabase.from('user_favorites').select('*', { count: 'exact', head: true }).eq('user_id', req.user.id),
-    supabase.from('property_inquiries').select('*', { count: 'exact', head: true }).eq('user_id', req.user.id),
-    supabase.from('service_requests').select('*', { count: 'exact', head: true }).eq('user_id', req.user.id)
+  const [totalProperties, totalFavorites, totalMessages] = await Promise.all([
+    Property.countDocuments({ owner: req.user._id }),
+    Favorite.countDocuments({ user: req.user._id }),
+    Message.countDocuments({ $or: [{ sender: req.user._id }, { recipient: req.user._id }] })
   ]);
 
   res.json({
     success: true,
     data: {
       user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-        createdAt: user.created_at,
-        profile: user.user_profiles[0],
+        ...user.toObject(),
         statistics: {
-          totalProperties: totalProperties || 0,
-          totalFavorites: totalFavorites || 0,
-          totalInquiries: totalInquiries || 0,
-          totalServiceRequests: totalServiceRequests || 0
+          totalProperties,
+          totalFavorites,
+          totalMessages
         }
       }
     }
   });
 }));
 
-// @desc    Update user profile
-// @route   PUT /api/users/profile
-// @access  Private
-router.put('/profile', asyncHandler(async (req, res) => {
+// @desc    Create new user (Admin only)
+// @route   POST /api/users
+// @access  Private/Admin
+router.post('/', asyncHandler(async (req, res) => {
   const {
-    firstName,
-    lastName,
-    phone,
-    bio,
-    address,
-    dateOfBirth,
-    gender,
-    preferences
+    email,
+    password,
+    profile,
+    role = 'user',
+    status = 'active'
   } = req.body;
 
-  const { data: profile, error } = await supabase
-    .from('user_profiles')
-    .update({
-      first_name: firstName,
-      last_name: lastName,
-      phone,
-      bio,
-      address,
-      date_of_birth: dateOfBirth,
-      gender,
-      preferences,
-      updated_at: new Date().toISOString()
-    })
-    .eq('user_id', req.user.id)
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  res.json({
-    success: true,
-    message: 'Profile updated successfully',
-    data: { profile }
-  });
-}));
-
-// @desc    Update user avatar
-// @route   PUT /api/users/avatar
-// @access  Private
-router.put('/avatar', asyncHandler(async (req, res) => {
-  const { avatar } = req.body;
-
-  if (!avatar) {
+  // Check if user already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
     return res.status(400).json({
       success: false,
-      message: 'Avatar URL is required'
+      message: 'User with this email already exists'
     });
   }
 
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({ 
-      avatar,
-      updated_at: new Date().toISOString()
-    })
-    .eq('user_id', req.user.id);
+  // Hash password
+  const saltRounds = 12;
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  if (error) {
-    throw error;
-  }
+  // Create user
+  const user = await User.create({
+    email,
+    password: hashedPassword,
+    profile,
+    role,
+    status,
+    emailVerified: true // Admin created users are auto-verified
+  });
 
-  res.json({
+  // Remove password from response
+  const userResponse = user.toObject();
+  delete userResponse.password;
+  delete userResponse.verificationToken;
+
+  res.status(201).json({
     success: true,
-    message: 'Avatar updated successfully',
-    data: { avatar }
+    data: { user: userResponse }
   });
 }));
 
-// @desc    Update user preferences
-// @route   PUT /api/users/preferences
+// @desc    Update user
+// @route   PUT /api/users/:id
 // @access  Private
-router.put('/preferences', asyncHandler(async (req, res) => {
-  const { preferences } = req.body;
+router.put('/:id', asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
 
-  const { error } = await supabase
-    .from('user_profiles')
-    .update({ 
-      preferences,
-      updated_at: new Date().toISOString()
-    })
-    .eq('user_id', req.user.id);
+  // Only allow users to update their own profile or admin to update any
+  if (req.user._id.toString() !== req.params.id && req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Not authorized to update this user'
+    });
+  }
 
-  if (error) {
-    throw error;
+  const {
+    profile,
+    preferences,
+    role,
+    status
+  } = req.body;
+
+  // Update fields
+  if (profile) {
+    user.profile = { ...user.profile, ...profile };
+  }
+  
+  if (preferences) {
+    user.preferences = { ...user.preferences, ...preferences };
+  }
+
+  // Only admin can update role and status
+  if (req.user.role === 'admin') {
+    if (role) user.role = role;
+    if (status) user.status = status;
+  }
+
+  await user.save();
+
+  // Remove password from response
+  const userResponse = user.toObject();
+  delete userResponse.password;
+  delete userResponse.verificationToken;
+
+  res.json({
+    success: true,
+    data: { user: userResponse }
+  });
+}));
+
+// @desc    Update user status
+// @route   PATCH /api/users/:id/status
+// @access  Private/Admin
+router.patch('/:id/status', asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  const { status } = req.body;
+  
+  if (!['active', 'inactive', 'pending', 'suspended'].includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid status value'
+    });
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { status },
+    { new: true }
+  ).select('-password -verificationToken');
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
   }
 
   res.json({
     success: true,
-    message: 'Preferences updated successfully',
-    data: { preferences }
+    data: { user }
+  });
+}));
+
+// @desc    Delete user
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
+router.delete('/:id', asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  const user = await User.findById(req.params.id);
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Instead of deleting, deactivate the account
+  user.status = 'inactive';
+  user.deactivatedAt = new Date();
+  await user.save();
+
+  res.json({
+    success: true,
+    message: 'User account deactivated successfully'
   });
 }));
 
@@ -163,81 +302,62 @@ router.put('/preferences', asyncHandler(async (req, res) => {
 // @access  Private
 router.get('/activity', asyncHandler(async (req, res) => {
   const { page = 1, limit = 20 } = req.query;
-  const offset = (page - 1) * limit;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  // Get recent activities (property views, favorites, inquiries, etc.)
+  // Get user's recent activities
   const activities = [];
 
-  // Property views
-  const { data: recentViews } = await supabase
-    .from('property_views')
-    .select(`
-      viewed_at,
-      properties (id, title, city, state, price)
-    `)
-    .eq('user_id', req.user.id)
-    .order('viewed_at', { ascending: false })
-    .limit(10);
+  // Recent properties created
+  const recentProperties = await Property.find({ owner: req.user._id })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .select('title createdAt');
 
-  if (recentViews) {
-    activities.push(...recentViews.map(view => ({
-      type: 'property_view',
-      action: 'Viewed property',
-      details: view.properties.title,
-      timestamp: view.viewed_at,
-      metadata: view.properties
-    })));
-  }
+  activities.push(...recentProperties.map(property => ({
+    type: 'property_created',
+    action: 'Created property',
+    details: property.title,
+    timestamp: property.createdAt,
+    metadata: { propertyId: property._id }
+  })));
 
   // Recent favorites
-  const { data: recentFavorites } = await supabase
-    .from('user_favorites')
-    .select(`
-      created_at,
-      properties (id, title, city, state, price)
-    `)
-    .eq('user_id', req.user.id)
-    .order('created_at', { ascending: false })
-    .limit(10);
+  const recentFavorites = await Favorite.find({ user: req.user._id })
+    .populate('property', 'title')
+    .sort({ createdAt: -1 })
+    .limit(5);
 
-  if (recentFavorites) {
-    activities.push(...recentFavorites.map(fav => ({
-      type: 'favorite_added',
-      action: 'Added to favorites',
-      details: fav.properties.title,
-      timestamp: fav.created_at,
-      metadata: fav.properties
-    })));
-  }
+  activities.push(...recentFavorites.map(favorite => ({
+    type: 'favorite_added',
+    action: 'Added to favorites',
+    details: favorite.property.title,
+    timestamp: favorite.createdAt,
+    metadata: { propertyId: favorite.property._id }
+  })));
 
-  // Recent inquiries
-  const { data: recentInquiries } = await supabase
-    .from('property_inquiries')
-    .select(`
-      created_at, inquiry_type,
-      properties (id, title, city, state, price)
-    `)
-    .eq('user_id', req.user.id)
-    .order('created_at', { ascending: false })
-    .limit(10);
+  // Recent messages
+  const recentMessages = await Message.find({
+    $or: [{ sender: req.user._id }, { recipient: req.user._id }]
+  })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .select('subject createdAt sender recipient');
 
-  if (recentInquiries) {
-    activities.push(...recentInquiries.map(inquiry => ({
-      type: 'property_inquiry',
-      action: `Made ${inquiry.inquiry_type} inquiry`,
-      details: inquiry.properties.title,
-      timestamp: inquiry.created_at,
-      metadata: inquiry.properties
-    })));
-  }
+  activities.push(...recentMessages.map(message => ({
+    type: 'message',
+    action: message.sender.toString() === req.user._id.toString() ? 'Sent message' : 'Received message',
+    details: message.subject,
+    timestamp: message.createdAt,
+    metadata: { messageId: message._id }
+  })));
 
   // Sort all activities by timestamp
   activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   // Apply pagination
-  const paginatedActivities = activities.slice(offset, offset + limit);
+  const paginatedActivities = activities.slice(skip, skip + parseInt(limit));
   const totalCount = activities.length;
-  const totalPages = Math.ceil(totalCount / limit);
+  const totalPages = Math.ceil(totalCount / parseInt(limit));
 
   res.json({
     success: true,
@@ -252,61 +372,6 @@ router.get('/activity', asyncHandler(async (req, res) => {
         limit: parseInt(limit)
       }
     }
-  });
-}));
-
-// @desc    Delete user account
-// @route   DELETE /api/users/account
-// @access  Private
-router.delete('/account', asyncHandler(async (req, res) => {
-  const { password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({
-      success: false,
-      message: 'Password confirmation is required'
-    });
-  }
-
-  // Verify password
-  const bcrypt = require('bcrypt');
-  const { data: user, error: userError } = await supabase
-    .from('users')
-    .select('password')
-    .eq('id', req.user.id)
-    .single();
-
-  if (userError || !user) {
-    return res.status(404).json({
-      success: false,
-      message: 'User not found'
-    });
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid password'
-    });
-  }
-
-  // Instead of deleting, deactivate the account
-  const { error: deactivateError } = await supabase
-    .from('users')
-    .update({ 
-      status: 'deactivated',
-      deactivated_at: new Date().toISOString()
-    })
-    .eq('id', req.user.id);
-
-  if (deactivateError) {
-    throw deactivateError;
-  }
-
-  res.json({
-    success: true,
-    message: 'Account deactivated successfully'
   });
 }));
 

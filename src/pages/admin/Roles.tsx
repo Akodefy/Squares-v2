@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,36 +15,89 @@ import {
 import { Column, DataTable } from "@/components/adminpanel/shared/DataTable";
 import DashboardLayout from "@/components/adminpanel/DashboardLayout";
 import { SearchFilter } from "@/components/adminpanel/shared/SearchFilter";
-import { usePagination } from "@/hooks/usePagination";
-import { Role, sampleRoles } from "@/components/data/sampleData";
+import roleService, { Role } from "@/services/roleService";
 
 const Roles = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const filteredRoles = useMemo(() => {
-    return sampleRoles.filter((role) => {
-      const matchesSearch =
-        role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        role.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || role.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [searchTerm, statusFilter]);
+  const fetchRoles = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        page: currentPage,
+        limit: 10,
+        search: searchTerm || undefined,
+        isActive: statusFilter === "all" ? undefined : statusFilter === "active",
+      };
 
-  const { paginatedItems, currentPage, totalPages, goToPage, nextPage, previousPage } =
-    usePagination(filteredRoles, 10);
+      const response = await roleService.getRoles(filters);
+      setRoles(response.data.roles);
+      setTotalPages(response.data.pagination.totalPages);
+    } catch (error) {
+      console.error("Failed to fetch roles:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const columns: Column<Role>[] = [
-    { key: "name", label: "Role Name" },
-    { key: "description", label: "Description" },
+  useEffect(() => {
+    fetchRoles();
+  }, [currentPage, searchTerm, statusFilter]);
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const previousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Create extended type for DataTable
+  type RoleWithId = Role & { id: string };
+
+  const columns: Column<RoleWithId>[] = [
+    { 
+      key: "name", 
+      label: "Role Name",
+      render: (role) => (
+        <div>
+          <div className="font-medium">{role.name}</div>
+          <div className="text-sm text-muted-foreground">
+            {role.description}
+          </div>
+        </div>
+      )
+    },
     {
       key: "permissions",
       label: "Permissions",
       render: (role) => (
         <div className="flex flex-wrap gap-1">
-          {role.permissions.slice(0, 2).map((perm) => (
-            <Badge key={perm} variant="secondary" className="text-xs">
+          {role.permissions.slice(0, 2).map((perm, idx) => (
+            <Badge key={idx} variant="secondary" className="text-xs">
               {perm}
             </Badge>
           ))}
@@ -55,20 +109,36 @@ const Roles = () => {
         </div>
       ),
     },
-    { key: "userCount", label: "Users" },
+    { 
+      key: "userCount", 
+      label: "Users",
+      render: (role) => (
+        <span className="font-medium">
+          {role.userCount || 0}
+        </span>
+      )
+    },
     {
-      key: "status",
+      key: "isActive",
       label: "Status",
       render: (role) => (
-        <Badge variant={role.status === "active" ? "default" : "secondary"}>
-          {role.status}
+        <Badge variant={role.isActive ? "default" : "secondary"}>
+          {role.isActive ? "Active" : "Inactive"}
         </Badge>
       ),
     },
   ];
 
-  return (
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2 text-lg">Loading roles...</span>
+      </div>
+    );
+  }
 
+  return (
       <div className="space-y-6 relative top-[60px]">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
@@ -81,15 +151,15 @@ const Roles = () => {
           <CardHeader>
             <CardTitle>All Roles</CardTitle>
             <CardDescription>
-              {filteredRoles.length} role{filteredRoles.length !== 1 ? "s" : ""} found
+              {roles.length} role{roles.length !== 1 ? "s" : ""} found
             </CardDescription>
           </CardHeader>
           <CardContent>
             <SearchFilter
               searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
+              onSearchChange={handleSearch}
               filterValue={statusFilter}
-              onFilterChange={setStatusFilter}
+              onFilterChange={handleStatusFilter}
               filterOptions={[
                 { label: "Active", value: "active" },
                 { label: "Inactive", value: "inactive" },
@@ -99,8 +169,8 @@ const Roles = () => {
 
             <DataTable
               columns={columns}
-              data={paginatedItems}
-              editPath={(role) => `/admin/roles/edit/${role.id}`}
+              data={roles.map(role => ({ ...role, id: role._id }))}
+              editPath={(role) => `/admin/roles/edit/${role._id}`}
             />
 
             {totalPages > 1 && (

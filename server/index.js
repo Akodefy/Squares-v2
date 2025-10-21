@@ -10,13 +10,17 @@ require('dotenv').config();
 
 // Import routes
 const authRoutes = require('./routes/auth');
-// const userRoutes = require('./routes/users');
-// const propertyRoutes = require('./routes/properties');
-// const favoriteRoutes = require('./routes/favorites');
-// const messageRoutes = require('./routes/messages');
+const userRoutes = require('./routes/users');
+const propertyRoutes = require('./routes/properties');
+const dashboardRoutes = require('./routes/dashboard');
+const favoriteRoutes = require('./routes/favorites');
+const messageRoutes = require('./routes/messages');
+const planRoutes = require('./routes/plans');
+const roleRoutes = require('./routes/roles');
+const subscriptionRoutes = require('./routes/subscriptions');
+const adminRoutes = require('./routes/admin');
 // const serviceRoutes = require('./routes/services');
 // const uploadRoutes = require('./routes/upload');
-// const adminRoutes = require('./routes/admin');
 
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
@@ -67,13 +71,17 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-// app.use('/api/users', authenticateToken, userRoutes);
-// app.use('/api/properties', propertyRoutes);
-// app.use('/api/favorites', authenticateToken, favoriteRoutes);
-// app.use('/api/messages', authenticateToken, messageRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/properties', propertyRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/plans', planRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/admin', adminRoutes);
 // app.use('/api/services', authenticateToken, serviceRoutes);
 // app.use('/api/upload', authenticateToken, uploadRoutes);
-// app.use('/api/admin', authenticateToken, adminRoutes);
 
 // Socket.IO for real-time messaging
 io.use((socket, next) => {

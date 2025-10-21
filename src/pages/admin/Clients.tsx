@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { usePagination } from "@/hooks/usePagination";
 import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -14,28 +14,68 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { sampleClients, SubscribedClient } from "@/components/data/sampleData";
+import subscriptionService, { Subscription } from "@/services/subscriptionService";
 import { Column, DataTable } from "@/components/adminpanel/shared/DataTable";
 import { SearchFilter } from "@/components/adminpanel/shared/SearchFilter";
 
 const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
 
-  const filteredClients = useMemo(() => {
-    return sampleClients.filter((client) => {
-      const matchesSearch =
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.planName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || client.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [searchTerm, statusFilter]);
+  const fetchSubscriptions = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        page: currentPage,
+        limit: 10,
+        search: searchTerm || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+      };
 
-  const { paginatedItems, currentPage, totalPages, goToPage, nextPage, previousPage } =
-    usePagination(filteredClients, 10);
+      const response = await subscriptionService.getSubscriptions(filters);
+      setSubscriptions(response.data.subscriptions);
+      setTotalPages(response.data.pagination.totalPages);
+    } catch (error) {
+      console.error("Failed to fetch subscriptions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, [currentPage, searchTerm, statusFilter]);
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const previousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   const handleExportExcel = () => {
     toast({
@@ -51,43 +91,77 @@ const Clients = () => {
     });
   };
 
-  const columns: Column<SubscribedClient>[] = [
-    { key: "name", label: "Client Name" },
-    { key: "email", label: "Email" },
-    { key: "planName", label: "Plan" },
+  // Create extended type for DataTable
+  type SubscriptionWithId = Subscription & { id: string };
+
+  const columns: Column<SubscriptionWithId>[] = [
+    { 
+      key: "user", 
+      label: "Client Name",
+      render: (subscription) => (
+        <div>
+          <div className="font-medium">{subscription.user?.name || 'N/A'}</div>
+          <div className="text-sm text-muted-foreground">{subscription.user?.email || 'N/A'}</div>
+        </div>
+      )
+    },
+    { 
+      key: "plan", 
+      label: "Plan",
+      render: (subscription) => (
+        <div>
+          <div className="font-medium">{subscription.plan?.name || 'N/A'}</div>
+          <div className="text-sm text-muted-foreground">{subscription.plan?.billingPeriod || 'N/A'}</div>
+        </div>
+      )
+    },
     {
       key: "amount",
       label: "Amount",
-      render: (client) => <span className="font-semibold">${client.amount.toFixed(2)}</span>,
+      render: (subscription) => (
+        <span className="font-semibold">{subscriptionService.formatAmount(subscription)}</span>
+      ),
     },
     {
-      key: "subscriptionDate",
-      label: "Subscription Date",
-      render: (client) => new Date(client.subscriptionDate).toLocaleDateString(),
+      key: "startDate",
+      label: "Start Date",
+      render: (subscription) => new Date(subscription.startDate).toLocaleDateString(),
     },
     {
-      key: "expiryDate",
-      label: "Expiry Date",
-      render: (client) => new Date(client.expiryDate).toLocaleDateString(),
+      key: "endDate",
+      label: "End Date",
+      render: (subscription) => new Date(subscription.endDate).toLocaleDateString(),
     },
     {
       key: "status",
       label: "Status",
-      render: (client) => (
-        <Badge
-          variant={
-            client.status === "active"
-              ? "default"
-              : client.status === "expired"
-              ? "destructive"
-              : "secondary"
-          }
-        >
-          {client.status}
-        </Badge>
-      ),
+      render: (subscription) => {
+        const statusInfo = subscriptionService.formatSubscriptionStatus(subscription.status);
+        return (
+          <Badge
+            variant={
+              subscription.status === "active"
+                ? "default"
+                : subscription.status === "expired"
+                ? "destructive"
+                : "secondary"
+            }
+          >
+            {statusInfo.label}
+          </Badge>
+        );
+      },
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2 text-lg">Loading clients...</span>
+      </div>
+    );
+  }
 
   return (
       <div className="space-y-6 relative top-[60px]">
@@ -114,15 +188,15 @@ const Clients = () => {
           <CardHeader>
             <CardTitle>All Clients</CardTitle>
             <CardDescription>
-              {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} found
+              {subscriptions.length} client{subscriptions.length !== 1 ? "s" : ""} found
             </CardDescription>
           </CardHeader>
           <CardContent>
             <SearchFilter
               searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
+              onSearchChange={handleSearch}
               filterValue={statusFilter}
-              onFilterChange={setStatusFilter}
+              onFilterChange={handleStatusFilter}
               filterOptions={[
                 { label: "Active", value: "active" },
                 { label: "Expired", value: "expired" },
@@ -133,8 +207,8 @@ const Clients = () => {
 
             <DataTable
               columns={columns}
-              data={paginatedItems}
-              editPath={(client) => `/admin/clients/edit/${client.id}`}
+              data={subscriptions.map(subscription => ({ ...subscription, id: subscription._id }))}
+              editPath={(subscription) => `/admin/clients/edit/${subscription._id}`}
             />
 
             {totalPages > 1 && (

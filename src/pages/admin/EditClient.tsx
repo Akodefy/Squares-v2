@@ -5,22 +5,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { sampleClients, SubscribedClient } from "@/components/data/sampleData";
+import subscriptionService, { Subscription } from "@/services/subscriptionService";
 
 const EditClient = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [client, setClient] = useState<SubscribedClient | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const foundClient = sampleClients.find((c) => c.id === id);
-    if (foundClient) {
-      setClient(foundClient);
-    }
-  }, [id]);
+    const fetchSubscription = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const response = await subscriptionService.getSubscription(id);
+        setSubscription(response.data.subscription);
+      } catch (error) {
+        console.error("Failed to fetch subscription:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load client data.",
+          variant: "destructive",
+        });
+        navigate("/admin/clients");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubscription();
+  }, [id, navigate, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +49,7 @@ const EditClient = () => {
     navigate("/clients");
   };
 
-  if (!client) {
+  if (!subscription) {
     return (
         <div>Client not found</div>
     );
@@ -60,8 +78,11 @@ const EditClient = () => {
                   <Label htmlFor="name">Client Name</Label>
                   <Input
                     id="name"
-                    value={client.name}
-                    onChange={(e) => setClient({ ...client, name: e.target.value })}
+                    value={subscription.user?.name || ''}
+                    onChange={(e) => setSubscription({ 
+                      ...subscription, 
+                      user: { ...subscription.user!, name: e.target.value }
+                    })}
                     required
                   />
                 </div>
@@ -71,8 +92,11 @@ const EditClient = () => {
                   <Input
                     id="email"
                     type="email"
-                    value={client.email}
-                    onChange={(e) => setClient({ ...client, email: e.target.value })}
+                    value={subscription.user?.email || ''}
+                    onChange={(e) => setSubscription({ 
+                      ...subscription, 
+                      user: { ...subscription.user!, email: e.target.value }
+                    })}
                     required
                   />
                 </div>
@@ -81,8 +105,11 @@ const EditClient = () => {
                   <Label htmlFor="planName">Plan</Label>
                   <Input
                     id="planName"
-                    value={client.planName}
-                    onChange={(e) => setClient({ ...client, planName: e.target.value })}
+                    value={subscription.plan?.name || ''}
+                    onChange={(e) => setSubscription({ 
+                      ...subscription, 
+                      plan: { ...subscription.plan!, name: e.target.value }
+                    })}
                     required
                   />
                 </div>
@@ -93,8 +120,8 @@ const EditClient = () => {
                     id="amount"
                     type="number"
                     step="0.01"
-                    value={client.amount}
-                    onChange={(e) => setClient({ ...client, amount: parseFloat(e.target.value) })}
+                    value={subscription.amount}
+                    onChange={(e) => setSubscription({ ...subscription, amount: parseFloat(e.target.value) })}
                     required
                   />
                 </div>
@@ -104,8 +131,8 @@ const EditClient = () => {
                   <Input
                     id="subscriptionDate"
                     type="date"
-                    value={client.subscriptionDate}
-                    onChange={(e) => setClient({ ...client, subscriptionDate: e.target.value })}
+                    value={subscription.startDate?.split('T')[0] || ''}
+                    onChange={(e) => setSubscription({ ...subscription, startDate: e.target.value })}
                     required
                   />
                 </div>
@@ -115,8 +142,8 @@ const EditClient = () => {
                   <Input
                     id="expiryDate"
                     type="date"
-                    value={client.expiryDate}
-                    onChange={(e) => setClient({ ...client, expiryDate: e.target.value })}
+                    value={subscription.endDate?.split('T')[0] || ''}
+                    onChange={(e) => setSubscription({ ...subscription, endDate: e.target.value })}
                     required
                   />
                 </div>
@@ -124,8 +151,8 @@ const EditClient = () => {
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select 
-                    value={client.status} 
-                    onValueChange={(value: "active" | "expired" | "cancelled") => setClient({ ...client, status: value })}
+                    value={subscription.status} 
+                    onValueChange={(value: "active" | "expired" | "cancelled") => setSubscription({ ...subscription, status: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />

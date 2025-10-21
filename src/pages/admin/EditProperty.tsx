@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Property, sampleProperties } from "@/components/data/sampleData";
+import propertyService, { Property } from "@/services/propertyService";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -64,10 +64,18 @@ const EditProperty = () => {
   });
 
   useEffect(() => {
-    const foundProperty = sampleProperties.find((p) => p.id === id);
-    if (foundProperty) {
-      setProperty(foundProperty);
-    }
+    const fetchProperty = async () => {
+      if (!id) return;
+      
+      try {
+        const response = await propertyService.getProperty(id);
+        setProperty(response.data.property);
+      } catch (error) {
+        console.error("Failed to fetch property:", error);
+      }
+    };
+
+    fetchProperty();
   }, [id]);
 
   // Deprecated manual submit retained only for reference; using react-hook-form's onSubmit

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePagination } from "@/hooks/usePagination";
@@ -10,33 +10,70 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Plan, samplePlans } from "@/components/data/sampleData";
+import { Plan, planService } from "@/services/planService";
 import { Column, DataTable } from "@/components/adminpanel/shared/DataTable";
 import { SearchFilter } from "@/components/adminpanel/shared/SearchFilter";
+import { Loader2 } from "lucide-react";
 
 const Plans = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [billingFilter, setBillingFilter] = useState("all");
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await planService.getPlans({
+          limit: 1000, // Get all plans for admin view
+        });
+        
+        if (response.success) {
+          setPlans(response.data.plans);
+        }
+      } catch (error) {
+        console.error("Failed to fetch plans:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlans();
+  }, []);
 
   const filteredPlans = useMemo(() => {
-    return samplePlans.filter((plan) => {
+    return plans.filter((plan) => {
       const matchesSearch = plan.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesBilling = billingFilter === "all" || plan.billingPeriod === billingFilter;
       return matchesSearch && matchesBilling;
     });
-  }, [searchTerm, billingFilter]);
+  }, [plans, searchTerm, billingFilter]);
 
   const { paginatedItems, currentPage, totalPages, goToPage, nextPage, previousPage } =
     usePagination(filteredPlans, 10);
 
-  const columns: Column<Plan>[] = [
-    { key: "name", label: "Plan Name" },
+  // Create extended type for DataTable
+  type PlanWithId = Plan & { id: string };
+
+  const columns: Column<PlanWithId>[] = [
+    { 
+      key: "name", 
+      label: "Plan Name",
+      render: (plan) => (
+        <div>
+          <div className="font-medium">{plan.name}</div>
+          <div className="text-sm text-muted-foreground">
+            {plan.description.substring(0, 50)}...
+          </div>
+        </div>
+      )
+    },
     {
       key: "price",
       label: "Price",
       render: (plan) => (
         <span className="font-semibold">
-          ${plan.price.toFixed(2)} <span className="text-muted-foreground text-sm">/ {plan.billingPeriod === "monthly" ? "mo" : "yr"}</span>
+          {planService.formatPrice(plan)}
         </span>
       ),
     },
@@ -58,17 +95,34 @@ const Plans = () => {
         </div>
       ),
     },
-    { key: "subscriberCount", label: "Subscribers" },
+    { 
+      key: "subscriberCount", 
+      label: "Subscribers",
+      render: (plan) => (
+        <span className="font-medium">
+          {plan.subscriberCount || 0}
+        </span>
+      )
+    },
     {
-      key: "status",
+      key: "isActive",
       label: "Status",
       render: (plan) => (
-        <Badge variant={plan.status === "active" ? "default" : "secondary"}>
-          {plan.status}
+        <Badge variant={planService.getPlanBadgeVariant(plan)}>
+          {plan.isActive ? "Active" : "Inactive"}
         </Badge>
       ),
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2 text-lg">Loading plans...</span>
+      </div>
+    );
+  }
 
   return (
       <div className="space-y-6 relative top-[60px]">
@@ -101,8 +155,8 @@ const Plans = () => {
 
             <DataTable
               columns={columns}
-              data={paginatedItems}
-              editPath={(plan) => `/admin/plans/edit/${plan.id}`}
+              data={paginatedItems.map(plan => ({ ...plan, id: plan._id }))}
+              editPath={(plan) => `/admin/plans/edit/${plan._id}`}
             />
 
             {totalPages > 1 && (

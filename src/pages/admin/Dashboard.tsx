@@ -1,42 +1,83 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Users, DollarSign, Activity } from "lucide-react";
-
-const statsCards = [
-  {
-    title: "Total Revenue",
-    value: "$45,231.89",
-    change: "+20.1% from last month",
-    icon: DollarSign,
-    color: "text-emerald-500 dark:text-emerald-400",
-    bgColor: "bg-emerald-500/10",
-  },
-  {
-    title: "Active Users",
-    value: "2,350",
-    change: "+180.1% from last month",
-    icon: Users,
-    color: "text-blue-500 dark:text-blue-400",
-    bgColor: "bg-blue-500/10",
-  },
-  {
-    title: "Growth",
-    value: "+12.5%",
-    change: "+4.1% from last month",
-    icon: TrendingUp,
-    color: "text-accent",
-    bgColor: "bg-accent/10",
-  },
-  {
-    title: "Engagement",
-    value: "89.2%",
-    change: "+2.5% from last month",
-    icon: Activity,
-    color: "text-primary",
-    bgColor: "bg-primary/10",
-  },
-];
+import { TrendingUp, Users, DollarSign, Activity, Loader2 } from "lucide-react";
+import { dashboardService, DashboardStats, RecentActivity } from "@/services/dashboardService";
 
 const Dashboard = () => {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activities, setActivities] = useState<RecentActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await dashboardService.getDashboardData();
+        if (response.success) {
+          setStats(response.data.stats);
+          setActivities(response.data.recentActivities);
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2 text-lg">Loading dashboard...</span>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-lg text-muted-foreground">Failed to load dashboard data.</p>
+      </div>
+    );
+  }
+
+  const statsCards = [
+    {
+      title: "Total Revenue",
+      value: dashboardService.formatRevenue(stats.totalRevenue),
+      change: `${stats.revenueThisMonth > 0 ? '+' : ''}${dashboardService.formatRevenue(stats.revenueThisMonth)} this month`,
+      icon: DollarSign,
+      color: "text-emerald-500 dark:text-emerald-400",
+      bgColor: "bg-emerald-500/10",
+    },
+    {
+      title: "Total Users",
+      value: stats.totalUsers.toLocaleString(),
+      change: `+${stats.newUsersThisMonth} this month`,
+      icon: Users,
+      color: "text-blue-500 dark:text-blue-400",
+      bgColor: "bg-blue-500/10",
+    },
+    {
+      title: "Total Properties",
+      value: stats.totalProperties.toLocaleString(),
+      change: `+${stats.newPropertiesThisMonth} this month`,
+      icon: TrendingUp,
+      color: "text-accent",
+      bgColor: "bg-accent/10",
+    },
+    {
+      title: "Engagement Rate",
+      value: `${stats.engagementRate}%`,
+      change: "Favorites per property",
+      icon: Activity,
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+    },
+  ];
+
   return (
     <div className="space-y-6 animate-fade-in">
         {/* Header */}
@@ -76,19 +117,33 @@ const Dashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Your latest platform activities</CardDescription>
+            <CardDescription>Latest platform activities</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4 pb-4 border-b last:border-0 last:pb-0">
-                  <div className="w-2 h-2 bg-primary rounded-full" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Activity {i}</p>
-                    <p className="text-xs text-muted-foreground">2 hours ago</p>
+              {activities.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No recent activities</p>
+              ) : (
+                activities.map((activity) => (
+                  <div key={activity._id} className="flex items-center gap-4 pb-4 border-b last:border-0 last:pb-0">
+                    <div className={`w-2 h-2 rounded-full ${
+                      activity.type === 'user_registered' ? 'bg-blue-500' :
+                      activity.type === 'property_listed' ? 'bg-green-500' :
+                      activity.type === 'property_sold' ? 'bg-emerald-500' :
+                      activity.type === 'property_rented' ? 'bg-purple-500' :
+                      'bg-primary'
+                    }`} />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {dashboardService.formatActivityDescription(activity)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {dashboardService.formatTimestamp(activity.timestamp)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

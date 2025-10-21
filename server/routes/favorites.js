@@ -1,50 +1,50 @@
 const express = require('express');
-const { supabase } = require('../config/database');
+const Favorite = require('../models/Favorite');
+const Property = require('../models/Property');
 const { asyncHandler } = require('../middleware/errorMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
 const router = express.Router();
+
+// Apply auth middleware to all routes
+router.use(authenticateToken);
 
 // @desc    Get user's favorites
 // @route   GET /api/favorites
 // @access  Private
 router.get('/', asyncHandler(async (req, res) => {
   const { page = 1, limit = 12 } = req.query;
-  const offset = (page - 1) * limit;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  const { data: favorites, error, count } = await supabase
-    .from('user_favorites')
-    .select(`
-      id, created_at,
-      properties (
-        id, title, description, price, property_type, listing_type,
-        bhk, area, city, state, status, featured, verified,
-        property_images(id, url, is_primary)
-      )
-    `, { count: 'exact' })
-    .eq('user_id', req.user.id)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+  // Get total count for pagination
+  const totalCount = await Favorite.countDocuments({ user: req.user._id });
 
-  if (error) {
-    throw error;
-  }
+  // Get favorites with populated property data
+  const favorites = await Favorite.find({ user: req.user._id })
+    .populate({
+      path: 'property',
+      populate: {
+        path: 'owner',
+        select: 'email profile.firstName profile.lastName profile.phone'
+      }
+    })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
 
-  const totalPages = Math.ceil(count / limit);
+  const totalPages = Math.ceil(totalCount / parseInt(limit));
 
   res.json({
     success: true,
     data: {
       favorites: favorites.map(fav => ({
-        id: fav.id,
-        addedAt: fav.created_at,
-        property: {
-          ...fav.properties,
-          images: fav.properties.property_images || []
-        }
+        _id: fav._id,
+        addedAt: fav.createdAt,
+        property: fav.property
       })),
       pagination: {
         currentPage: parseInt(page),
         totalPages,
-        totalCount: count,
+        totalCount,
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
         limit: parseInt(limit)
@@ -60,13 +60,8 @@ router.post('/:propertyId', asyncHandler(async (req, res) => {
   const { propertyId } = req.params;
 
   // Check if property exists
-  const { data: property, error: propertyError } = await supabase
-    .from('properties')
-    .select('id')
-    .eq('id', propertyId)
-    .single();
-
-  if (propertyError || !property) {
+  const property = await Property.findById(propertyId);
+  if (!property) {
     return res.status(404).json({
       success: false,
       message: 'Property not found'
@@ -74,12 +69,10 @@ router.post('/:propertyId', asyncHandler(async (req, res) => {
   }
 
   // Check if already in favorites
-  const { data: existingFavorite } = await supabase
-    .from('user_favorites')
-    .select('id')
-    .eq('user_id', req.user.id)
-    .eq('property_id', propertyId)
-    .single();
+  const existingFavorite = await Favorite.findOne({
+    user: req.user._id,
+    property: propertyId
+  });
 
   if (existingFavorite) {
     return res.status(400).json({
@@ -89,19 +82,12 @@ router.post('/:propertyId', asyncHandler(async (req, res) => {
   }
 
   // Add to favorites
-  const { data: favorite, error } = await supabase
-    .from('user_favorites')
-    .insert({
-      user_id: req.user.id,
-      property_id: propertyId,
-      created_at: new Date().toISOString()
-    })
-    .select()
-    .single();
+  const favorite = await Favorite.create({
+    user: req.user._id,
+    property: propertyId
+  });
 
-  if (error) {
-    throw error;
-  }
+  await favorite.populate('property');
 
   res.status(201).json({
     success: true,
@@ -116,14 +102,16 @@ router.post('/:propertyId', asyncHandler(async (req, res) => {
 router.delete('/:propertyId', asyncHandler(async (req, res) => {
   const { propertyId } = req.params;
 
-  const { error } = await supabase
-    .from('user_favorites')
-    .delete()
-    .eq('user_id', req.user.id)
-    .eq('property_id', propertyId);
+  const result = await Favorite.deleteOne({
+    user: req.user._id,
+    property: propertyId
+  });
 
-  if (error) {
-    throw error;
+  if (result.deletedCount === 0) {
+    return res.status(404).json({
+      success: false,
+      message: 'Favorite not found'
+    });
   }
 
   res.json({
@@ -138,12 +126,10 @@ router.delete('/:propertyId', asyncHandler(async (req, res) => {
 router.get('/check/:propertyId', asyncHandler(async (req, res) => {
   const { propertyId } = req.params;
 
-  const { data: favorite } = await supabase
-    .from('user_favorites')
-    .select('id')
-    .eq('user_id', req.user.id)
-    .eq('property_id', propertyId)
-    .single();
+  const favorite = await Favorite.findOne({
+    user: req.user._id,
+    property: propertyId
+  });
 
   res.json({
     success: true,
@@ -166,19 +152,14 @@ router.delete('/bulk', asyncHandler(async (req, res) => {
     });
   }
 
-  const { error } = await supabase
-    .from('user_favorites')
-    .delete()
-    .eq('user_id', req.user.id)
-    .in('property_id', propertyIds);
-
-  if (error) {
-    throw error;
-  }
+  const result = await Favorite.deleteMany({
+    user: req.user._id,
+    property: { $in: propertyIds }
+  });
 
   res.json({
     success: true,
-    message: `${propertyIds.length} properties removed from favorites`
+    message: `${result.deletedCount} properties removed from favorites`
   });
 }));
 

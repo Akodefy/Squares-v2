@@ -1,96 +1,59 @@
+import { useState, useEffect } from "react";
 import PropertyFilters from "@/components/PropertyFilters";
 import PropertyCard from "@/components/PropertyCard";
-import property1 from "@/assets/property-1.jpg";
-import property2 from "@/assets/property-2.jpg";
-import property3 from "@/assets/property-3.jpg";
 import { Link } from "react-router-dom";
+import { propertyService, Property, PropertyFilters as PropertyFilterType } from "@/services/propertyService";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
-  const properties = [
-    {
-      id: 1,
-      title: "Luxury 3BHK Apartment in Powai",
-      location: "Powai, Mumbai",
-      price: "₹1.2 Cr",
-      bedrooms: 3,
-      bathrooms: 2,
-      area: "1450 sq.ft",
-      type: "Apartment",
-      image: property1,
-      featured: true,
-    },
-    {
-      id: 2,
-      title: "Modern Villa with Pool",
-      location: "Whitefield, Bangalore",
-      price: "₹2.5 Cr",
-      bedrooms: 4,
-      bathrooms: 3,
-      area: "2800 sq.ft",
-      type: "Villa",
-      image: property2,
-      featured: true,
-    },
-    {
-      id: 3,
-      title: "Spacious 2BHK with City View",
-      location: "Bandra West, Mumbai",
-      price: "₹85 Lac",
-      bedrooms: 2,
-      bathrooms: 2,
-      area: "1200 sq.ft",
-      type: "Apartment",
-      image: property3,
-      featured: false,
-    },
-    {
-      id: 4,
-      title: "Premium 3BHK in Gated Community",
-      location: "Gurgaon, Delhi NCR",
-      price: "₹1.8 Cr",
-      bedrooms: 3,
-      bathrooms: 3,
-      area: "1850 sq.ft",
-      type: "Apartment",
-      image: property1,
-      featured: false,
-    },
-    {
-      id: 5,
-      title: "Elegant Villa with Garden",
-      location: "Hinjewadi, Pune",
-      price: "₹1.9 Cr",
-      bedrooms: 4,
-      bathrooms: 4,
-      area: "3200 sq.ft",
-      type: "Villa",
-      image: property2,
-      featured: false,
-    },
-    {
-      id: 6,
-      title: "Cozy 2BHK Near Metro",
-      location: "Indirapuram, Ghaziabad",
-      price: "₹65 Lac",
-      bedrooms: 2,
-      bathrooms: 2,
-      area: "1100 sq.ft",
-      type: "Apartment",
-      image: property3,
-      featured: false,
-    },
-  ];
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeaturedProperties = async () => {
+      try {
+        setLoading(true);
+        // Fetch featured properties or latest properties for homepage
+        const response = await propertyService.getProperties({
+          limit: 6,
+          page: 1,
+        });
+        
+        if (response.success) {
+          setProperties(response.data.properties);
+        }
+      } catch (error) {
+        console.error("Failed to fetch properties:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load properties. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProperties();
+  }, []);
+
+  const handleFilterChange = (filters: PropertyFilterType) => {
+    // For the index page, we might want to redirect to products page with filters
+    // For now, we'll just show all properties
+    console.log("Filters changed:", filters);
+  };
 
   return (
     <>
-      <PropertyFilters />
+      <PropertyFilters onFilterChange={handleFilterChange} />
 
       <section className="mt-12">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-3xl font-bold">Featured Properties</h2>
+            <h2 className="text-3xl font-bold">Latest Properties</h2>
             <p className="text-muted-foreground mt-1">
-              Hand-picked premium properties for you
+              Discover our newest property listings
             </p>
           </div>
           <Link
@@ -101,11 +64,24 @@ const Index = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
-            <PropertyCard key={property.id} {...property} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2 text-lg">Loading properties...</span>
+          </div>
+        ) : properties.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-lg text-muted-foreground">
+              No properties available at the moment.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((property) => (
+              <PropertyCard key={property._id} property={property} />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="mt-16 bg-gradient-to-r from-primary to-primary/80 rounded-2xl p-12 text-center text-primary-foreground">
@@ -116,9 +92,12 @@ const Index = () => {
           Join thousands of happy homeowners who found their perfect property
           with us
         </p>
-        <button className="bg-accent text-accent-foreground px-8 py-3 rounded-lg font-semibold hover:bg-accent/90 transition-colors shadow-[var(--shadow-medium)]">
+        <Link
+          to="/products"
+          className="bg-accent text-accent-foreground px-8 py-3 rounded-lg font-semibold hover:bg-accent/90 transition-colors shadow-[var(--shadow-medium)] inline-block"
+        >
           Get Started Today
-        </button>
+        </Link>
       </section>
     </>
   );

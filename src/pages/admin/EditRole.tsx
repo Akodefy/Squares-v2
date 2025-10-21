@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Role, sampleRoles } from "@/components/data/sampleData";
+import roleService, { Role } from "@/services/roleService";
 
 const availablePermissions = ["create", "read", "update", "delete", "manage_users", "manage_content", "manage_settings"];
 
@@ -19,13 +19,31 @@ const EditRole = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [role, setRole] = useState<Role | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const foundRole = sampleRoles.find((r) => r.id === id);
-    if (foundRole) {
-      setRole(foundRole);
-    }
-  }, [id]);
+    const fetchRole = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const response = await roleService.getRole(id);
+        setRole(response.data.role);
+      } catch (error) {
+        console.error("Failed to fetch role:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load role data.",
+          variant: "destructive",
+        });
+        navigate("/admin/roles");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRole();
+  }, [id, navigate, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +100,7 @@ const EditRole = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
-                  <Select value={role.status} onValueChange={(value: "active" | "inactive") => setRole({ ...role, status: value })}>
+                  <Select value={role.isActive ? "active" : "inactive"} onValueChange={(value: "active" | "inactive") => setRole({ ...role, isActive: value === "active" })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

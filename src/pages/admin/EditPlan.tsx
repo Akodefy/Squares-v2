@@ -5,31 +5,56 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plan, samplePlans } from "@/components/data/sampleData";
+import planService, { Plan } from "@/services/planService";
 
 const EditPlan = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [newFeature, setNewFeature] = useState("");
 
   useEffect(() => {
-    const foundPlan = samplePlans.find((p) => p.id === id);
-    if (foundPlan) {
-      setPlan(foundPlan);
-    }
-  }, [id]);
+    const fetchPlan = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const response = await planService.getPlan(id);
+        setPlan(response.data.plan);
+      } catch (error) {
+        console.error("Failed to fetch plan:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load plan data.",
+          variant: "destructive",
+        });
+        navigate("/admin/plans");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleSubmit = (e: React.FormEvent) => {
+    fetchPlan();
+  }, [id, navigate, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Plan updated",
-      description: "The plan has been updated successfully.",
-    });
-    navigate("/admin/plans");
+    if (!plan || !id) return;
+
+    try {
+      setSaving(true);
+      await planService.updatePlan(id, plan);
+      navigate("/admin/plans");
+    } catch (error) {
+      console.error("Failed to update plan:", error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addFeature = () => {
@@ -42,6 +67,15 @@ const EditPlan = () => {
     if (!plan) return;
     setPlan({ ...plan, features: plan.features.filter((_, i) => i !== index) });
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2 text-lg">Loading plan...</span>
+      </div>
+    );
+  }
 
   if (!plan) {
     return (
@@ -109,8 +143,8 @@ const EditPlan = () => {
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select 
-                    value={plan.status} 
-                    onValueChange={(value: "active" | "inactive") => setPlan({ ...plan, status: value })}
+                    value={plan.isActive ? "active" : "inactive"} 
+                    onValueChange={(value: "active" | "inactive") => setPlan({ ...plan, isActive: value === "active" })}
                   >
                     <SelectTrigger>
                       <SelectValue />
