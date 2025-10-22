@@ -8,6 +8,7 @@ import NotFound from "@/pages/NotFound";
 import AdminRoutes from "@/routes/AdminRoutes";
 import UserRoutes from "@/routes/UserRoutes";
 import CustomerRoutes from "@/routes/CustomerRoutes";
+import VendorRoutes from "@/routes/VendorRoutes";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 // Lazy load vendor components
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/*" element={<UserRoutes />} />
             <Route path="/admin/*" element={<AdminRoutes />} />
             <Route path="/customer/*" element={<CustomerRoutes />} />
+            <Route path="/vendor/*" element={<VendorRoutes />} />
             <Route path="/vendor/login" element={
               <Suspense fallback={<div>Loading...</div>}>
                 <VendorLogin />

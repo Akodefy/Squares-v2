@@ -1,0 +1,400 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Users,
+  Search,
+  Phone,
+  Mail,
+  MapPin,
+  Clock,
+  Star,
+  Filter,
+  Download,
+  MessageSquare,
+  TrendingUp,
+  Calendar,
+  Eye
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const VendorLeads = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [interestFilter, setInterestFilter] = useState("all");
+
+  const leads = [
+    {
+      id: 1,
+      name: "Rahul Sharma",
+      email: "rahul.sharma@email.com",
+      phone: "+91 98765 43210",
+      property: "Luxury 3BHK Apartment in Powai",
+      propertyPrice: "₹1.2 Cr",
+      interest: "High",
+      status: "new",
+      source: "Website",
+      message: "I'm interested in this property. Can we schedule a visit?",
+      budget: "₹1.0 - 1.5 Cr",
+      location: "Mumbai",
+      createdAt: "2024-10-22 10:30 AM",
+      lastContact: "Never",
+      score: 85
+    },
+    {
+      id: 2,
+      name: "Priya Patel",
+      email: "priya.patel@email.com",
+      phone: "+91 87654 32109",
+      property: "Modern Villa with Private Garden",
+      propertyPrice: "₹2.5 Cr",
+      interest: "Medium",
+      status: "contacted",
+      source: "Phone Call",
+      message: "Looking for a villa with good connectivity to IT parks.",
+      budget: "₹2.0 - 3.0 Cr",
+      location: "Bangalore",
+      createdAt: "2024-10-21 03:45 PM",
+      lastContact: "2024-10-22 09:15 AM",
+      score: 65
+    },
+    {
+      id: 3,
+      name: "Amit Kumar",
+      email: "amit.kumar@email.com",
+      phone: "+91 76543 21098",
+      property: "Commercial Office Space",
+      propertyPrice: "₹45 Lac",
+      interest: "High",
+      status: "qualified",
+      source: "Referral",
+      message: "Need office space for my startup. Immediate requirement.",
+      budget: "₹40 - 50 Lac",
+      location: "Gurgaon",
+      createdAt: "2024-10-20 11:20 AM",
+      lastContact: "2024-10-21 02:30 PM",
+      score: 92
+    },
+    {
+      id: 4,
+      name: "Sneha Reddy",
+      email: "sneha.reddy@email.com",
+      phone: "+91 65432 10987",
+      property: "Budget 2BHK Flat",
+      propertyPrice: "₹65 Lac",
+      interest: "Low",
+      status: "converted",
+      source: "Social Media",
+      message: "First-time buyer, need guidance on home loan process.",
+      budget: "₹60 - 70 Lac",
+      location: "Hyderabad",
+      createdAt: "2024-10-18 09:10 AM",
+      lastContact: "2024-10-20 04:45 PM",
+      score: 45
+    }
+  ];
+
+  const stats = [
+    {
+      title: "Total Leads",
+      value: "156",
+      change: "+12 today",
+      icon: Users,
+      color: "text-blue-600"
+    },
+    {
+      title: "New Leads",
+      value: "23",
+      change: "+5 today",
+      icon: TrendingUp,
+      color: "text-green-600"
+    },
+    {
+      title: "Qualified Leads",
+      value: "45",
+      change: "+3 this week",
+      icon: Star,
+      color: "text-yellow-600"
+    },
+    {
+      title: "Converted",
+      value: "12",
+      change: "This month",
+      icon: Star,
+      color: "text-purple-600"
+    }
+  ];
+
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         lead.property.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         lead.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
+    const matchesInterest = interestFilter === "all" || lead.interest.toLowerCase() === interestFilter;
+    
+    return matchesSearch && matchesStatus && matchesInterest;
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "new": return "bg-blue-500";
+      case "contacted": return "bg-yellow-500";
+      case "qualified": return "bg-green-500";
+      case "converted": return "bg-purple-500";
+      case "lost": return "bg-red-500";
+      default: return "bg-gray-500";
+    }
+  };
+
+  const getInterestColor = (interest: string) => {
+    switch (interest) {
+      case "High": return "text-green-600 bg-green-100";
+      case "Medium": return "text-yellow-600 bg-yellow-100";
+      case "Low": return "text-red-600 bg-red-100";
+      default: return "text-gray-600 bg-gray-100";
+    }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
+          <p className="text-muted-foreground">Manage your property inquiries and potential customers</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+          <Button>
+            <Filter className="w-4 h-4 mr-2" />
+            Advanced Filter
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => (
+          <Card key={stat.title}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
+                </div>
+                <stat.icon className={`h-8 w-8 ${stat.color}`} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Tabs defaultValue="all" className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <TabsList>
+            <TabsTrigger value="all">All Leads ({leads.length})</TabsTrigger>
+            <TabsTrigger value="new">New (23)</TabsTrigger>
+            <TabsTrigger value="contacted">Contacted (45)</TabsTrigger>
+            <TabsTrigger value="qualified">Qualified (45)</TabsTrigger>
+            <TabsTrigger value="converted">Converted (12)</TabsTrigger>
+          </TabsList>
+
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search leads..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="contacted">Contacted</SelectItem>
+                <SelectItem value="qualified">Qualified</SelectItem>
+                <SelectItem value="converted">Converted</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={interestFilter} onValueChange={setInterestFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Interest" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Interest</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <TabsContent value="all" className="space-y-4">
+          {filteredLeads.map((lead) => (
+            <Card key={lead.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-1">{lead.name}</h3>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                          <span className="flex items-center">
+                            <Mail className="w-4 h-4 mr-1" />
+                            {lead.email}
+                          </span>
+                          <span className="flex items-center">
+                            <Phone className="w-4 h-4 mr-1" />
+                            {lead.phone}
+                          </span>
+                          <span className="flex items-center">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            {lead.location}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium mb-1">{lead.property}</p>
+                        <p className="text-primary font-bold">{lead.propertyPrice}</p>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex gap-2">
+                          <Badge className={`${getStatusColor(lead.status)} text-white`}>
+                            {lead.status}
+                          </Badge>
+                          <Badge className={getInterestColor(lead.interest)}>
+                            {lead.interest}
+                          </Badge>
+                        </div>
+                        <div className={`text-sm font-medium ${getScoreColor(lead.score)}`}>
+                          Score: {lead.score}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Budget Range</p>
+                        <p className="text-sm font-medium">{lead.budget}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Source</p>
+                        <p className="text-sm font-medium">{lead.source}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Last Contact</p>
+                        <p className="text-sm font-medium flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {lead.lastContact}
+                        </p>
+                      </div>
+                    </div>
+
+                    {lead.message && (
+                      <div className="bg-muted p-3 rounded-lg mb-4">
+                        <p className="text-sm italic">"{lead.message}"</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        Created: {lead.createdAt}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 lg:ml-6">
+                    <Button size="sm">
+                      <Phone className="w-4 h-4 mr-2" />
+                      Call
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Message
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        {/* Similar content for other tabs */}
+        <TabsContent value="new">
+          <div className="text-center py-12">
+            <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">New Leads</h3>
+            <p className="text-muted-foreground">New leads will appear here</p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="contacted">
+          <div className="text-center py-12">
+            <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Contacted Leads</h3>
+            <p className="text-muted-foreground">Leads you've already contacted will appear here</p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="qualified">
+          <div className="text-center py-12">
+            <Star className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Qualified Leads</h3>
+            <p className="text-muted-foreground">Qualified leads ready for conversion will appear here</p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="converted">
+          <div className="text-center py-12">
+            <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Converted Leads</h3>
+            <p className="text-muted-foreground">Successfully converted leads will appear here</p>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {filteredLeads.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No leads found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchQuery || statusFilter !== "all" || interestFilter !== "all" 
+                ? "No leads match your search criteria" 
+                : "No leads available yet"
+              }
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default VendorLeads;

@@ -8,8 +8,8 @@ export default function ThemeTest() {
 
   useEffect(() => {
     setMounted(true);
-    // ✅ Force default theme to dark on mount
-    if (!theme) setTheme("dark");
+    // ✅ Force default theme to light on mount
+    if (!theme) setTheme("light");
   }, [theme, setTheme]);
 
   if (!mounted) return null;

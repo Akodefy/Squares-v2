@@ -29,13 +29,7 @@ const Navbar = () => {
                 to="/products"
                 className="text-sm font-medium hover:text-primary transition-colors"
               >
-                Products
-              </Link>
-              <Link
-                to="/subscription-plans"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Subscription Plans
+                All Properties
               </Link>
               <Link
                 to="/contact"
@@ -55,20 +49,6 @@ const Navbar = () => {
             <Link to="/login">
               <Button variant="ghost" className="hover:bg-accent/10">
                 <User className="h-5 w-5" /> <span>Login / Register</span>
-              </Button>
-            </Link>
-            <Link to="/post-property">
-              <Button
-                variant="accent"
-                className="hidden sm:flex items-center gap-2 px-4 py-2"
-              >
-                <span>Post Property</span>
-                <img
-                  src={newBadge}
-                  alt="Post Property GIF"
-                  className="w-7 h-7"
-                  style={{ display: "inline-block" }}
-                />
               </Button>
             </Link>
             <ThemeToggle />
@@ -92,14 +72,7 @@ const Navbar = () => {
                 className="block py-2 text-sm font-medium hover:text-primary transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Products
-              </Link>
-              <Link
-                to="/subscription-plans"
-                className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Subscription Plans
+                All Properties
               </Link>
               <Link
                 to="/contact"
@@ -118,23 +91,6 @@ const Navbar = () => {
                   className="w-full mb-2"
                 >
                   Become a Vendor
-                </Button>
-              </Link>
-              <Link
-                to="/post-property"
-                className="block"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Button
-                  variant="accent"
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  <span>Post Property</span>
-                  <img
-                    src={newBadge}
-                    alt="Post Property GIF"
-                    className="w-7 h-7"
-                  />
                 </Button>
               </Link>
             </div>
