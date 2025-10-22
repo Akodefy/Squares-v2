@@ -51,7 +51,7 @@ const PropertyComparison = () => {
         phone: "+91 98765 43210",
         verified: true
       },
-      images: ["/api/placeholder/400/300"],
+      images: ["https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop&auto=format"],
       listedDate: "2024-10-15",
       pricePerSqft: Math.round(12000000 / 1450),
       monthlyMaintenance: 3500,
@@ -83,7 +83,7 @@ const PropertyComparison = () => {
         phone: "+91 87654 32109",
         verified: true
       },
-      images: ["/api/placeholder/400/300"],
+      images: ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop&auto=format"],
       listedDate: "2024-10-12",
       pricePerSqft: Math.round(25000000 / 2800),
       monthlyMaintenance: 8000,
@@ -115,7 +115,7 @@ const PropertyComparison = () => {
         phone: "+91 65432 10987",
         verified: true
       },
-      images: ["/api/placeholder/400/300"],
+      images: ["https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop&auto=format"],
       listedDate: "2024-10-08",
       pricePerSqft: Math.round(18000000 / 2100),
       monthlyMaintenance: 5500,

@@ -235,6 +235,49 @@ class UserService {
     }
   }
 
+  async getCurrentUser(): Promise<SingleUserResponse> {
+    try {
+      const response = await this.makeRequest<SingleUserResponse>("/auth/me");
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch current user";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async updateCurrentUser(userData: Partial<User>): Promise<SingleUserResponse> {
+    try {
+      // First get current user to get their ID
+      const currentUserResponse = await this.getCurrentUser();
+      const userId = currentUserResponse.data.user._id;
+      
+      const response = await this.makeRequest<SingleUserResponse>(`/users/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ profile: userData.profile }),
+      });
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   // Helper method to get full name
   getFullName(user: User): string {
     return `${user.profile.firstName} ${user.profile.lastName}`.trim();

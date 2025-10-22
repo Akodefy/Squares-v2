@@ -47,6 +47,11 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            <Link to="/vendor/login">
+              <Button variant="outline" className="hover:bg-accent/10 hidden sm:flex">
+                Become a Vendor
+              </Button>
+            </Link>
             <Link to="/login">
               <Button variant="ghost" className="hover:bg-accent/10">
                 <User className="h-5 w-5" /> <span>Login / Register</span>
@@ -102,6 +107,18 @@ const Navbar = () => {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Contact
+              </Link>
+              <Link
+                to="/vendor/login"
+                className="block"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Button
+                  variant="outline"
+                  className="w-full mb-2"
+                >
+                  Become a Vendor
+                </Button>
               </Link>
               <Link
                 to="/post-property"

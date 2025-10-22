@@ -85,7 +85,7 @@ const Dashboard = () => {
       title: "Luxury 3BHK Apartment",
       location: "Bandra West, Mumbai",
       price: "₹1.5 Cr",
-      image: "/api/placeholder/300/200",
+      image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300&h=200&fit=crop&auto=format",
       rating: 4.5,
     },
     {
@@ -93,7 +93,7 @@ const Dashboard = () => {
       title: "Modern Villa with Garden",
       location: "Koramangala, Bangalore",
       price: "₹2.8 Cr",
-      image: "/api/placeholder/300/200",
+      image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=300&h=200&fit=crop&auto=format",
       rating: 4.8,
     },
     {
@@ -101,7 +101,7 @@ const Dashboard = () => {
       title: "Premium 2BHK Flat",
       location: "Gurgaon, Delhi NCR",
       price: "₹95 Lac",
-      image: "/api/placeholder/300/200",
+      image: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=300&h=200&fit=crop&auto=format",
       rating: 4.3,
     },
   ];

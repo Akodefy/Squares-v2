@@ -26,10 +26,10 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 
 const PropertySearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedCity, setSelectedCity] = useState("all");
   const [priceRange, setPriceRange] = useState([0, 10000000]);
-  const [propertyType, setPropertyType] = useState("");
-  const [bedrooms, setBedrooms] = useState("");
+  const [propertyType, setPropertyType] = useState("all");
+  const [bedrooms, setBedrooms] = useState("any");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [sortBy, setSortBy] = useState("relevance");
   
@@ -61,7 +61,7 @@ const PropertySearch = () => {
       bathrooms: 2,
       area: 1450,
       type: "apartment",
-      images: ["/api/placeholder/400/300"],
+      images: ["https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop&auto=format"],
       amenities: ["Swimming Pool", "Gym/Fitness Center", "Parking", "Security"],
       rating: 4.5,
       views: 234,
@@ -78,7 +78,7 @@ const PropertySearch = () => {
       bathrooms: 3,
       area: 2800,
       type: "villa",
-      images: ["/api/placeholder/400/300"],
+      images: ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop&auto=format"],
       amenities: ["Garden/Park", "Parking", "Security", "Power Backup"],
       rating: 4.8,
       views: 156,
@@ -95,7 +95,7 @@ const PropertySearch = () => {
       bathrooms: 2,
       area: 1200,
       type: "apartment",
-      images: ["/api/placeholder/400/300"],
+      images: ["https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&h=300&fit=crop&auto=format"],
       amenities: ["Elevator", "Parking", "WiFi", "Security"],
       rating: 4.3,
       views: 89,
@@ -109,10 +109,10 @@ const PropertySearch = () => {
     return properties.filter(property => {
       const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            property.location.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCity = !selectedCity || property.location.includes(selectedCity);
+      const matchesCity = selectedCity === "all" || property.location.includes(selectedCity);
       const matchesPrice = property.price >= priceRange[0] && property.price <= priceRange[1];
-      const matchesType = !propertyType || property.type === propertyType;
-      const matchesBedrooms = !bedrooms || property.bedrooms.toString() === bedrooms;
+      const matchesType = propertyType === "all" || property.type === propertyType;
+      const matchesBedrooms = bedrooms === "any" || property.bedrooms.toString() === bedrooms;
       const matchesAmenities = selectedAmenities.length === 0 || 
                               selectedAmenities.every(amenity => property.amenities.includes(amenity));
       
@@ -147,7 +147,7 @@ const PropertySearch = () => {
             <SelectValue placeholder="Select city" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Cities</SelectItem>
+            <SelectItem value="all">All Cities</SelectItem>
             <SelectItem value="Mumbai">Mumbai</SelectItem>
             <SelectItem value="Bangalore">Bangalore</SelectItem>
             <SelectItem value="Delhi">Delhi</SelectItem>
@@ -180,7 +180,7 @@ const PropertySearch = () => {
             <SelectValue placeholder="Select type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Types</SelectItem>
+            <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="apartment">Apartment</SelectItem>
             <SelectItem value="villa">Villa</SelectItem>
             <SelectItem value="house">House</SelectItem>
@@ -197,7 +197,7 @@ const PropertySearch = () => {
             <SelectValue placeholder="Select bedrooms" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Any</SelectItem>
+            <SelectItem value="any">Any</SelectItem>
             <SelectItem value="1">1 BHK</SelectItem>
             <SelectItem value="2">2 BHK</SelectItem>
             <SelectItem value="3">3 BHK</SelectItem>

@@ -15,7 +15,7 @@ const MyFavorites: React.FC = () => {
   const [stats, setStats] = useState<FavoriteStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState('');
+  const [filterType, setFilterType] = useState('all');
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
 
   useEffect(() => {
@@ -109,7 +109,7 @@ const MyFavorites: React.FC = () => {
       property.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       property.city.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesFilter = !filterType || 
+    const matchesFilter = !filterType || filterType === 'all' ||
       (filterType === 'available' && property.isAvailable) ||
       (filterType === 'sold' && !property.isAvailable) ||
       (filterType === 'recent' && new Date(favorite.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
@@ -119,7 +119,7 @@ const MyFavorites: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <div className="min-h-screen bg-background p-6 pt-24">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-lg">Loading favorites...</div>
@@ -130,7 +130,7 @@ const MyFavorites: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-6 pt-24">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -167,7 +167,7 @@ const MyFavorites: React.FC = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Properties</SelectItem>
+              <SelectItem value="all">All Properties</SelectItem>
               <SelectItem value="available">Available</SelectItem>
               <SelectItem value="sold">Sold</SelectItem>
               <SelectItem value="recent">Recently Added</SelectItem>
@@ -234,7 +234,7 @@ const MyFavorites: React.FC = () => {
                 <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">No favorites found</h3>
                 <p className="text-muted-foreground mb-4">
-                  {searchQuery || filterType ? 
+                  {searchQuery || (filterType && filterType !== 'all') ? 
                     "No properties match your search criteria" : 
                     "Start adding properties to your favorites to see them here"
                   }

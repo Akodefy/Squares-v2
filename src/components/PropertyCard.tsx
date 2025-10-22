@@ -3,6 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Property, propertyService } from "@/services/propertyService";
+import { DEFAULT_PROPERTY_IMAGE } from "@/utils/imageUtils";
 
 interface PropertyCardProps {
   property: Property;
@@ -22,7 +23,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           alt={property.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = '/placeholder-property.jpg';
+            (e.target as HTMLImageElement).src = DEFAULT_PROPERTY_IMAGE;
           }}
         />
         {property.featured && (

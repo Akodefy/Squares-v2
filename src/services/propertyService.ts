@@ -1,4 +1,6 @@
+import { authService } from './authService';
 import { toast } from "@/hooks/use-toast";
+import { DEFAULT_PROPERTY_IMAGE } from '@/utils/imageUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -262,7 +264,7 @@ class PropertyService {
   // Helper method to get primary image
   getPrimaryImage(property: Property): string {
     const primaryImage = property.images.find(img => img.isPrimary);
-    return primaryImage?.url || property.images[0]?.url || '/placeholder-property.jpg';
+    return primaryImage?.url || property.images[0]?.url || DEFAULT_PROPERTY_IMAGE;
   }
 
   // Helper method to format area

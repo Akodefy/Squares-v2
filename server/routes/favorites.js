@@ -163,4 +163,41 @@ router.delete('/bulk', asyncHandler(async (req, res) => {
   });
 }));
 
+// @desc    Get favorite statistics
+// @route   GET /api/favorites/stats
+// @access  Private
+router.get('/stats', asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  const [favorites, totalFavorites, avgPriceResult, availableProperties] = await Promise.all([
+    Favorite.find({ user: userId }).populate('property'),
+    Favorite.countDocuments({ user: userId }),
+    Favorite.aggregate([
+      { $match: { user: userId } },
+      { $lookup: { from: 'properties', localField: 'property', foreignField: '_id', as: 'property' } },
+      { $unwind: '$property' },
+      { $group: { _id: null, avgPrice: { $avg: '$property.price' } } }
+    ]),
+    Favorite.aggregate([
+      { $match: { user: userId } },
+      { $lookup: { from: 'properties', localField: 'property', foreignField: '_id', as: 'property' } },
+      { $unwind: '$property' },
+      { $match: { 'property.isAvailable': true } },
+      { $count: 'available' }
+    ])
+  ]);
+
+  const avgPrice = avgPriceResult.length > 0 ? avgPriceResult[0].avgPrice : 0;
+  const availableCount = availableProperties.length > 0 ? availableProperties[0].available : 0;
+
+  res.json({
+    success: true,
+    data: {
+      totalFavorites,
+      avgPrice: Math.round(avgPrice),
+      availableProperties: availableCount
+    }
+  });
+}));
+
 module.exports = router;

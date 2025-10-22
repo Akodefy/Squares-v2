@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,20 +27,26 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { userService, type User as UserType } from "@/services/userService";
+import { toast } from "@/hooks/use-toast";
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState<UserType | null>(null);
   
   const [profile, setProfile] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+91 9876543210",
-    location: "Mumbai, Maharashtra",
-    bio: "Real estate enthusiast looking for the perfect investment opportunities. Interested in residential and commercial properties.",
-    joinDate: "January 2024",
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    address: "",
+    pincode: "",
+    bio: "",
+    joinDate: "",
     avatar: "",
-    verified: true
+    verified: false
   });
 
   const [preferences, setPreferences] = useState({
@@ -58,22 +64,102 @@ const Profile = () => {
     profileVisibility: "public"
   });
 
+  // Load user data
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      const response = await userService.getCurrentUser();
+      const userData = response.data.user;
+      setUser(userData);
+      
+      // Map user data to profile state
+      setProfile({
+        name: userService.getFullName(userData),
+        email: userData.email,
+        phone: userData.profile.phone || "",
+        location: userData.profile.address ? 
+          `${userData.profile.address.city || ""}, ${userData.profile.address.state || ""}`.replace(/^,\s*|,\s*$/g, '') : "",
+        address: userData.profile.address?.street || "",
+        pincode: userData.profile.address?.pincode || "",
+        bio: "", // Add bio field to User model if needed
+        joinDate: userService.formatCreationDate(userData.createdAt),
+        avatar: "", // Add avatar field to User model if needed
+        verified: userData.emailVerified
+      });
+
+      // Map preferences
+      setPreferences({
+        emailNotifications: userData.preferences?.notifications?.email ?? true,
+        smsNotifications: userData.preferences?.notifications?.sms ?? false,
+        pushNotifications: userData.preferences?.notifications?.push ?? true,
+        marketingEmails: false,
+        propertyAlerts: true,
+        priceDropAlerts: true
+      });
+
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load profile data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const stats = {
-    propertiesPosted: 3,
-    inquiriesReceived: 24,
-    responseRate: 95,
-    avgResponseTime: "2 hours",
-    rating: 4.8,
-    reviews: 12
+    propertiesPosted: 0, // TODO: Add property count from API
+    inquiriesReceived: 0, // TODO: Add inquiry count from API
+    responseRate: 0,
+    avgResponseTime: "N/A",
+    rating: 0,
+    reviews: 0
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    // TODO: Implement profile update API call
-    setTimeout(() => {
-      setLoading(false);
+    if (!user) return;
+    
+    try {
+      setSaving(true);
+      
+      // Prepare user data for update
+      const updateData: Partial<UserType> = {
+        profile: {
+          firstName: profile.name.split(' ')[0] || '',
+          lastName: profile.name.split(' ').slice(1).join(' ') || '',
+          phone: profile.phone,
+          address: {
+            street: profile.address,
+            city: profile.location.split(',')[0]?.trim() || '',
+            state: profile.location.split(',')[1]?.trim() || '',
+            pincode: profile.pincode
+          }
+        },
+        preferences: {
+          ...user.preferences,
+          notifications: {
+            email: preferences.emailNotifications,
+            sms: preferences.smsNotifications,
+            push: preferences.pushNotifications
+          }
+        }
+      };
+
+      await userService.updateCurrentUser(updateData);
+      await loadUserData(); // Refresh data
       setIsEditing(false);
-    }, 1000);
+      
+    } catch (error) {
+      console.error('Error saving profile:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -95,8 +181,18 @@ const Profile = () => {
     }));
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6 pt-24">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading profile...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 pt-16">
+    <div className="space-y-6 pt-24">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -253,6 +349,32 @@ const Profile = () => {
                       <p className="text-sm">{profile.location}</p>
                     )}
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Address</Label>
+                    {isEditing ? (
+                      <Input
+                        value={profile.address}
+                        onChange={(e) => setProfile(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Street address"
+                      />
+                    ) : (
+                      <p className="text-sm">{profile.address}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Pincode</Label>
+                    {isEditing ? (
+                      <Input
+                        value={profile.pincode}
+                        onChange={(e) => setProfile(prev => ({ ...prev, pincode: e.target.value }))}
+                        placeholder="Postal code"
+                      />
+                    ) : (
+                      <p className="text-sm">{profile.pincode}</p>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
@@ -270,8 +392,8 @@ const Profile = () => {
 
                 {isEditing && (
                   <div className="flex gap-2 pt-4">
-                    <Button onClick={handleSave} disabled={loading}>
-                      {loading ? (
+                    <Button onClick={handleSave} disabled={saving}>
+                      {saving ? (
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                           Saving...
