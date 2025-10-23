@@ -313,10 +313,8 @@ router.get('/subscription/check/:subscriptionName', requireVendorRole, asyncHand
       hasSubscription = feature ? feature.hasAccess : false;
     }
     
-    // For addPropertySubscription, allow by default for demo
-    if (subscriptionName === 'addPropertySubscription') {
-      hasSubscription = true;
-    }
+    // Remove demo override - now properly check subscriptions
+    // Only allow access if user has an active subscription
     
     res.json({
       success: true,
