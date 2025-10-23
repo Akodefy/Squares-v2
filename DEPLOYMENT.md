@@ -18,7 +18,7 @@ cd server
 
 # Install Vercel CLI if not already installed
 npm i -g vercel
-
+hiii
 # Deploy backend
 vercel --prod
 ```
