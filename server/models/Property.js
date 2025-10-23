@@ -22,7 +22,7 @@ const propertySchema = new mongoose.Schema({
   },
   listingType: {
     type: String,
-    enum: ['sale', 'rent'],
+    enum: ['sale', 'rent', 'lease'],
     required: true
   },
   price: {

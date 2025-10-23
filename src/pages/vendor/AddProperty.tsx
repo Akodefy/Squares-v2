@@ -196,6 +196,10 @@ const AddProperty = () => {
                   <RadioGroupItem value="rent" id="rent" />
                   <Label htmlFor="rent">For Rent</Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="lease" id="lease" />
+                  <Label htmlFor="lease">For Lease</Label>
+                </div>
               </RadioGroup>
             </div>
 
@@ -417,7 +421,7 @@ const AddProperty = () => {
               </div>
             </div>
 
-            {formData.listingType === "rent" && (
+            {(formData.listingType === "rent" || formData.listingType === "lease") && (
               <div className="space-y-2">
                 <Label htmlFor="securityDeposit">Security Deposit</Label>
                 <div className="relative">

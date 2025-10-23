@@ -89,6 +89,7 @@ const PropertyFilters = ({ onFilterChange }: PropertyFiltersProps) => {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="sale">For Sale</SelectItem>
             <SelectItem value="rent">For Rent</SelectItem>
+            <SelectItem value="lease">For Lease</SelectItem>
           </SelectContent>
         </Select>
         

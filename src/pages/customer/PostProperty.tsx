@@ -147,6 +147,7 @@ const PostProperty = () => {
                   <SelectContent>
                     <SelectItem value="sell">For Sale</SelectItem>
                     <SelectItem value="rent">For Rent</SelectItem>
+                    <SelectItem value="lease">For Lease</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
