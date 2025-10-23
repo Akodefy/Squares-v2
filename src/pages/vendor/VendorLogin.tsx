@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
 
 const VendorLogin = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -44,39 +46,46 @@ const VendorLogin = () => {
     setIsLoading(true);
 
     try {
-      // Import authService
+      // Clear any existing auth data first (silently)
       const { authService } = await import("@/services/authService");
-      
-      // Clear any existing auth data first
-      await authService.logout();
+      authService.clearAuthData();
       console.log('VendorLogin: Cleared existing auth data');
       
-      const response = await authService.login({ email, password });
-      console.log('VendorLogin: Login response:', response);
+      const success = await login(email, password);
+      console.log('VendorLogin: Login attempt result:', success);
       
-      if (response.success && response.data?.user) {
-        const userRole = response.data.user.role;
-        console.log('VendorLogin: User role from server:', userRole);
+      if (success) {
+        // Get the logged in user to check role
+        const user = authService.getStoredUser();
+        console.log('VendorLogin: User data after login:', user);
         
-        // Check if user is a vendor (agent role)
-        if (userRole === 'agent') {
+        if (user?.role === 'agent') {
           toast({
             title: "Success",
             description: "Logged in successfully! Redirecting to vendor dashboard...",
           });
-          // Navigate to vendor dashboard
           console.log('VendorLogin: Navigating to vendor dashboard');
-          navigate("/vendor/dashboard");
+          // Use timeout to ensure state updates
+          setTimeout(() => {
+            navigate("/vendor/dashboard", { replace: true });
+          }, 100);
         } else {
-          console.log('VendorLogin: User role is', userRole, 'expected agent');
+          console.log('VendorLogin: User role is', user?.role, 'expected agent');
           toast({
             title: "Access Denied",
             description: "This login is for vendors only. Please use the appropriate login portal.",
             variant: "destructive",
           });
           // Clear the login
-          await authService.logout();
+          authService.clearAuthData();
         }
+      } else {
+        console.log('VendorLogin: Login failed');
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password. Please try again.",
+          variant: "destructive",
+        });
       }
       
     } catch (error) {

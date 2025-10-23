@@ -35,6 +35,8 @@ const VendorSubscriptionPlans: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedAddons, setSelectedAddons] = useState<AddonService[]>([]);
   const [addons, setAddons] = useState<AddonService[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(true);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState(false);
   const [addonsLoading, setAddonsLoading] = useState(true);
@@ -93,7 +95,30 @@ const VendorSubscriptionPlans: React.FC = () => {
 
   useEffect(() => {
     loadAddons();
+    loadCurrentSubscription();
   }, []);
+
+  const loadCurrentSubscription = async () => {
+    try {
+      setLoadingSubscription(true);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/vendors/subscription-status`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.hasActiveSubscription) {
+          setCurrentSubscription(data.data.subscription);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load current subscription:', error);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
 
   const getAddonIcon = (category: string, iconName?: string) => {
     const iconProps = { className: "w-6 h-6" };
@@ -265,8 +290,15 @@ const VendorSubscriptionPlans: React.FC = () => {
   const renderPlanSelection = () => (
     <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-4">Choose Your Subscription Plan</h1>
-        <p className="text-muted-foreground text-lg mb-8">Select the plan that best fits your business needs</p>
+        <h1 className="text-3xl font-bold text-foreground mb-4">
+          {currentSubscription ? 'Upgrade Your Subscription Plan' : 'Choose Your Subscription Plan'}
+        </h1>
+        <p className="text-muted-foreground text-lg mb-8">
+          {currentSubscription 
+            ? `You currently have the ${currentSubscription.planName}. Select a higher plan to upgrade.`
+            : 'Select the plan that best fits your business needs'
+          }
+        </p>
         
         <div className="flex items-center justify-center space-x-4 mb-12">
           <Button
@@ -288,21 +320,41 @@ const VendorSubscriptionPlans: React.FC = () => {
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">
-        {plans.map((plan) => (
-          <Card 
-            key={plan.id} 
-            className={`relative cursor-pointer transition-all duration-200 hover:shadow-lg border-2 ${
-              selectedPlan?.id === plan.id 
-                ? 'border-blue-600 shadow-lg bg-blue-50/50' 
-                : 'border-border hover:border-blue-300'
-            } ${plan.recommended ? 'border-yellow-400' : ''}`}
-            onClick={() => handlePlanSelect(plan)}
-          >
-            {plan.recommended && (
-              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-600 hover:bg-yellow-600">
-                Most Popular
-              </Badge>
-            )}
+        {plans
+          .filter(plan => {
+            // Hide current plan if upgrading
+            if (currentSubscription) {
+              const currentPlanName = currentSubscription.planName?.toLowerCase();
+              return !currentPlanName?.includes(plan.name.toLowerCase());
+            }
+            return true;
+          })
+          .map((plan) => {
+          const isCurrentPlan = currentSubscription && 
+            currentSubscription.planName?.toLowerCase().includes(plan.name.toLowerCase());
+          
+          return (
+            <Card 
+              key={plan.id} 
+              className={`relative cursor-pointer transition-all duration-200 hover:shadow-lg border-2 ${
+                selectedPlan?.id === plan.id 
+                  ? 'border-blue-600 shadow-lg bg-blue-50/50' 
+                  : 'border-border hover:border-blue-300'
+              } ${plan.recommended ? 'border-yellow-400' : ''} ${
+                isCurrentPlan ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              onClick={() => !isCurrentPlan && handlePlanSelect(plan)}
+            >
+              {plan.recommended && (
+                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-600 hover:bg-yellow-600">
+                  Most Popular
+                </Badge>
+              )}
+              {isCurrentPlan && (
+                <Badge className="absolute -top-3 right-4 bg-green-600 hover:bg-green-600">
+                  Current Plan
+                </Badge>
+              )}
             <CardHeader className="text-center pb-6">
               <div className="flex justify-center mb-4">{plan.icon}</div>
               <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
@@ -327,7 +379,26 @@ const VendorSubscriptionPlans: React.FC = () => {
               </ul>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
+        
+        {/* Show message if no upgrades available */}
+        {currentSubscription && plans.filter(plan => {
+          const currentPlanName = currentSubscription.planName?.toLowerCase();
+          return !currentPlanName?.includes(plan.name.toLowerCase());
+        }).length === 0 && (
+          <div className="col-span-full text-center py-12">
+            <Shield className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold mb-2">You're on the highest plan!</h3>
+            <p className="text-gray-600 mb-6">You currently have the best subscription plan available.</p>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/vendor/subscription-manager')}
+            >
+              Manage Current Plan
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -336,7 +407,12 @@ const VendorSubscriptionPlans: React.FC = () => {
     <div className="space-y-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-foreground mb-4">Enhance Your Plan</h1>
-        <p className="text-muted-foreground text-lg mb-8">Add optional services to boost your property marketing</p>
+        <p className="text-muted-foreground text-lg mb-8">
+          {currentSubscription?.addons?.length > 0 
+            ? `Add more services to boost your property marketing. You currently have ${currentSubscription.addons.length} addon(s).`
+            : 'Add optional services to boost your property marketing'
+          }
+        </p>
       </div>
 
       {addonsLoading ? (
@@ -356,8 +432,18 @@ const VendorSubscriptionPlans: React.FC = () => {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {addons.map((addon) => {
+          {addons
+            .filter(addon => {
+              // Hide already purchased addons
+              if (currentSubscription?.addons) {
+                return !currentSubscription.addons.some((purchasedAddon: any) => purchasedAddon._id === addon._id);
+              }
+              return true;
+            })
+            .map((addon) => {
             const isSelected = selectedAddons.some(a => a._id === addon._id);
+            const isPurchased = currentSubscription?.addons?.some((purchasedAddon: any) => purchasedAddon._id === addon._id);
+            
             return (
               <Card 
                 key={addon._id}
@@ -365,8 +451,8 @@ const VendorSubscriptionPlans: React.FC = () => {
                   isSelected 
                     ? 'border-blue-600 bg-blue-50/50 shadow-md' 
                     : 'border-border hover:border-blue-300'
-                }`}
-                onClick={() => handleAddonToggle(addon)}
+                } ${isPurchased ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={() => !isPurchased && handleAddonToggle(addon)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -381,7 +467,11 @@ const VendorSubscriptionPlans: React.FC = () => {
                         </Badge>
                       </div>
                     </div>
-                    {isSelected ? (
+                    {isPurchased ? (
+                      <Badge className="bg-green-600 hover:bg-green-600 text-white">
+                        Purchased
+                      </Badge>
+                    ) : isSelected ? (
                       <CheckCircle className="w-6 h-6 text-blue-600 flex-shrink-0" />
                     ) : (
                       <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />

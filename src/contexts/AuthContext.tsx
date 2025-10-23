@@ -67,6 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.login({ email, password });
       if (response.success && response.data?.user) {
         setUser(response.data.user);
+        console.log('AuthContext: User set after login:', response.data.user);
         return true;
       }
       return false;

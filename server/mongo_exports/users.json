@@ -12,7 +12,7 @@
       "emailVerified": true,
       "avatar": null,
       "bio": null,
-      "lastLogin": "2025-10-23T07:21:28.871Z",
+      "lastLogin": "2025-10-23T10:36:27.308Z",
       "preferences": {
         "notifications": {
           "email": true,
@@ -45,7 +45,7 @@
       }
     },
     "createdAt": "2025-10-21T10:59:31.034Z",
-    "updatedAt": "2025-10-23T07:21:28.873Z",
+    "updatedAt": "2025-10-23T10:36:27.319Z",
     "__v": 1
   },
   {
@@ -116,7 +116,7 @@
         }
       },
       "avatar": null,
-      "lastLogin": "2025-10-23T07:36:21.209Z",
+      "lastLogin": "2025-10-23T12:03:02.986Z",
       "vendorInfo": {
         "certifications": [],
         "experience": 0,
@@ -138,7 +138,7 @@
       }
     },
     "createdAt": "2025-10-22T10:25:37.241Z",
-    "updatedAt": "2025-10-23T07:36:21.215Z",
+    "updatedAt": "2025-10-23T12:03:02.987Z",
     "__v": 1
   },
   {
@@ -206,6 +206,73 @@
     },
     "createdAt": "2025-10-23T07:28:25.628Z",
     "updatedAt": "2025-10-23T08:18:41.955Z",
+    "__v": 0
+  },
+  {
+    "_id": "68fa18a0c9fa98e30aa7a7ac",
+    "email": "kanagaraj@gmail.com",
+    "password": "$2b$12$UobqAjSew9oFt6lMFZOpZeACcBZGH1eWRTLtsazty3hQPIY3WSyh.",
+    "role": "agent",
+    "status": "active",
+    "profile": {
+      "firstName": "Test",
+      "lastName": "Vendor",
+      "phone": "+91-9876543210",
+      "address": {
+        "street": "123 Test Street",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "zipCode": "400001",
+        "country": "India"
+      },
+      "preferences": {
+        "notifications": {
+          "email": true,
+          "sms": false,
+          "push": true
+        },
+        "privacy": {
+          "showEmail": false,
+          "showPhone": true
+        }
+      },
+      "vendorInfo": {
+        "licenseNumber": "REA-123456",
+        "gstNumber": "22AAAAA0000A1Z5",
+        "panNumber": "ABCDE1234F",
+        "companyName": "Test Real Estate",
+        "experience": 5,
+        "specializations": [
+          "Residential",
+          "Commercial"
+        ],
+        "serviceAreas": [
+          "Mumbai",
+          "Pune"
+        ],
+        "rating": {
+          "average": 4.5,
+          "count": 10
+        },
+        "website": null,
+        "certifications": [],
+        "vendorPreferences": {
+          "emailNotifications": true,
+          "smsNotifications": true,
+          "leadAlerts": true,
+          "marketingEmails": false,
+          "weeklyReports": true
+        },
+        "responseTime": "Not calculated",
+        "memberSince": "2025-10-23T11:59:28.450Z"
+      },
+      "avatar": null,
+      "bio": null,
+      "emailVerified": false,
+      "lastLogin": null
+    },
+    "createdAt": "2025-10-23T11:59:28.457Z",
+    "updatedAt": "2025-10-23T11:59:28.457Z",
     "__v": 0
   }
 ]

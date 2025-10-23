@@ -137,11 +137,16 @@ class AuthService {
 
   async logout(): Promise<void> {
     try {
-      await this.makeRequest("/auth/logout", {
-        method: "POST",
-      });
+      // Only call API if we have a token
+      const token = localStorage.getItem("token");
+      if (token) {
+        await this.makeRequest("/auth/logout", {
+          method: "POST",
+        });
+      }
     } catch (error) {
       console.error("Logout request failed:", error);
+      // Continue with local cleanup even if API call fails
     } finally {
       // Clear local storage regardless of API call success
       localStorage.removeItem("token");
@@ -152,6 +157,12 @@ class AuthService {
         description: "You have been logged out successfully.",
       });
     }
+  }
+
+  clearAuthData(): void {
+    // Silent cleanup without API call or toast
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   }
 
   async getCurrentUser(): Promise<any> {

@@ -308,11 +308,11 @@ const VendorBilling: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {payments.length > 0 ? (
+              {payments && payments.length > 0 ? (
                 <div className="space-y-4">
-                  {payments.slice(0, 5).map((payment) => (
+                  {payments.slice(0, 5).map((payment, index) => (
                     <div
-                      key={payment._id}
+                      key={payment?._id || `payment-${index}`}
                       className="flex items-center justify-between p-4 border rounded-lg"
                     >
                       <div className="flex items-center space-x-4">
@@ -321,22 +321,22 @@ const VendorBilling: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-medium">
-                            {payment.description || 'Subscription Payment'}
+                            {payment?.description || 'Subscription Payment'}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {payment.paymentMethod || 'Credit Card'} • {formatDate(payment.createdAt)}
+                            {payment?.paymentMethod || 'Credit Card'} • {payment?.createdAt ? formatDate(payment.createdAt) : 'N/A'}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="flex items-center space-x-2">
-                          {getStatusIcon(payment.status)}
+                          {getStatusIcon(payment?.status || 'pending')}
                           <span className="font-semibold">
-                            {formatAmount(payment.amount, payment.currency)}
+                            {formatAmount(payment?.amount || 0, payment?.currency || 'INR')}
                           </span>
                         </div>
-                        <Badge className={`text-xs ${getStatusColor(payment.status)}`}>
-                          {payment.status}
+                        <Badge className={`text-xs ${getStatusColor(payment?.status || 'pending')}`}>
+                          {payment?.status || 'pending'}
                         </Badge>
                       </div>
                     </div>
@@ -358,11 +358,11 @@ const VendorBilling: React.FC = () => {
               <CardTitle>Payment History</CardTitle>
             </CardHeader>
             <CardContent>
-              {payments.length > 0 ? (
+              {payments && payments.length > 0 ? (
                 <div className="space-y-4">
-                  {payments.map((payment) => (
+                  {payments.map((payment, index) => (
                     <div
-                      key={payment._id}
+                      key={payment?._id || `payment-full-${index}`}
                       className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-center space-x-4">
@@ -371,13 +371,13 @@ const VendorBilling: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-medium">
-                            {payment.description || 'Subscription Payment'}
+                            {payment?.description || 'Subscription Payment'}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Payment ID: {payment._id.slice(-8)}
+                            Payment ID: {payment?._id?.slice(-8) || 'N/A'}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {formatDate(payment.createdAt)}
+                            {payment?.createdAt ? formatDate(payment.createdAt) : 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -431,11 +431,11 @@ const VendorBilling: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {invoices.length > 0 ? (
+              {invoices && invoices.length > 0 ? (
                 <div className="space-y-4">
-                  {invoices.map((invoice) => (
+                  {invoices.map((invoice, index) => (
                     <div
-                      key={invoice._id}
+                      key={invoice?._id || `invoice-${index}`}
                       className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-center space-x-4">
@@ -443,9 +443,9 @@ const VendorBilling: React.FC = () => {
                           <FileText className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="font-medium">Invoice #{invoice.invoiceNumber}</p>
+                          <p className="font-medium">Invoice #{invoice?.invoiceNumber || 'N/A'}</p>
                           <p className="text-sm text-muted-foreground">
-                            Issued: {formatDate(invoice.issueDate)}
+                            Issued: {invoice?.issueDate ? formatDate(invoice.issueDate) : 'N/A'}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Due: {formatDate(invoice.dueDate)}
@@ -503,14 +503,14 @@ const VendorBilling: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium">Properties</p>
                         <p className="text-sm text-muted-foreground">
-                          {billingStats.usageStats.properties.used} / {billingStats.usageStats.properties.limit}
+                          {billingStats?.usageStats?.properties?.used || 0} / {billingStats?.usageStats?.properties?.limit || 0}
                         </p>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-blue-600 h-2 rounded-full" 
                           style={{ 
-                            width: `${Math.min((billingStats.usageStats.properties.used / billingStats.usageStats.properties.limit) * 100, 100)}%` 
+                            width: `${Math.min(((billingStats?.usageStats?.properties?.used || 0) / (billingStats?.usageStats?.properties?.limit || 1)) * 100, 100)}%` 
                           }}
                         ></div>
                       </div>
@@ -520,14 +520,14 @@ const VendorBilling: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium">Leads</p>
                         <p className="text-sm text-muted-foreground">
-                          {billingStats.usageStats.leads.used} / {billingStats.usageStats.leads.limit}
+                          {billingStats?.usageStats?.leads?.used || 0} / {billingStats?.usageStats?.leads?.limit || 0}
                         </p>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-green-600 h-2 rounded-full" 
                           style={{ 
-                            width: `${Math.min((billingStats.usageStats.leads.used / billingStats.usageStats.leads.limit) * 100, 100)}%` 
+                            width: `${Math.min(((billingStats?.usageStats?.leads?.used || 0) / (billingStats?.usageStats?.leads?.limit || 1)) * 100, 100)}%` 
                           }}
                         ></div>
                       </div>
@@ -537,14 +537,14 @@ const VendorBilling: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium">Messages</p>
                         <p className="text-sm text-muted-foreground">
-                          {billingStats.usageStats.messages.used} / {billingStats.usageStats.messages.limit}
+                          {billingStats?.usageStats?.messages?.used || 0} / {billingStats?.usageStats?.messages?.limit || 0}
                         </p>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-purple-600 h-2 rounded-full" 
                           style={{ 
-                            width: `${Math.min((billingStats.usageStats.messages.used / billingStats.usageStats.messages.limit) * 100, 100)}%` 
+                            width: `${Math.min(((billingStats?.usageStats?.messages?.used || 0) / (billingStats?.usageStats?.messages?.limit || 1)) * 100, 100)}%` 
                           }}
                         ></div>
                       </div>

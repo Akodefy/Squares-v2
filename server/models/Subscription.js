@@ -12,6 +12,10 @@ const subscriptionSchema = new mongoose.Schema({
     ref: 'Plan',
     required: true
   },
+  addons: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AddonService'
+  }],
   status: {
     type: String,
     enum: ['active', 'expired', 'cancelled', 'pending'],

@@ -1,6 +1,8 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+// const mongoose = require('mongoose');
 const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
 const { asyncHandler } = require('../middleware/errorMiddleware');
@@ -367,6 +369,7 @@ router.post('/verify-subscription-payment', authenticateToken, asyncHandler(asyn
     const subscription = new Subscription({
       user: req.user.id, // Changed from userId to user
       plan: plan._id, // Changed from planId to plan and use the actual plan ObjectId
+      addons: addons.filter(id => mongoose.Types.ObjectId.isValid(id)), // Add addons array
       status: 'active',
       startDate,
       endDate,
@@ -394,7 +397,8 @@ router.post('/verify-subscription-payment', authenticateToken, asyncHandler(asyn
     // Populate response
     await subscription.populate([
       { path: 'user', select: 'name email phone profile' },
-      { path: 'plan', select: 'name description price billingPeriod features' }
+      { path: 'plan', select: 'name description price billingPeriod features' },
+      { path: 'addons', select: 'name description price category billingType' }
     ]);
 
     res.json({

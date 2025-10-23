@@ -627,7 +627,10 @@ router.get('/subscription-status', requireVendorRole, asyncHandler(async (req, r
       user: vendorId, // Changed from userId to user
       status: 'active',
       endDate: { $gt: new Date() }
-    }).populate('plan'); // Changed from planId to plan
+    }).populate([
+      { path: 'plan' },
+      { path: 'addons', select: 'name description price category billingType' }
+    ]); // Changed from planId to plan and added addons population
 
     if (activeSubscription) {
       res.json({
@@ -642,7 +645,10 @@ router.get('/subscription-status', requireVendorRole, asyncHandler(async (req, r
             startDate: activeSubscription.startDate,
             endDate: activeSubscription.endDate,
             features: activeSubscription.plan.features, // Changed from planId to plan
-            billingCycle: activeSubscription.billingCycle || 'monthly'
+            billingCycle: activeSubscription.billingCycle || 'monthly',
+            addons: activeSubscription.addons || [], // Include purchased addons
+            amount: activeSubscription.amount,
+            currency: activeSubscription.currency
           }
         }
       });
@@ -737,6 +743,272 @@ router.get('/leads', requireVendorRole, asyncHandler(async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch vendor leads'
+    });
+  }
+}));
+
+// @desc    Get vendor subscription details (for billing page)
+// @route   GET /api/vendors/subscription/current
+// @access  Private/Agent
+router.get('/subscription/current', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+
+  try {
+    const Subscription = require('../models/Subscription');
+    
+    const activeSubscription = await Subscription.findOne({
+      user: vendorId,
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).populate([
+      { path: 'plan' },
+      { path: 'addons', select: 'name description price category billingType' }
+    ]);
+
+    if (activeSubscription) {
+      res.json({
+        success: true,
+        data: {
+          _id: activeSubscription._id,
+          vendorId: activeSubscription.user,
+          planId: activeSubscription.plan._id,
+          plan: activeSubscription.plan,
+          status: activeSubscription.status,
+          billingCycle: activeSubscription.billingCycle || 'monthly',
+          startDate: activeSubscription.startDate,
+          endDate: activeSubscription.endDate,
+          nextBillingDate: activeSubscription.nextBillingDate || activeSubscription.endDate,
+          amount: activeSubscription.amount,
+          currency: activeSubscription.currency || 'INR',
+          autoRenew: activeSubscription.autoRenew,
+          addons: activeSubscription.addons || [],
+          createdAt: activeSubscription.createdAt,
+          updatedAt: activeSubscription.updatedAt
+        }
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'No active subscription found'
+      });
+    }
+  } catch (error) {
+    console.error('Get current subscription error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch current subscription'
+    });
+  }
+}));
+
+// @desc    Get vendor payments
+// @route   GET /api/vendors/payments
+// @access  Private/Agent
+router.get('/payments', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+  const { page = 1, limit = 20, dateFrom } = req.query;
+
+  try {
+    const Subscription = require('../models/Subscription');
+    
+    // Build query
+    let query = { user: vendorId };
+    if (dateFrom) {
+      query.createdAt = { $gte: new Date(dateFrom) };
+    }
+    
+    // Get payments (subscriptions with payment details)
+    const payments = await Subscription.find(query)
+      .populate('plan', 'name description')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const totalPayments = await Subscription.countDocuments(query);
+
+    // Format payments data
+    const formattedPayments = payments.map(payment => ({
+      id: payment._id,
+      date: payment.createdAt,
+      amount: payment.amount,
+      currency: payment.currency || 'INR',
+      status: payment.status === 'active' ? 'completed' : payment.status,
+      method: payment.paymentMethod || 'razorpay',
+      description: `${payment.plan?.name} Subscription`,
+      transactionId: payment.transactionId,
+      plan: payment.plan
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        payments: formattedPayments,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalPayments,
+          pages: Math.ceil(totalPayments / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get payments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payments'
+    });
+  }
+}));
+
+// @desc    Get vendor invoices
+// @route   GET /api/vendors/invoices
+// @access  Private/Agent
+router.get('/invoices', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+  const { page = 1, limit = 10 } = req.query;
+
+  try {
+    const Subscription = require('../models/Subscription');
+    
+    // Get subscriptions as invoices
+    const subscriptions = await Subscription.find({ user: vendorId })
+      .populate('plan', 'name description')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const totalInvoices = await Subscription.countDocuments({ user: vendorId });
+
+    // Format invoices data
+    const formattedInvoices = subscriptions.map(subscription => ({
+      id: subscription._id,
+      invoiceNumber: `INV-${subscription._id.toString().slice(-8).toUpperCase()}`,
+      date: subscription.createdAt,
+      dueDate: subscription.endDate,
+      amount: subscription.amount,
+      currency: subscription.currency || 'INR',
+      status: subscription.status === 'active' ? 'paid' : 
+               subscription.status === 'expired' ? 'overdue' : 'pending',
+      description: `${subscription.plan?.name} Subscription`,
+      plan: subscription.plan
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        invoices: formattedInvoices,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalInvoices,
+          pages: Math.ceil(totalInvoices / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get invoices error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch invoices'
+    });
+  }
+}));
+
+// @desc    Get vendor billing stats
+// @route   GET /api/vendors/billing/stats
+// @access  Private/Agent
+router.get('/billing/stats', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+
+  try {
+    const Subscription = require('../models/Subscription');
+    
+    // Get all vendor subscriptions
+    const subscriptions = await Subscription.find({ user: vendorId });
+    
+    // Calculate stats
+    const totalRevenue = subscriptions.reduce((sum, sub) => sum + (sub.amount || 0), 0);
+    const totalInvoices = subscriptions.length;
+    
+    // Get active subscription for next billing
+    const activeSubscription = await Subscription.findOne({
+      user: vendorId,
+      status: 'active',
+      endDate: { $gt: new Date() }
+    });
+    
+    const nextBillingAmount = activeSubscription ? activeSubscription.amount : 0;
+
+    // Mock usage stats
+    const usageStats = {
+      propertiesPosted: 5,
+      maxProperties: activeSubscription ? 50 : 0,
+      leadsReceived: 25,
+      maxLeads: activeSubscription ? 100 : 0,
+      usagePercentage: 50
+    };
+
+    res.json({
+      success: true,
+      data: {
+        totalRevenue,
+        nextBillingAmount,
+        totalInvoices,
+        usageStats
+      }
+    });
+  } catch (error) {
+    console.error('Get billing stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch billing stats'
+    });
+  }
+}));
+
+// @desc    Get vendor billing stats
+// @route   GET /api/vendors/billing/stats
+// @access  Private/Agent
+router.get('/billing/stats', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+
+  try {
+    const Subscription = require('../models/Subscription');
+    
+    // Get current subscription
+    const currentSubscription = await Subscription.findOne({
+      user: vendorId,
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).populate('plan');
+
+    // Calculate stats
+    const totalSpent = await Subscription.aggregate([
+      { $match: { user: vendorId } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const totalTransactions = await Subscription.countDocuments({ user: vendorId });
+    
+    const nextBilling = currentSubscription ? currentSubscription.endDate : null;
+    const monthlySpend = currentSubscription ? currentSubscription.amount : 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalSpent: totalSpent[0]?.total || 0,
+        monthlySpend,
+        totalTransactions,
+        nextBilling,
+        currency: 'INR',
+        savings: billingCycle === 'yearly' ? Math.round(monthlySpend * 2) : 0 // 2 months free calculation
+      }
+    });
+  } catch (error) {
+    console.error('Get billing stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch billing stats'
     });
   }
 }));

@@ -11,7 +11,7 @@ const createVendor = async () => {
     console.log('✅ Connected to MongoDB successfully');
 
     // Check if vendor already exists
-    const existingVendor = await User.findOne({ email: 'vendor1@ninetyneacres.com' });
+    const existingVendor = await User.findOne({ email: 'kanagaraj@gmail.com' });
 
     if (existingVendor) {
       console.log('⚠️  Vendor already exists:', existingVendor.email);
@@ -29,7 +29,7 @@ const createVendor = async () => {
     console.log('📝 Creating vendor user...');
     
     const vendorUserData = {
-      email: 'vendor1@ninetyneacres.com',
+      email: 'kanagaraj@gmail.com',
       password: 'vendor@123', // This will be hashed by the pre-save middleware
       role: 'agent', // Vendors are agents in this system
       status: 'active',

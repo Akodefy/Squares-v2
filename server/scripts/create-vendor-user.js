@@ -11,7 +11,7 @@ async function createVendorUser() {
     console.log('Connected to MongoDB');
 
     // Check if vendor user already exists
-    const existingVendor = await User.findOne({ email: 'vendor@ninetyneacres.com' });
+    const existingVendor = await User.findOne({ email: 'kanagaraj@gmail.com' });
     
     if (existingVendor) {
       console.log('Updating existing vendor user...');
@@ -28,7 +28,7 @@ async function createVendorUser() {
     // Create vendor user
     // Don't hash password manually - let the pre-save hook do it
     const vendorUser = new User({
-      email: 'vendor@ninetyneacres.com',
+      email: 'kanagaraj@gmail.com',
       password: 'vendor123', // Plain password
       role: 'agent',
       status: 'active',

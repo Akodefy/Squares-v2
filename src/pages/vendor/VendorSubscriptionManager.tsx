@@ -17,6 +17,9 @@ interface Subscription {
   endDate: string;
   features: string[];
   billingCycle: string;
+  addons?: AddonService[]; // Add addons to the interface
+  amount?: number;
+  currency?: string;
 }
 
 interface AddonService {
@@ -45,17 +48,26 @@ const VendorSubscriptionManager: React.FC = () => {
 
   const loadSubscriptionData = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/vendors/subscription-status`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/vendors/subscription-status`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
+      console.log('Subscription API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Subscription API response data:', data);
+        
         if (data.success && data.data.hasActiveSubscription) {
+          console.log('Setting subscription data:', data.data.subscription);
           setSubscription(data.data.subscription);
+        } else {
+          console.log('No active subscription found:', data);
         }
+      } else {
+        console.log('Subscription API response not ok:', response.status, await response.text());
       }
     } catch (error) {
       console.error('Failed to load subscription:', error);
@@ -273,6 +285,50 @@ const VendorSubscriptionManager: React.FC = () => {
               </div>
             </div>
 
+            {/* Purchased Addons */}
+            {subscription.addons && subscription.addons.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Purchased Add-ons</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {subscription.addons.map((addon, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-1.5 rounded bg-blue-100">
+                          <CheckCircle className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{addon.name}</p>
+                          <p className="text-xs text-gray-600 capitalize">{addon.category}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-blue-600">₹{addon.price.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">
+                          {addon.billingType.replace('_', ' ').replace('per property', 'per listing')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Subscription Summary */}
+            {subscription.amount && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Amount</p>
+                    <p className="font-semibold text-lg">₹{subscription.amount.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Billing</p>
+                    <p className="font-medium">{subscription.billingCycle}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex space-x-4">
               <Button 
@@ -317,7 +373,9 @@ const VendorSubscriptionManager: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {availableAddons.map((addon) => {
+            {availableAddons
+              .filter(addon => !subscription?.addons?.some(purchasedAddon => purchasedAddon._id === addon._id)) // Filter out already purchased addons
+              .map((addon) => {
               const isSelected = selectedAddons.some(a => a._id === addon._id);
               return (
                 <Card 
@@ -353,6 +411,16 @@ const VendorSubscriptionManager: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Show message if all addons are purchased */}
+          {subscription && availableAddons.length > 0 && 
+           availableAddons.every(addon => subscription.addons?.some(purchasedAddon => purchasedAddon._id === addon._id)) && (
+            <div className="text-center py-8">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">All Addons Purchased!</h3>
+              <p className="text-gray-600">You have already purchased all available addon services.</p>
+            </div>
+          )}
 
           {/* Purchase Addons Button */}
           {selectedAddons.length > 0 && (
