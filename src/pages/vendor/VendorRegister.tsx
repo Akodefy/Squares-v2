@@ -70,6 +70,12 @@ const VendorRegister = () => {
     marketingConsent: false
   });
 
+  const [uploadedDocuments, setUploadedDocuments] = useState({
+    businessRegistration: null,
+    professionalLicense: null,
+    identityProof: null
+  });
+
   const businessTypes = [
     "Real Estate Agent",
     "Property Developer",
@@ -95,6 +101,48 @@ const VendorRegister = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleDocumentUpload = async (documentType: string, file: File) => {
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'vendor-documents');
+
+      const response = await fetch('http://localhost:5000/api/upload/single', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setUploadedDocuments(prev => ({
+          ...prev,
+          [documentType]: {
+            name: file.name,
+            url: result.data.url,
+            size: file.size
+          }
+        }));
+
+        toast({
+          title: "Document Uploaded",
+          description: `${file.name} has been uploaded successfully.`,
+        });
+      } else {
+        throw new Error(result.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Document upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: `Failed to upload ${file.name}. Please try again.`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleNext = () => {
@@ -158,7 +206,8 @@ const VendorRegister = () => {
           licenseNumber: formData.licenseNumber,
           gstNumber: formData.gstNumber,
           panNumber: formData.panNumber
-        }
+        },
+        documents: uploadedDocuments
       };
 
       const response = await authService.register(registrationData);
@@ -470,9 +519,28 @@ const VendorRegister = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Upload your business registration or incorporation certificate
                 </p>
-                <Button variant="outline" size="sm">
+                <input
+                  id="business-registration"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleDocumentUpload('businessRegistration', file);
+                  }}
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => document.getElementById('business-registration')?.click()}
+                >
                   Choose File
                 </Button>
+                {uploadedDocuments.businessRegistration && (
+                  <div className="mt-2 text-sm text-green-600">
+                    ✓ {uploadedDocuments.businessRegistration.name}
+                  </div>
+                )}
               </div>
 
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
@@ -481,9 +549,28 @@ const VendorRegister = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Upload relevant professional licenses or certifications
                 </p>
-                <Button variant="outline" size="sm">
+                <input
+                  id="professional-license"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleDocumentUpload('professionalLicense', file);
+                  }}
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => document.getElementById('professional-license')?.click()}
+                >
                   Choose File
                 </Button>
+                {uploadedDocuments.professionalLicense && (
+                  <div className="mt-2 text-sm text-green-600">
+                    ✓ {uploadedDocuments.professionalLicense.name}
+                  </div>
+                )}
               </div>
 
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
@@ -492,9 +579,28 @@ const VendorRegister = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Upload Aadhaar card, PAN card, or passport
                 </p>
-                <Button variant="outline" size="sm">
+                <input
+                  id="identity-proof"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleDocumentUpload('identityProof', file);
+                  }}
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => document.getElementById('identity-proof')?.click()}
+                >
                   Choose File
                 </Button>
+                {uploadedDocuments.identityProof && (
+                  <div className="mt-2 text-sm text-green-600">
+                    ✓ {uploadedDocuments.identityProof.name}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -1,304 +1,533 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Star, Zap, ArrowRight } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, Circle, ArrowLeft, ArrowRight, Star, Zap, Shield, Camera, Video, Share2, Search, Users, Headphones } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { addonService } from '@/services/addonService';
 
-const VendorSubscriptionPlans = () => {
-  const [selectedPlan, setSelectedPlan] = useState("premium");
-  const [billingCycle, setBillingCycle] = useState("monthly");
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  features: string[];
+  recommended?: boolean;
+  icon: React.ReactNode;
+  description: string;
+}
 
-  const plans = [
+interface AddonService {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  billingType: 'monthly' | 'yearly' | 'per_property' | 'one_time';
+  category: 'photography' | 'marketing' | 'technology' | 'support' | 'crm';
+  icon?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+const VendorSubscriptionPlans: React.FC = () => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [selectedAddons, setSelectedAddons] = useState<AddonService[]>([]);
+  const [addons, setAddons] = useState<AddonService[]>([]);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [loading, setLoading] = useState(false);
+  const [addonsLoading, setAddonsLoading] = useState(true);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const plans: Plan[] = [
     {
-      id: "basic",
-      name: "Basic",
-      icon: Zap,
-      description: "Perfect for new vendors getting started",
-      monthlyPrice: 999,
-      yearlyPrice: 9990,
-      yearlyDiscount: 17,
+      id: 'basic',
+      name: 'Basic',
+      price: 999,
+      description: 'Perfect for getting started',
+      icon: <Circle className="w-8 h-8 text-blue-600" />,
       features: [
-        "Up to 10 property listings",
-        "Basic lead management",
-        "Email support",
-        "Standard property photos",
-        "Basic analytics",
-        "Property status updates"
-      ],
-      limitations: [
-        "No featured listings",
-        "No priority support",
-        "Limited customization"
-      ],
-      popular: false
+        'Up to 10 property listings',
+        'Basic analytics',
+        'Email support',
+        'Mobile app access',
+        'Standard templates'
+      ]
     },
     {
-      id: "premium",
-      name: "Premium",
-      icon: Crown,
-      description: "Most popular choice for active vendors",
-      monthlyPrice: 2499,
-      yearlyPrice: 24990,
-      yearlyDiscount: 17,
+      id: 'premium',
+      name: 'Premium',
+      price: 2499,
+      description: 'Most popular choice for growing businesses',
+      icon: <Star className="w-8 h-8 text-yellow-600" />,
+      recommended: true,
       features: [
-        "Up to 50 property listings",
-        "Advanced lead management",
-        "Priority email & phone support",
-        "HD property photos & videos",
-        "Detailed analytics & insights",
-        "Featured listings (5 per month)",
-        "Custom property brochures",
-        "Lead scoring & tracking",
-        "Social media integration",
-        "Mobile app access"
-      ],
-      limitations: [],
-      popular: true
+        'Up to 50 property listings',
+        'Advanced analytics & insights',
+        'Priority support',
+        'Custom branding',
+        'Lead management',
+        'Virtual tour integration',
+        'SEO optimization'
+      ]
     },
     {
-      id: "enterprise",
-      name: "Enterprise",
-      icon: Star,
-      description: "For large vendors and agencies",
-      monthlyPrice: 4999,
-      yearlyPrice: 49990,
-      yearlyDiscount: 17,
+      id: 'enterprise',
+      name: 'Enterprise',
+      price: 0, // Contact based
+      description: 'For large-scale operations',
+      icon: <Shield className="w-8 h-8 text-purple-600" />,
       features: [
-        "Unlimited property listings",
-        "Complete CRM integration",
-        "24/7 dedicated support",
-        "Professional photography service",
-        "Advanced analytics & reports",
-        "Unlimited featured listings",
-        "Custom branding & themes",
-        "API access",
-        "Multi-user accounts",
-        "White-label solutions",
-        "Virtual tour creation",
-        "Marketing automation"
-      ],
-      limitations: [],
-      popular: false
+        'Unlimited property listings',
+        'Custom reporting',
+        'Dedicated account manager',
+        'API access',
+        'White-label solution',
+        'Advanced integrations',
+        'Custom features'
+      ]
     }
   ];
 
-  const addOnServices = [
-    {
-      name: "Professional Photography",
-      description: "High-quality photos by professional photographers",
-      price: 2999,
-      unit: "per property"
-    },
-    {
-      name: "Virtual Tour Creation",
-      description: "360° virtual tours for immersive property viewing",
-      price: 4999,
-      unit: "per property"
-    },
-    {
-      name: "Drone Photography",
-      description: "Aerial shots and videos for premium properties",
-      price: 3999,
-      unit: "per property"
-    },
-    {
-      name: "Social Media Marketing",
-      description: "Promoted posts on Facebook, Instagram, and Google",
-      price: 1999,
-      unit: "per month"
+  useEffect(() => {
+    loadAddons();
+  }, []);
+
+  const getAddonIcon = (category: string, iconName?: string) => {
+    const iconProps = { className: "w-6 h-6" };
+    
+    switch (category) {
+      case 'photography':
+        return iconName === 'video' ? <Video {...iconProps} /> : <Camera {...iconProps} />;
+      case 'marketing':
+        return iconName === 'search' ? <Search {...iconProps} /> : <Share2 {...iconProps} />;
+      case 'technology':
+        return <Zap {...iconProps} />;
+      case 'support':
+        return <Headphones {...iconProps} />;
+      case 'crm':
+        return <Users {...iconProps} />;
+      default:
+        return <Circle {...iconProps} />;
     }
-  ];
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
   };
 
-  const getCurrentPrice = (plan: any) => {
-    return billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
-  };
-
-  const getDisplayPrice = (plan: any) => {
-    const price = getCurrentPrice(plan);
-    if (billingCycle === "yearly") {
-      return `${formatPrice(price)}/year`;
+  const loadAddons = async () => {
+    try {
+      setAddonsLoading(true);
+      const addonsList = await addonService.getAddons();
+      setAddons(addonsList.filter((addon: AddonService) => addon.isActive));
+    } catch (error) {
+      console.error('Failed to load addons:', error);
+      toast({
+        title: "Failed to load addons",
+        description: "Using default addon services",
+        variant: "destructive",
+      });
+    } finally {
+      setAddonsLoading(false);
     }
-    return `${formatPrice(price)}/month`;
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Subscription Plans</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Choose the perfect plan for your business needs. Upgrade or downgrade anytime.
-        </p>
+  const calculatePlanPrice = (plan: Plan) => {
+    if (plan.price === 0) return 'Contact Us';
+    const price = billingCycle === 'yearly' ? plan.price * 10 : plan.price; // 2 months free on yearly
+    return `₹${price.toLocaleString()}`;
+  };
+
+  const calculateAddonTotal = () => {
+    return selectedAddons.reduce((total, addon) => total + addon.price, 0);
+  };
+
+  const calculateTotal = () => {
+    if (!selectedPlan || selectedPlan.price === 0) return 0;
+    const planPrice = billingCycle === 'yearly' ? selectedPlan.price * 10 : selectedPlan.price;
+    return planPrice + calculateAddonTotal();
+  };
+
+  const handlePlanSelect = (plan: Plan) => {
+    setSelectedPlan(plan);
+  };
+
+  const handleAddonToggle = (addon: AddonService) => {
+    setSelectedAddons(prev => {
+      const exists = prev.find(a => a._id === addon._id);
+      if (exists) {
+        return prev.filter(a => a._id !== addon._id);
+      } else {
+        return [...prev, addon];
+      }
+    });
+  };
+
+  const proceedToNextStep = () => {
+    if (currentStep === 1 && !selectedPlan) {
+      toast({
+        title: "Please select a plan",
+        description: "You must select a subscription plan to continue",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (currentStep === 1 && selectedPlan?.price === 0) {
+      // Enterprise plan - redirect to contact
+      toast({
+        title: "Enterprise Plan Selected",
+        description: "Our team will contact you within 24 hours to discuss your requirements",
+      });
+      navigate("/contact");
+      return;
+    }
+    
+    setCurrentStep(prev => Math.min(prev + 1, 3));
+  };
+
+  const goToPreviousStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const proceedToPayment = async () => {
+    if (!selectedPlan) return;
+    
+    setLoading(true);
+    try {
+      const paymentData = {
+        planId: selectedPlan.id,
+        addons: selectedAddons.map(addon => addon._id),
+        billingCycle,
+        totalAmount: calculateTotal()
+      };
+
+      console.log("Proceeding to payment with:", paymentData);
+      
+      // Call the actual payment service
+      const { paymentService } = await import('../../services/paymentService');
+      const result = await paymentService.processSubscriptionPayment(paymentData);
+      
+      if (result.success) {
+        toast({
+          title: "Payment Successful!",
+          description: `Successfully subscribed to ${selectedPlan.name}${selectedAddons.length > 0 ? ` with ${selectedAddons.length} addon(s)` : ''}`,
+        });
         
-        {/* Billing Toggle */}
-        <div className="flex items-center justify-center space-x-4">
-          <RadioGroup
-            value={billingCycle}
-            onValueChange={setBillingCycle}
-            className="flex items-center space-x-4"
+        navigate("/vendor/subscription-manager");
+      } else {
+        throw new Error(result.message || 'Payment failed');
+      }
+      
+    } catch (error) {
+      console.error("Payment failed:", error);
+      toast({
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "Failed to process payment",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center mb-8">
+      {[
+        { step: 1, label: "Choose Plan" },
+        { step: 2, label: "Add Services" }, 
+        { step: 3, label: "Payment" }
+      ].map(({ step, label }, index) => (
+        <div key={step} className="flex items-center">
+          <div className="flex flex-col items-center">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+              step <= currentStep 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-muted text-muted-foreground'
+            }`}>
+              {step}
+            </div>
+            <span className={`text-xs mt-2 ${
+              step <= currentStep ? 'text-blue-600 font-medium' : 'text-muted-foreground'
+            }`}>
+              {label}
+            </span>
+          </div>
+          {index < 2 && (
+            <div className={`w-16 h-0.5 mx-4 mt-2 ${
+              step < currentStep ? 'bg-blue-600' : 'bg-border'
+            }`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderPlanSelection = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-foreground mb-4">Choose Your Subscription Plan</h1>
+        <p className="text-muted-foreground text-lg mb-8">Select the plan that best fits your business needs</p>
+        
+        <div className="flex items-center justify-center space-x-4 mb-12">
+          <Button
+            variant={billingCycle === 'monthly' ? 'default' : 'outline'}
+            onClick={() => setBillingCycle('monthly')}
+            size="lg"
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="monthly" id="monthly" />
-              <Label htmlFor="monthly">Monthly</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="yearly" id="yearly" />
-              <Label htmlFor="yearly">Yearly</Label>
-              <Badge variant="secondary" className="ml-2">Save 17%</Badge>
-            </div>
-          </RadioGroup>
+            Monthly
+          </Button>
+          <Button
+            variant={billingCycle === 'yearly' ? 'default' : 'outline'}
+            onClick={() => setBillingCycle('yearly')}
+            size="lg"
+          >
+            Yearly 
+            <Badge className="ml-2 bg-green-600 hover:bg-green-600">Save 17%</Badge>
+          </Button>
         </div>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {plans.map((plan) => {
-          const Icon = plan.icon;
-          const isSelected = selectedPlan === plan.id;
-          
-          return (
-            <Card 
-              key={plan.id} 
-              className={`relative transition-all duration-300 ${
-                plan.popular 
-                  ? 'ring-2 ring-primary shadow-lg scale-105' 
-                  : isSelected 
-                    ? 'ring-2 ring-primary/50' 
-                    : 'hover:shadow-md'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-primary text-primary-foreground px-4 py-1">
-                    Most Popular
-                  </Badge>
-                </div>
-              )}
-              
-              <CardHeader className="text-center pb-4">
-                <div className="flex justify-center mb-4">
-                  <div className={`p-3 rounded-full ${
-                    plan.popular ? 'bg-primary/10' : 'bg-muted'
-                  }`}>
-                    <Icon className={`w-8 h-8 ${
-                      plan.popular ? 'text-primary' : 'text-muted-foreground'
-                    }`} />
-                  </div>
-                </div>
-                <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                <CardDescription className="text-sm">
-                  {plan.description}
-                </CardDescription>
-                <div className="mt-4">
-                  <div className="text-4xl font-bold">
-                    {getDisplayPrice(plan)}
-                  </div>
-                  {billingCycle === "yearly" && (
-                    <div className="text-sm text-muted-foreground">
-                      {formatPrice(plan.monthlyPrice)}/month billed yearly
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  {plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  className="w-full"
-                  variant={plan.popular ? "default" : "outline"}
-                  onClick={() => setSelectedPlan(plan.id)}
-                >
-                  {isSelected ? "Current Plan" : "Choose Plan"}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-
-                {plan.popular && (
-                  <div className="text-center">
-                    <Badge variant="outline" className="text-xs">
-                      14-day free trial
-                    </Badge>
-                  </div>
+      <div className="grid md:grid-cols-3 gap-8">
+        {plans.map((plan) => (
+          <Card 
+            key={plan.id} 
+            className={`relative cursor-pointer transition-all duration-200 hover:shadow-lg border-2 ${
+              selectedPlan?.id === plan.id 
+                ? 'border-blue-600 shadow-lg bg-blue-50/50' 
+                : 'border-border hover:border-blue-300'
+            } ${plan.recommended ? 'border-yellow-400' : ''}`}
+            onClick={() => handlePlanSelect(plan)}
+          >
+            {plan.recommended && (
+              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-600 hover:bg-yellow-600">
+                Most Popular
+              </Badge>
+            )}
+            <CardHeader className="text-center pb-6">
+              <div className="flex justify-center mb-4">{plan.icon}</div>
+              <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+              <div className="text-4xl font-bold text-blue-600 mt-4">
+                {calculatePlanPrice(plan)}
+                {plan.price > 0 && (
+                  <span className="text-lg text-muted-foreground font-normal">
+                    /{billingCycle}
+                  </span>
                 )}
-              </CardContent>
-            </Card>
-          );
-        })}
+              </div>
+              <p className="text-muted-foreground mt-2">{plan.description}</p>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-4">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-center">
+                    <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
+                    <span className="text-sm text-foreground">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderAddonSelection = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-foreground mb-4">Enhance Your Plan</h1>
+        <p className="text-muted-foreground text-lg mb-8">Add optional services to boost your property marketing</p>
       </div>
 
-      {/* Add-on Services */}
-      <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">Add-on Services</h2>
-          <p className="text-muted-foreground">
-            Enhance your listings with professional services
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {addOnServices.map((service, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2 flex-1">
-                    <h3 className="font-semibold">{service.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {service.description}
-                    </p>
-                  </div>
-                  <div className="text-right ml-4">
-                    <div className="font-bold text-lg">
-                      {formatPrice(service.price)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {service.unit}
-                    </div>
-                  </div>
-                </div>
-                <Button variant="outline" className="w-full mt-4">
-                  Add to Plan
-                </Button>
+      {addonsLoading ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Card key={i} className="h-48 animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-6 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-3 bg-muted rounded w-full mb-2"></div>
+                <div className="h-3 bg-muted rounded w-2/3"></div>
               </CardContent>
             </Card>
           ))}
         </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {addons.map((addon) => {
+            const isSelected = selectedAddons.some(a => a._id === addon._id);
+            return (
+              <Card 
+                key={addon._id}
+                className={`cursor-pointer transition-all duration-200 hover:shadow-md border-2 ${
+                  isSelected 
+                    ? 'border-blue-600 bg-blue-50/50 shadow-md' 
+                    : 'border-border hover:border-blue-300'
+                }`}
+                onClick={() => handleAddonToggle(addon)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        {getAddonIcon(addon.category, addon.icon)}
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-semibold">{addon.name}</CardTitle>
+                        <Badge variant="outline" className="mt-1 capitalize text-xs">
+                          {addon.category}
+                        </Badge>
+                      </div>
+                    </div>
+                    {isSelected ? (
+                      <CheckCircle className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                    )}
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600 mt-2">
+                    ₹{addon.price.toLocaleString()}
+                    <span className="text-sm text-muted-foreground font-normal">
+                      /{addon.billingType.replace('_', ' ').replace('per property', 'per listing')}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{addon.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {!addonsLoading && addons.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground">
+            <Circle className="w-12 h-12 mx-auto mb-4" />
+            <p className="text-lg">No addon services available at the moment.</p>
+            <p className="text-sm">You can continue without addons or check back later.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPaymentSummary = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-foreground mb-4">Payment Summary</h1>
+        <p className="text-muted-foreground text-lg mb-8">Review your selection and complete payment</p>
       </div>
 
-      {/* Current Plan Status */}
-      <Card className="bg-muted/50">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Current Plan: Premium (Monthly)</h3>
-              <p className="text-sm text-muted-foreground">
-                Next billing date: March 15, 2024
-              </p>
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Order Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Plan Summary */}
+            <div className="flex items-center justify-between py-4 border-b">
+              <div className="flex items-center space-x-4">
+                <div className="p-2 rounded-lg bg-blue-100">
+                  {selectedPlan?.icon}
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg">{selectedPlan?.name} Plan</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Billed {billingCycle}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-lg">
+                  ₹{(billingCycle === 'yearly' && selectedPlan?.price ? selectedPlan.price * 10 : selectedPlan?.price || 0).toLocaleString()}
+                </p>
+              </div>
             </div>
-            <div className="space-x-3">
-              <Button variant="outline">Manage Plan</Button>
-              <Button>Upgrade Plan</Button>
+
+            {/* Addons Summary */}
+            {selectedAddons.length > 0 && (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-lg">Add-on Services</h4>
+                {selectedAddons.map((addon) => (
+                  <div key={addon._id} className="flex items-center justify-between py-3 border-b border-dashed">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-1.5 rounded bg-muted">
+                        {getAddonIcon(addon.category, addon.icon)}
+                      </div>
+                      <div>
+                        <p className="font-medium">{addon.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {addon.billingType.replace('_', ' ')}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="font-semibold">₹{addon.price.toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Total */}
+            <div className="flex items-center justify-between py-4 border-t-2 border-border">
+              <span className="text-xl font-bold">Total Amount</span>
+              <span className="text-2xl font-bold text-blue-600">₹{calculateTotal().toLocaleString()}</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <div className="text-center space-y-4">
+          <Button 
+            size="lg" 
+            onClick={proceedToPayment}
+            disabled={loading}
+            className="min-w-[250px] h-12 text-lg"
+          >
+            {loading ? "Processing..." : `Pay ₹${calculateTotal().toLocaleString()}`}
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            🔒 Secure payment powered by Razorpay
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      {renderStepIndicator()}
+
+      {currentStep === 1 && renderPlanSelection()}
+      {currentStep === 2 && renderAddonSelection()}
+      {currentStep === 3 && renderPaymentSummary()}
+
+      {/* Navigation Buttons */}
+      <div className="flex justify-between pt-8">
+        <Button
+          variant="outline"
+          onClick={goToPreviousStep}
+          disabled={currentStep === 1}
+          className="flex items-center space-x-2"
+          size="lg"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Previous</span>
+        </Button>
+
+        {currentStep < 3 && (
+          <Button
+            onClick={proceedToNextStep}
+            className="flex items-center space-x-2"
+            size="lg"
+          >
+            <span>Next</span>
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

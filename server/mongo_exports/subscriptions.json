@@ -1,0 +1,25 @@
+[
+  {
+    "_id": "68f9f0ccfc486a107436a59c",
+    "user": "68f8b1214f4741e752f0e18b",
+    "plan": "68f9e256fabae925b343afb6",
+    "status": "active",
+    "startDate": "2025-10-23T09:09:32.221Z",
+    "endDate": "2025-11-23T09:09:32.221Z",
+    "amount": 4497,
+    "currency": "INR",
+    "paymentMethod": "razorpay",
+    "transactionId": "pay_RWrMjIEhHKzzG8_monthly_2addons",
+    "paymentDetails": {
+      "razorpayOrderId": "order_RWrMemfv7kMHCO",
+      "razorpayPaymentId": "pay_RWrMjIEhHKzzG8",
+      "razorpaySignature": "350def7c808d6162e54793baeb5d45a5c64c719da9a73f0702a0cc4bac9e1e98"
+    },
+    "autoRenew": true,
+    "renewalAttempts": 0,
+    "lastPaymentDate": "2025-10-23T09:09:32.221Z",
+    "createdAt": "2025-10-23T09:09:32.235Z",
+    "updatedAt": "2025-10-23T09:09:32.235Z",
+    "__v": 0
+  }
+]

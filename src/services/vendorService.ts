@@ -243,6 +243,76 @@ class VendorService {
       };
     }
   }
+
+  async checkSubscription(subscriptionName: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: { hasSubscription: boolean };
+      }>(`/vendors/subscription/check/${subscriptionName}`);
+
+      if (response.success && response.data) {
+        return response.data.hasSubscription;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Failed to check subscription:", error);
+      return false;
+    }
+  }
+
+  async activateSubscription(planId: string, paymentId: string): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        message: string;
+      }>(`/vendors/subscription/activate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ planId, paymentId }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Failed to activate subscription:", error);
+      return {
+        success: false,
+        message: "Failed to activate subscription. Please try again.",
+      };
+    }
+  }
+
+  async getVendorSubscriptions(): Promise<Array<{
+    name: string;
+    isActive: boolean;
+    expiresAt?: string;
+  }>> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: { subscriptions: Array<{
+          name: string;
+          isActive: boolean;
+          expiresAt?: string;
+        }> };
+      }>("/vendors/subscriptions");
+
+      if (response.success && response.data) {
+        return response.data.subscriptions;
+      }
+
+      return [];
+    } catch (error) {
+      console.error("Failed to fetch vendor subscriptions:", error);
+      return [];
+    }
+  }
 }
 
 export const vendorService = new VendorService();

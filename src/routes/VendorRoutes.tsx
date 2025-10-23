@@ -9,9 +9,10 @@ import {
   VendorLeads,
   VendorMessages,
   VendorAnalytics,
-  VendorPackages,
+  // VendorPackages, // Commented out - will be used in future
   VendorServices,
   VendorSubscriptionPlans,
+  VendorSubscriptionManager,
   VendorBilling,
   VendorReviews,
   VendorProfile
@@ -57,11 +58,12 @@ const VendorRoutes = () => {
               <VendorAnalytics />
             </Suspense>
           } />
-          <Route path="packages" element={
+          {/* Commented out packages section - will be used in future */}
+          {/* <Route path="packages" element={
             <Suspense fallback={<div>Loading...</div>}>
               <VendorPackages />
             </Suspense>
-          } />
+          } /> */}
           <Route path="services" element={
             <Suspense fallback={<div>Loading...</div>}>
               <VendorServices />
@@ -70,6 +72,11 @@ const VendorRoutes = () => {
           <Route path="subscription-plans" element={
             <Suspense fallback={<div>Loading...</div>}>
               <VendorSubscriptionPlans />
+            </Suspense>
+          } />
+          <Route path="subscription-manager" element={
+            <Suspense fallback={<div>Loading...</div>}>
+              <VendorSubscriptionManager />
             </Suspense>
           } />
           <Route path="billing" element={

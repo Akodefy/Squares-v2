@@ -1,0 +1,137 @@
+[
+  {
+    "_id": "68f76ea021142399c9d14229",
+    "title": "Luxury Villa in Whitefield",
+    "description": "Beautiful 4BHK villa with modern amenities, swimming pool, and garden.",
+    "type": "villa",
+    "status": "available",
+    "listingType": "sale",
+    "price": 12500000,
+    "area": {
+      "builtUp": 3500,
+      "unit": "sqft"
+    },
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "address": {
+      "street": "123 Main Street",
+      "locality": "Whitefield",
+      "city": "Bangalore",
+      "state": "Karnataka",
+      "pincode": "560066"
+    },
+    "amenities": [
+      "Swimming Pool",
+      "Garden",
+      "Parking",
+      "Security"
+    ],
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6",
+        "isPrimary": true,
+        "_id": "68f76ea021142399c9d1422a"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1570129477492-45c003edd2be",
+        "isPrimary": false,
+        "_id": "68f76ea021142399c9d1422b"
+      }
+    ],
+    "owner": "68f76792ae8ba267e353c0e9",
+    "views": 0,
+    "featured": true,
+    "verified": false,
+    "__v": 0,
+    "createdAt": "2025-10-21T11:29:36.238Z",
+    "updatedAt": "2025-10-21T11:29:36.238Z"
+  },
+  {
+    "_id": "68f76ea021142399c9d1422f",
+    "title": "Commercial Plot in Electronic City",
+    "description": "Prime commercial plot suitable for office complex or shopping mall.",
+    "type": "plot",
+    "status": "available",
+    "listingType": "sale",
+    "price": 25000000,
+    "area": {
+      "plot": 8000,
+      "unit": "sqft"
+    },
+    "bedrooms": 0,
+    "bathrooms": 0,
+    "address": {
+      "street": "Electronic City Phase 1",
+      "locality": "Electronic City",
+      "city": "Bangalore",
+      "state": "Karnataka",
+      "pincode": "560100"
+    },
+    "amenities": [
+      "Road Access",
+      "Electricity",
+      "Water Connection"
+    ],
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1497366216548-37526070297c",
+        "isPrimary": true,
+        "_id": "68f76ea021142399c9d14230"
+      }
+    ],
+    "owner": "68f76792ae8ba267e353c0e9",
+    "views": 0,
+    "featured": true,
+    "verified": false,
+    "__v": 0,
+    "createdAt": "2025-10-21T11:29:36.243Z",
+    "updatedAt": "2025-10-21T11:29:36.243Z"
+  },
+  {
+    "_id": "68f76ea021142399c9d1422c",
+    "title": "Modern Apartment in Koramangala",
+    "description": "Spacious 3BHK apartment in prime location with all modern facilities.",
+    "type": "apartment",
+    "status": "available",
+    "listingType": "rent",
+    "price": 45000,
+    "area": {
+      "builtUp": 1800,
+      "unit": "sqft"
+    },
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "address": {
+      "street": "456 Park Avenue",
+      "locality": "Koramangala",
+      "city": "Bangalore",
+      "state": "Karnataka",
+      "pincode": "560034"
+    },
+    "amenities": [
+      "Gym",
+      "Elevator",
+      "Parking",
+      "Power Backup"
+    ],
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2",
+        "isPrimary": true,
+        "_id": "68f76ea021142399c9d1422d"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+        "isPrimary": false,
+        "_id": "68f76ea021142399c9d1422e"
+      }
+    ],
+    "owner": "68f76792ae8ba267e353c0e9",
+    "views": 0,
+    "featured": false,
+    "verified": false,
+    "__v": 0,
+    "createdAt": "2025-10-21T11:29:36.242Z",
+    "updatedAt": "2025-10-21T11:29:36.242Z"
+  }
+]

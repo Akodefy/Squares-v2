@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,15 +17,22 @@ import {
   Check,
   ArrowLeft,
   Video,
-  Eye
+  Eye,
+  Crown,
+  Lock
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { vendorService } from "@/services/vendorService";
+import { toast } from "@/hooks/use-toast";
 
 const AddProperty = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [hasAddPropertySubscription, setHasAddPropertySubscription] = useState(false);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
   const [formData, setFormData] = useState({
     // Basic Details
     title: "",
@@ -74,6 +81,37 @@ const AddProperty = () => {
 
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadedVideos, setUploadedVideos] = useState([]);
+
+  // Check if user has addPropertySubscription
+  useEffect(() => {
+    const checkAddPropertySubscription = async () => {
+      setIsCheckingSubscription(true);
+      try {
+        const hasSubscription = await vendorService.checkSubscription("addPropertySubscription");
+        setHasAddPropertySubscription(hasSubscription);
+        
+        if (!hasSubscription) {
+          toast({
+            title: "Subscription Required",
+            description: "You need an active subscription to add properties. Please upgrade your plan.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+        setHasAddPropertySubscription(false);
+        toast({
+          title: "Error",
+          description: "Failed to check subscription status. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCheckingSubscription(false);
+      }
+    };
+
+    checkAddPropertySubscription();
+  }, []);
 
   const steps = [
     { id: 1, title: "Basic Details", description: "Property type and listing details" },
@@ -690,63 +728,126 @@ const AddProperty = () => {
         </div>
       </div>
 
-      {/* Progress Steps */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-8">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex flex-col items-center flex-1">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 mb-2 ${
-                  currentStep >= step.id 
-                    ? 'bg-primary border-primary text-primary-foreground' 
-                    : 'border-muted-foreground text-muted-foreground'
-                }`}>
-                  {currentStep > step.id ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    step.id
-                  )}
+      {/* Loading State */}
+      {isCheckingSubscription && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Checking subscription status...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Subscription Required */}
+      {!isCheckingSubscription && !hasAddPropertySubscription && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="p-6">
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+                <Lock className="w-8 h-8 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-amber-900 mb-2">
+                  Subscription Required
+                </h2>
+                <p className="text-amber-700 mb-4">
+                  To add properties, you need an active "Add Property Subscription" plan.
+                </p>
+                <p className="text-sm text-amber-600 mb-2">
+                  Upgrade your plan to start listing properties and reach potential customers.
+                </p>
+                <div className="bg-amber-100 border border-amber-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-amber-800">
+                    <strong>What you'll get with a subscription:</strong>
+                  </p>
+                  <ul className="text-sm text-amber-700 mt-2 space-y-1">
+                    <li>• Unlimited property listings</li>
+                    <li>• Advanced lead management</li>
+                    <li>• Priority customer support</li>
+                    <li>• Enhanced property visibility</li>
+                  </ul>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium">{step.title}</p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`hidden md:block absolute h-0.5 w-20 top-5 left-1/2 transform translate-x-8 ${
-                    currentStep > step.id ? 'bg-primary' : 'bg-muted-foreground'
-                  }`} />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link to="/vendor/subscription-plans">
+                  <Button className="bg-amber-600 hover:bg-amber-700 text-white">
+                    <Crown className="w-4 h-4 mr-2" />
+                    View Subscription Plans
+                  </Button>
+                </Link>
+                <Button variant="outline" onClick={() => navigate("/vendor/properties")}>
+                  Back to Properties
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add Property Form - Only show if user has subscription */}
+      {!isCheckingSubscription && hasAddPropertySubscription && (
+        <>
+          {/* Progress Steps */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-8">
+                {steps.map((step, index) => (
+                  <div key={step.id} className="flex flex-col items-center flex-1">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 mb-2 ${
+                      currentStep >= step.id 
+                        ? 'bg-primary border-primary text-primary-foreground' 
+                        : 'border-muted-foreground text-muted-foreground'
+                    }`}>
+                      {currentStep > step.id ? (
+                        <Check className="w-5 h-5" />
+                      ) : (
+                        step.id
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium">{step.title}</p>
+                      <p className="text-xs text-muted-foreground">{step.description}</p>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <div className={`hidden md:block absolute h-0.5 w-20 top-5 left-1/2 transform translate-x-8 ${
+                        currentStep > step.id ? 'bg-primary' : 'bg-muted-foreground'
+                      }`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Step Content */}
+              <div className="min-h-96">
+                {renderStepContent()}
+              </div>
+
+              {/* Navigation Buttons */}
+              <div className="flex justify-between mt-8">
+                <Button 
+                  variant="outline" 
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                >
+                  Previous
+                </Button>
+                
+                {currentStep === steps.length ? (
+                  <Button onClick={handleSubmit} className="px-8">
+                    Submit Property
+                  </Button>
+                ) : (
+                  <Button onClick={nextStep}>
+                    Next
+                  </Button>
                 )}
               </div>
-            ))}
-          </div>
-
-          {/* Step Content */}
-          <div className="min-h-96">
-            {renderStepContent()}
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
-            <Button 
-              variant="outline" 
-              onClick={prevStep}
-              disabled={currentStep === 1}
-            >
-              Previous
-            </Button>
-            
-            {currentStep === steps.length ? (
-              <Button onClick={handleSubmit} className="px-8">
-                Submit Property
-              </Button>
-            ) : (
-              <Button onClick={nextStep}>
-                Next
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 };

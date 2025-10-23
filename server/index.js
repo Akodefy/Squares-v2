@@ -16,12 +16,14 @@ const dashboardRoutes = require('./routes/dashboard');
 const favoriteRoutes = require('./routes/favorites');
 const messageRoutes = require('./routes/messages');
 const planRoutes = require('./routes/plans');
+const addonRoutes = require('./routes/addons');
 const roleRoutes = require('./routes/roles');
 const subscriptionRoutes = require('./routes/subscriptions');
 const adminRoutes = require('./routes/admin');
 const vendorRoutes = require('./routes/vendors');
+const paymentRoutes = require('./routes/payments');
+const uploadRoutes = require('./routes/upload');
 // const serviceRoutes = require('./routes/services');
-// const uploadRoutes = require('./routes/upload');
 
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
@@ -78,12 +80,14 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/plans', planRoutes);
+app.use('/api/addons', addonRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/vendors', vendorRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/upload', uploadRoutes);
 // app.use('/api/services', authenticateToken, serviceRoutes);
-// app.use('/api/upload', authenticateToken, uploadRoutes);
 
 // Socket.IO for real-time messaging
 io.use((socket, next) => {

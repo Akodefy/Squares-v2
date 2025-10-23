@@ -29,7 +29,39 @@ const registerSchema = Joi.object({
   agreeToTerms: Joi.boolean().valid(true).required().messages({
     'any.only': 'You must agree to the terms and conditions',
     'any.required': 'You must agree to the terms and conditions'
-  })
+  }),
+  // Optional business info for vendors
+  businessInfo: Joi.object({
+    businessName: Joi.string().min(2).max(100),
+    businessType: Joi.string().max(50),
+    businessDescription: Joi.string().max(500),
+    experience: Joi.string().max(20),
+    address: Joi.string().max(200),
+    city: Joi.string().max(50),
+    state: Joi.string().max(50),
+    pincode: Joi.string().max(10),
+    licenseNumber: Joi.string().max(50),
+    gstNumber: Joi.string().max(15),
+    panNumber: Joi.string().max(10)
+  }).optional(),
+  // Optional documents for vendors
+  documents: Joi.object({
+    businessRegistration: Joi.object({
+      name: Joi.string(),
+      url: Joi.string().uri(),
+      size: Joi.number()
+    }).optional(),
+    professionalLicense: Joi.object({
+      name: Joi.string(),
+      url: Joi.string().uri(),
+      size: Joi.number()
+    }).optional(),
+    identityProof: Joi.object({
+      name: Joi.string(),
+      url: Joi.string().uri(),
+      size: Joi.number()
+    }).optional()
+  }).optional()
 });
 
 // User login schema

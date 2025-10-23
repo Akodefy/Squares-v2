@@ -1,3 +1,7 @@
+/* 
+// COMMENTED OUT - Will be used in future
+// This packages section is temporarily disabled and will be used in the future
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -186,7 +190,7 @@ const VendorPackages = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header * /}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Promotion Packages</h1>
@@ -207,7 +211,7 @@ const VendorPackages = () => {
         </TabsList>
 
         <TabsContent value="packages" className="space-y-6">
-          {/* Promotion Packages */}
+          {/* Promotion Packages * /}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {packages.map((pkg) => (
               <Card 
@@ -237,7 +241,7 @@ const VendorPackages = () => {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Benefits Preview */}
+                  {/* Benefits Preview * /}
                   <div className="grid grid-cols-3 gap-2 p-3 bg-muted rounded-lg">
                     <div className="text-center">
                       <div className="text-sm font-semibold text-green-600">{pkg.benefits.views}</div>
@@ -253,7 +257,7 @@ const VendorPackages = () => {
                     </div>
                   </div>
 
-                  {/* Features */}
+                  {/* Features * /}
                   <div className="space-y-2">
                     {pkg.features.map((feature, index) => (
                       <div key={index} className="flex items-center text-sm">
@@ -276,7 +280,7 @@ const VendorPackages = () => {
             ))}
           </div>
 
-          {/* Success Stories */}
+          {/* Success Stories * /}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -443,6 +447,21 @@ const VendorPackages = () => {
           )}
         </TabsContent>
       </Tabs>
+    </div>
+  );
+};
+
+export default VendorPackages;
+*/
+
+// Placeholder component for future use
+const VendorPackages = () => {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold mb-4">Packages Feature Coming Soon</h2>
+        <p className="text-gray-600">This feature will be available in a future update.</p>
+      </div>
     </div>
   );
 };

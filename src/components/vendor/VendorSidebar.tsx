@@ -40,7 +40,7 @@ const VendorSidebar = ({ sidebarOpen, setSidebarOpen }: VendorSidebarProps) => {
     { name: "Analytics", href: "/vendor/analytics", icon: BarChart3 },
     { name: "Packages", href: "/vendor/packages", icon: Package },
     { name: "Services", href: "/vendor/services", icon: Briefcase },
-    { name: "Subscription Plans", href: "/vendor/subscription-plans", icon: Crown },
+    { name: "Subscription", href: "/vendor/subscription-manager", icon: Crown },
     { name: "Billing", href: "/vendor/billing", icon: CreditCard },
     { name: "Reviews", href: "/vendor/reviews", icon: Star },
     { name: "Profile", href: "/vendor/profile", icon: Settings },

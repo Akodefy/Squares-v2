@@ -25,7 +25,9 @@ router.post('/register', validateRequest(registerSchema), asyncHandler(async (re
     lastName, 
     phone, 
     role = 'customer',
-    agreeToTerms 
+    agreeToTerms,
+    businessInfo,
+    documents
   } = req.body;
 
   if (!agreeToTerms) {
@@ -44,18 +46,27 @@ router.post('/register', validateRequest(registerSchema), asyncHandler(async (re
     });
   }
 
+  // Create user profile with business info for vendors
+  const profile = {
+    firstName,
+    lastName,
+    phone,
+    emailVerified: false
+  };
+
+  // Add business info for vendors (agents)
+  if (role === 'agent' && businessInfo) {
+    profile.businessInfo = businessInfo;
+    profile.documents = documents;
+  }
+
   // Create user
   const user = new User({
     email,
     password,
     role,
-    status: 'pending',
-    profile: {
-      firstName,
-      lastName,
-      phone,
-      emailVerified: false
-    }
+    status: role === 'agent' ? 'pending' : 'active', // Vendors need approval
+    profile
   });
 
   await user.save();

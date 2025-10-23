@@ -37,13 +37,19 @@ const subscriptionSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['credit_card', 'debit_card', 'upi', 'net_banking', 'wallet'],
+    enum: ['credit_card', 'debit_card', 'upi', 'net_banking', 'wallet', 'razorpay'],
     required: true
   },
   transactionId: {
     type: String,
     unique: true,
     sparse: true
+  },
+  paymentDetails: {
+    razorpayOrderId: String,
+    razorpayPaymentId: String,
+    razorpaySignature: String,
+    transactionId: String
   },
   autoRenew: {
     type: Boolean,

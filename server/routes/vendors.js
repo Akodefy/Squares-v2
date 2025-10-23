@@ -9,11 +9,32 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(authenticateToken);
 
+// Middleware to check if user is vendor/agent
+const requireVendorRole = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  // Allow both 'agent' and 'admin' roles to access vendor routes
+  // Also allow users who might be registered as vendors but have different role
+  if (!['agent', 'admin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Insufficient permissions. Vendor access required.'
+    });
+  }
+
+  next();
+};
+
 // @desc    Get vendor statistics
 // @route   GET /api/vendors/statistics
 // @access  Private/Agent
-router.get('/statistics', authorizeRoles(['agent']), asyncHandler(async (req, res) => {
-  const vendorId = req.user._id;
+router.get('/statistics', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
 
   // Get vendor's properties count
   const totalProperties = await Property.countDocuments({ owner: vendorId });
@@ -150,7 +171,7 @@ router.get('/properties', authorizeRoles(['agent']), asyncHandler(async (req, re
   const skip = (parseInt(page) - 1) * parseInt(limit);
   
   // Build filter object
-  const filter = { owner: req.user._id };
+  const filter = { owner: req.user.id };
   
   if (status) {
     filter.status = status;
@@ -201,7 +222,7 @@ router.get('/leads', authorizeRoles(['agent']), asyncHandler(async (req, res) =>
   
   // Get leads (messages sent to this vendor)
   const filter = {
-    recipient: req.user._id,
+    recipient: req.user.id,
     type: { $in: ['inquiry', 'lead', 'property_inquiry', 'contact'] }
   };
 
@@ -235,6 +256,489 @@ router.get('/leads', authorizeRoles(['agent']), asyncHandler(async (req, res) =>
       }
     }
   });
+}));
+
+// @desc    Check vendor subscription
+// @route   GET /api/vendors/subscription/check/:subscriptionName
+// @access  Private/Agent
+router.get('/subscription/check/:subscriptionName', requireVendorRole, asyncHandler(async (req, res) => {
+  const { subscriptionName } = req.params;
+  const vendorId = req.user.id;
+  
+  // For now, we'll simulate checking subscription
+  // In a real implementation, you would check against a Subscription model
+  // that links users to their purchased plans/features
+  
+  try {
+    const Subscription = require('../models/Subscription');
+    const Plan = require('../models/Plan');
+    
+    // Check if vendor has active subscription
+    const activeSubscription = await Subscription.findOne({
+      user: vendorId, // Changed from userId to user
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).populate('plan'); // Changed from planId to plan
+    
+    let hasSubscription = false;
+    
+    if (activeSubscription) {
+      // Check if the active subscription plan includes the requested feature
+      const plan = activeSubscription.plan; // Changed from planId to plan
+      
+      // Map subscription names to plan features and limits
+      const featureMapping = {
+        'addPropertySubscription': {
+          hasAccess: true, // All plans allow adding properties
+          limit: plan.limits?.properties || 0 // 0 means unlimited
+        },
+        'featuredListingSubscription': {
+          hasAccess: plan.limits?.featuredListings > 0 || plan.name === 'Enterprise Plan',
+          limit: plan.limits?.featuredListings || 0
+        },
+        'premiumAnalyticsSubscription': {
+          hasAccess: plan.features?.includes('Detailed analytics & insights') || 
+                    plan.features?.includes('Advanced analytics & reports') ||
+                    plan.name === 'Premium Plan' || plan.name === 'Enterprise Plan',
+          limit: 0
+        },
+        'leadManagementSubscription': {
+          hasAccess: plan.limits?.leadManagement !== undefined,
+          limit: plan.limits?.leadManagement === 'enterprise' ? 0 : 
+                 plan.limits?.leadManagement === 'advanced' ? 1000 : 50
+        }
+      };
+      
+      const feature = featureMapping[subscriptionName];
+      hasSubscription = feature ? feature.hasAccess : false;
+    }
+    
+    // For addPropertySubscription, allow by default for demo
+    if (subscriptionName === 'addPropertySubscription') {
+      hasSubscription = true;
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        hasSubscription,
+        subscriptionName
+      }
+    });
+  } catch (error) {
+    console.error('Subscription check error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check subscription'
+    });
+  }
+}));
+
+// @desc    Get vendor subscriptions
+// @route   GET /api/vendors/subscriptions
+// @access  Private/Agent
+router.get('/subscriptions', authorizeRoles(['agent']), asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+  
+  try {
+    const Subscription = require('../models/Subscription');
+    
+    // Get vendor's active subscriptions
+    const activeSubscriptions = await Subscription.find({
+      userId: vendorId,
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).populate('planId');
+    
+    // Map subscriptions to expected format
+    const subscriptionsMap = {
+      'addPropertySubscription': { isActive: true, expiresAt: null }, // Allow by default for demo
+      'featuredListingSubscription': { isActive: false, expiresAt: null },
+      'premiumAnalyticsSubscription': { isActive: false, expiresAt: null },
+      'leadManagementSubscription': { isActive: false, expiresAt: null }
+    };
+    
+    // Update based on active subscriptions
+    activeSubscriptions.forEach(subscription => {
+      const plan = subscription.planId;
+      const expiresAt = subscription.endDate.toISOString();
+      
+      if (plan.limits?.featuredListings > 0 || plan.name === 'Enterprise Plan') {
+        subscriptionsMap['featuredListingSubscription'] = { isActive: true, expiresAt };
+      }
+      if (plan.features?.includes('Detailed analytics & insights') || 
+          plan.features?.includes('Advanced analytics & reports') ||
+          plan.name === 'Premium Plan' || plan.name === 'Enterprise Plan') {
+        subscriptionsMap['premiumAnalyticsSubscription'] = { isActive: true, expiresAt };
+      }
+      if (plan.limits?.leadManagement) {
+        subscriptionsMap['leadManagementSubscription'] = { isActive: true, expiresAt };
+      }
+    });
+    
+    // Convert to array format
+    const subscriptions = Object.entries(subscriptionsMap).map(([name, data]) => ({
+      name,
+      isActive: data.isActive,
+      expiresAt: data.expiresAt
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        subscriptions: subscriptions
+      }
+    });
+  } catch (error) {
+    console.error('Get subscriptions error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch subscriptions'
+    });
+  }
+}));
+
+// @desc    Activate vendor subscription after payment
+// @route   POST /api/vendors/subscription/activate
+// @access  Private/Agent
+router.post('/subscription/activate', requireVendorRole, asyncHandler(async (req, res) => {
+  const { planId, paymentId } = req.body;
+  const vendorId = req.user.id;
+  
+  try {
+    if (!planId || !paymentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Plan ID and Payment ID are required'
+      });
+    }
+
+    // In a real implementation, you would:
+    // 1. Verify the payment with Razorpay
+    // 2. Get the plan details from Plan model
+    // 3. Create or update the Subscription record
+    // 4. Update user's subscription status
+    
+    // For now, we'll simulate successful activation
+    const Plan = require('../models/Plan');
+    const Subscription = require('../models/Subscription');
+    
+    // Get plan details
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: 'Plan not found'
+      });
+    }
+
+    // Create or update subscription
+    const subscription = await Subscription.findOneAndUpdate(
+      { user: vendorId, plan: planId }, // Changed userId to user, planId to plan
+      {
+        user: vendorId, // Changed from userId to user
+        plan: planId, // Changed from planId to plan
+        status: 'active',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + (plan.duration || 30) * 24 * 60 * 60 * 1000), // Add duration in days, default 30 days
+        transactionId: paymentId, // Changed from paymentId to transactionId
+        amount: plan.price
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Subscription activated successfully',
+      data: {
+        subscription: {
+          id: subscription._id,
+          planName: plan.name,
+          status: subscription.status,
+          startDate: subscription.startDate,
+          endDate: subscription.endDate
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Subscription activation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to activate subscription'
+    });
+  }
+}));
+
+// @desc    Get vendor lead statistics
+// @route   GET /api/vendors/lead-stats
+// @access  Private/Agent
+router.get('/lead-stats', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+
+  try {
+    // Mock lead statistics - in real implementation, you would fetch from Lead model
+    const leadStats = {
+      totalLeads: 45,
+      newLeads: 12,
+      contactedLeads: 28,
+      convertedLeads: 5,
+      leadTrends: {
+        thisMonth: 15,
+        lastMonth: 12,
+        growth: 25
+      },
+      leadSources: {
+        website: 25,
+        social: 12,
+        referral: 8
+      },
+      conversionRate: 11.1
+    };
+
+    res.json({
+      success: true,
+      data: leadStats
+    });
+  } catch (error) {
+    console.error('Lead stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch lead statistics'
+    });
+  }
+}));
+
+// @desc    Get vendor analytics overview
+// @route   GET /api/vendors/analytics/overview
+// @access  Private/Agent
+router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+  const { timeframe = '30days' } = req.query;
+
+  try {
+    // Mock analytics data - in real implementation, you would calculate from actual data
+    const analyticsData = {
+      totalViews: 2847,
+      totalLeads: 45,
+      totalProperties: 12,
+      conversionRate: 1.58,
+      trends: {
+        views: {
+          current: 2847,
+          previous: 2156,
+          growth: 32.1
+        },
+        leads: {
+          current: 45,
+          previous: 38,
+          growth: 18.4
+        },
+        properties: {
+          current: 12,
+          previous: 10,
+          growth: 20.0
+        }
+      },
+      chartData: {
+        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        views: [650, 720, 890, 587],
+        leads: [8, 12, 15, 10],
+        inquiries: [15, 18, 22, 16]
+      }
+    };
+
+    res.json({
+      success: true,
+      data: analyticsData
+    });
+  } catch (error) {
+    console.error('Analytics overview error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch analytics overview'
+    });
+  }
+}));
+
+// @desc    Get vendor performance metrics
+// @route   GET /api/vendors/analytics/performance
+// @access  Private/Agent
+router.get('/analytics/performance', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+  const { timeframe = '30days' } = req.query;
+
+  try {
+    // Mock performance data
+    const performanceData = {
+      propertyPerformance: [
+        {
+          propertyId: '1',
+          title: 'Luxury Villa in Bandra',
+          views: 456,
+          leads: 12,
+          inquiries: 8,
+          conversionRate: 2.6
+        },
+        {
+          propertyId: '2', 
+          title: '3BHK Apartment in Powai',
+          views: 389,
+          leads: 9,
+          inquiries: 6,
+          conversionRate: 2.3
+        }
+      ],
+      topPerformingProperties: [
+        { id: '1', title: 'Luxury Villa in Bandra', metric: 'views', value: 456 },
+        { id: '2', title: '3BHK Apartment in Powai', metric: 'leads', value: 9 }
+      ],
+      timeSeriesData: {
+        daily: {
+          labels: Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`),
+          views: Array.from({ length: 30 }, () => Math.floor(Math.random() * 100) + 20),
+          leads: Array.from({ length: 30 }, () => Math.floor(Math.random() * 5) + 1)
+        }
+      }
+    };
+
+    res.json({
+      success: true,
+      data: performanceData
+    });
+  } catch (error) {
+    console.error('Performance metrics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch performance metrics'
+    });
+  }
+}));
+
+// @desc    Check vendor subscription status
+// @route   GET /api/vendors/subscription-status
+// @access  Private/Agent
+router.get('/subscription-status', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+
+  try {
+    const Subscription = require('../models/Subscription');
+    
+    const activeSubscription = await Subscription.findOne({
+      user: vendorId, // Changed from userId to user
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).populate('plan'); // Changed from planId to plan
+
+    if (activeSubscription) {
+      res.json({
+        success: true,
+        data: {
+          hasActiveSubscription: true,
+          subscription: {
+            id: activeSubscription._id,
+            planName: activeSubscription.plan.name, // Changed from planId to plan
+            planId: activeSubscription.plan._id, // Changed from planId to plan
+            status: activeSubscription.status,
+            startDate: activeSubscription.startDate,
+            endDate: activeSubscription.endDate,
+            features: activeSubscription.plan.features, // Changed from planId to plan
+            billingCycle: activeSubscription.billingCycle || 'monthly'
+          }
+        }
+      });
+    } else {
+      res.json({
+        success: true,
+        data: {
+          hasActiveSubscription: false,
+          subscription: null
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Subscription status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch subscription status'
+    });
+  }
+}));
+
+// @desc    Get vendor leads
+// @route   GET /api/vendors/leads
+// @access  Private/Agent
+router.get('/leads', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+  const { page = 1, limit = 10, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+  try {
+    // Mock lead data - in real implementation, you would fetch from Lead model
+    const mockLeads = [
+      {
+        id: '1',
+        propertyTitle: 'Luxury Villa in Bandra',
+        customerName: 'Rahul Sharma',
+        customerEmail: 'rahul@example.com',
+        customerPhone: '+91 9876543210',
+        status: 'new',
+        message: 'Interested in visiting this property',
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        budget: '2.5 Cr'
+      },
+      {
+        id: '2',
+        propertyTitle: '3BHK Apartment in Powai',
+        customerName: 'Priya Patel',
+        customerEmail: 'priya@example.com',
+        customerPhone: '+91 9876543211',
+        status: 'contacted',
+        message: 'Looking for immediate possession',
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        budget: '1.8 Cr'
+      },
+      {
+        id: '3',
+        propertyTitle: 'Commercial Office Space',
+        customerName: 'Amit Kumar',
+        customerEmail: 'amit@example.com',
+        customerPhone: '+91 9876543212',
+        status: 'converted',
+        message: 'Need office space for IT company',
+        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        budget: '5 Cr'
+      }
+    ];
+
+    // Apply filters
+    let filteredLeads = mockLeads;
+    if (status && status !== 'all') {
+      filteredLeads = filteredLeads.filter(lead => lead.status === status);
+    }
+
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    const paginatedLeads = filteredLeads.slice(startIndex, startIndex + parseInt(limit));
+
+    res.json({
+      success: true,
+      data: {
+        leads: paginatedLeads,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(filteredLeads.length / limit),
+          totalLeads: filteredLeads.length,
+          hasNext: startIndex + parseInt(limit) < filteredLeads.length,
+          hasPrev: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Vendor leads error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch vendor leads'
+    });
+  }
 }));
 
 module.exports = router;

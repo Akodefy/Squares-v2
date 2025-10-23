@@ -7,9 +7,11 @@ export const AddProperty = lazy(() => import("@/pages/vendor/AddProperty"));
 export const VendorLeads = lazy(() => import("@/pages/vendor/VendorLeads"));
 export const VendorMessages = lazy(() => import("@/pages/vendor/VendorMessages"));
 export const VendorAnalytics = lazy(() => import("@/pages/vendor/VendorAnalytics"));
-export const VendorPackages = lazy(() => import("@/pages/vendor/VendorPackages"));
+// Commented out packages - will be used in future
+// export const VendorPackages = lazy(() => import("@/pages/vendor/VendorPackages"));
 export const VendorServices = lazy(() => import("@/pages/vendor/VendorServices"));
 export const VendorSubscriptionPlans = lazy(() => import("@/pages/vendor/VendorSubscriptionPlans"));
+export const VendorSubscriptionManager = lazy(() => import("@/pages/vendor/VendorSubscriptionManager"));
 export const VendorBilling = lazy(() => import("@/pages/vendor/VendorBilling"));
 export const VendorReviews = lazy(() => import("@/pages/vendor/VendorReviews"));
 export const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));

@@ -1,4 +1,4 @@
-import { Menu, Bell, User, Search } from "lucide-react";
+import { Menu, Bell, User, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,12 +11,36 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface VendorNavbarProps {
   setSidebarOpen: (open: boolean) => void;
 }
 
 const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your vendor account.",
+      });
+      navigate("/"); // Redirect to home page
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Logout failed",
+        description: "There was an error logging out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <header className="bg-background border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
@@ -57,7 +81,12 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
                   <User className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <div className="text-sm font-medium">John Vendor</div>
+                  <div className="text-sm font-medium">
+                    {user?.profile?.firstName && user?.profile?.lastName
+                      ? `${user.profile.firstName} ${user.profile.lastName}`
+                      : "Vendor User"
+                    }
+                  </div>
                   <div className="text-xs text-muted-foreground">Premium Agent</div>
                 </div>
               </Button>
@@ -70,7 +99,10 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
               <DropdownMenuItem>Billing</DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Sign out</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
