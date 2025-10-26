@@ -19,13 +19,16 @@ import {
   Video,
   Eye,
   Crown,
-  Lock
+  Lock,
+  Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, Link } from "react-router-dom";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { vendorService } from "@/services/vendorService";
+import { locationService, type Country, type State, type District, type City, type Taluk, type LocationName } from "@/services/locationService";
+import SearchableLocationDropdown from "@/components/form-components/SearchableLocationDropdown";
 import { toast } from "@/hooks/use-toast";
 
 const AddProperty = () => {
@@ -42,10 +45,13 @@ const AddProperty = () => {
     
     // Location
     address: "",
-    city: "",
+    country: "",
     state: "",
+    district: "",
+    city: "",
+    taluk: "",
+    locationName: "",
     pincode: "",
-    locality: "",
     
     // Property Details
     bedrooms: "",
@@ -81,6 +87,253 @@ const AddProperty = () => {
 
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadedVideos, setUploadedVideos] = useState([]);
+
+  // Location data states
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [states, setStates] = useState<State[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [taluks, setTaluks] = useState<Taluk[]>([]);
+  const [locationNames, setLocationNames] = useState<LocationName[]>([]);
+  
+  // Loading states for location fields
+  const [locationLoading, setLocationLoading] = useState({
+    countries: false,
+    states: false,
+    districts: false,
+    cities: false,
+    taluks: false,
+    locationNames: false,
+    pincode: false
+  });
+
+  // Load countries on component mount
+  useEffect(() => {
+    const loadCountries = async () => {
+      setLocationLoading(prev => ({ ...prev, countries: true }));
+      try {
+        const countriesData = await locationService.getCountries();
+        setCountries(countriesData);
+        // Set India as default
+        if (countriesData.length > 0 && !formData.country) {
+          setFormData(prev => ({ ...prev, country: 'IN' }));
+        }
+      } catch (error) {
+        console.error('Error loading countries:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load countries. Please refresh the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setLocationLoading(prev => ({ ...prev, countries: false }));
+      }
+    };
+
+    loadCountries();
+  }, []);
+
+  // Load states when country changes
+  useEffect(() => {
+    const loadStates = async () => {
+      if (!formData.country) {
+        setStates([]);
+        return;
+      }
+
+      setLocationLoading(prev => ({ ...prev, states: true }));
+      try {
+        const statesData = await locationService.getStatesByCountry(formData.country);
+        setStates(statesData);
+        // Reset dependent fields
+        setFormData(prev => ({ 
+          ...prev, 
+          state: '', 
+          district: '',
+          city: '', 
+          taluk: '',
+          locationName: '', 
+          pincode: '' 
+        }));
+        setDistricts([]);
+        setCities([]);
+        setTaluks([]);
+        setLocationNames([]);
+      } catch (error) {
+        console.error('Error loading states:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load states. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLocationLoading(prev => ({ ...prev, states: false }));
+      }
+    };
+
+    loadStates();
+  }, [formData.country]);
+
+  // Load districts when state changes
+  useEffect(() => {
+    const loadDistricts = async () => {
+      if (!formData.state) {
+        setDistricts([]);
+        return;
+      }
+
+      setLocationLoading(prev => ({ ...prev, districts: true }));
+      try {
+        const districtsData = await locationService.getDistrictsByState(formData.state, formData.country);
+        setDistricts(districtsData);
+        // Reset dependent fields
+        setFormData(prev => ({ 
+          ...prev, 
+          district: '',
+          city: '', 
+          taluk: '',
+          locationName: '', 
+          pincode: '' 
+        }));
+        setCities([]);
+        setTaluks([]);
+        setLocationNames([]);
+      } catch (error) {
+        console.error('Error loading districts:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load districts. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLocationLoading(prev => ({ ...prev, districts: false }));
+      }
+    };
+
+    loadDistricts();
+  }, [formData.state]);
+
+  // Load cities when district changes
+  useEffect(() => {
+    const loadCities = async () => {
+      if (!formData.district) {
+        setCities([]);
+        return;
+      }
+
+      setLocationLoading(prev => ({ ...prev, cities: true }));
+      try {
+        const citiesData = await locationService.getCitiesByDistrict(formData.district, formData.state, formData.country);
+        setCities(citiesData);
+        // Reset dependent fields
+        setFormData(prev => ({ 
+          ...prev, 
+          city: '', 
+          taluk: '',
+          locationName: '', 
+          pincode: '' 
+        }));
+        setTaluks([]);
+        setLocationNames([]);
+      } catch (error) {
+        console.error('Error loading cities:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load cities. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLocationLoading(prev => ({ ...prev, cities: false }));
+      }
+    };
+
+    loadCities();
+  }, [formData.district]);
+
+  // Load taluks when city changes
+  useEffect(() => {
+    const loadTaluks = async () => {
+      if (!formData.city) {
+        setTaluks([]);
+        return;
+      }
+
+      setLocationLoading(prev => ({ ...prev, taluks: true }));
+      try {
+        const taluksData = await locationService.getTaluksByCity(formData.city);
+        setTaluks(taluksData);
+        // Reset dependent fields
+        setFormData(prev => ({ 
+          ...prev, 
+          taluk: '', 
+          locationName: '',
+          pincode: '' 
+        }));
+        setLocationNames([]);
+      } catch (error) {
+        console.error('Error loading taluks:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load taluks. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLocationLoading(prev => ({ ...prev, taluks: false }));
+      }
+    };
+
+    loadTaluks();
+  }, [formData.city]);
+
+  // Load location names when taluk changes
+  useEffect(() => {
+    const loadLocationNames = async () => {
+      if (!formData.taluk) {
+        setLocationNames([]);
+        return;
+      }
+
+      setLocationLoading(prev => ({ ...prev, locationNames: true }));
+      try {
+        const locationNamesData = await locationService.getLocationNamesByTaluk(formData.taluk);
+        setLocationNames(locationNamesData);
+        // Reset dependent fields
+        setFormData(prev => ({ 
+          ...prev, 
+          locationName: '',
+          pincode: '' 
+        }));
+      } catch (error) {
+        console.error('Error loading location names:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load location names. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLocationLoading(prev => ({ ...prev, locationNames: false }));
+      }
+    };
+
+    loadLocationNames();
+  }, [formData.taluk]);
+
+  // Auto-detect pincode when location name changes
+  useEffect(() => {
+    const autoDetectPincode = async () => {
+      if (!formData.locationName) return;
+
+      const selectedLocationName = locationNames.find(l => l.id === formData.locationName);
+      if (selectedLocationName && selectedLocationName.pincode) {
+        setFormData(prev => ({ 
+          ...prev, 
+          pincode: selectedLocationName.pincode 
+        }));
+      }
+    };
+
+    autoDetectPincode();
+  }, [formData.locationName, locationNames]);
 
   // Check if user has addPropertySubscription
   useEffect(() => {
@@ -163,6 +416,92 @@ const AddProperty = () => {
     console.log("Property Data:", formData);
     // Here you would submit to your backend
     navigate("/vendor/properties");
+  };
+
+  // Handle location field changes
+  const handleLocationChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle pincode change and auto-detect location
+  const handlePincodeChange = async (pincode: string) => {
+    setFormData(prev => ({ ...prev, pincode }));
+
+    if (pincode.length >= 6 && locationService.isPincodeValid(pincode, formData.country)) {
+      setLocationLoading(prev => ({ ...prev, pincode: true }));
+      try {
+        const pincodeData = await locationService.getLocationByPincode(pincode);
+        
+        if (pincodeData) {
+          // Find matching country
+          const matchingCountry = countries.find(c => c.name === pincodeData.country);
+          if (matchingCountry) {
+            setFormData(prev => ({ ...prev, country: matchingCountry.code }));
+            
+            // Load states for the detected country
+            const statesData = await locationService.getStatesByCountry(matchingCountry.code);
+            setStates(statesData);
+            
+            // Find matching state
+            const matchingState = statesData.find(s => s.name === pincodeData.state);
+            if (matchingState) {
+              setFormData(prev => ({ ...prev, state: matchingState.stateCode }));
+              
+              // Load districts for the detected state
+              const districtsData = await locationService.getDistrictsByState(matchingState.stateCode, matchingCountry.code);
+              setDistricts(districtsData);
+              
+              // Find matching district (using city name as district for now)
+              const matchingDistrict = districtsData.find(d => d.name === pincodeData.city);
+              if (matchingDistrict) {
+                setFormData(prev => ({ ...prev, district: matchingDistrict.id }));
+                
+                // Load cities for the detected district
+                const citiesData = await locationService.getCitiesByDistrict(matchingDistrict.id, matchingState.stateCode, matchingCountry.code);
+                setCities(citiesData);
+                
+                // Auto-select first city for now (can be improved)
+                if (citiesData.length > 0) {
+                  const firstCity = citiesData[0];
+                  setFormData(prev => ({ ...prev, city: firstCity.id }));
+                  
+                  // Load taluks for the detected city
+                  const taluksData = await locationService.getTaluksByCity(firstCity.id);
+                  setTaluks(taluksData);
+                  
+                  // Auto-select first taluk for now (can be improved)
+                  if (taluksData.length > 0) {
+                    const firstTaluk = taluksData[0];
+                    setFormData(prev => ({ ...prev, taluk: firstTaluk.id }));
+                    
+                    // Load location names for the detected taluk
+                    const locationNamesData = await locationService.getLocationNamesByTaluk(firstTaluk.id);
+                    setLocationNames(locationNamesData);
+                    
+                    // Find matching location name
+                    const matchingLocationName = locationNamesData.find(l => 
+                      l.name === pincodeData.locality || l.pincode === pincode
+                    );
+                    if (matchingLocationName) {
+                      setFormData(prev => ({ ...prev, locationName: matchingLocationName.id }));
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          toast({
+            title: "Location Auto-Detected",
+            description: `Found: ${pincodeData.locality}, ${pincodeData.city}, ${pincodeData.state}`,
+          });
+        }
+      } catch (error) {
+        console.error('Error detecting location from pincode:', error);
+      } finally {
+        setLocationLoading(prev => ({ ...prev, pincode: false }));
+      }
+    }
   };
 
   const handleAmenityToggle = (amenity: string) => {
@@ -270,47 +609,198 @@ const AddProperty = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  placeholder="e.g., Mumbai"
-                  value={formData.city}
-                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                />
+                <Label htmlFor="country">Country *</Label>
+                <Select 
+                  value={formData.country} 
+                  onValueChange={(value) => handleLocationChange('country', value)}
+                  disabled={locationLoading.countries}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={locationLoading.countries ? "Loading..." : "Select country"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        <span className="flex items-center">
+                          <span className="mr-2">{country.flag}</span>
+                          {country.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="state">State *</Label>
-                <Input
-                  id="state"
-                  placeholder="e.g., Maharashtra"
+                <Label htmlFor="state">State/Province *</Label>
+                <SearchableLocationDropdown
+                  options={states.map(state => ({
+                    value: state.stateCode,
+                    label: state.name,
+                    searchText: state.name
+                  }))}
                   value={formData.state}
-                  onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                  onValueChange={(value) => handleLocationChange('state', value)}
+                  placeholder={
+                    !formData.country ? "Select country first" : 
+                    locationLoading.states ? "Loading..." : 
+                    "Select state"
+                  }
+                  disabled={!formData.country || locationLoading.states}
+                  loading={locationLoading.states}
+                  searchPlaceholder="Search states..."
+                  emptyText="No states found."
                 />
+                {locationLoading.states && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    Loading states...
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="locality">Locality/Area *</Label>
-                <Input
-                  id="locality"
-                  placeholder="e.g., Bandra West"
-                  value={formData.locality}
-                  onChange={(e) => setFormData(prev => ({ ...prev, locality: e.target.value }))}
+                <Label htmlFor="district">District *</Label>
+                <SearchableLocationDropdown
+                  options={districts.map(district => ({
+                    value: district.id,
+                    label: district.name,
+                    searchText: `${district.name}, ${district.stateCode}`
+                  }))}
+                  value={formData.district}
+                  onValueChange={(value) => handleLocationChange('district', value)}
+                  placeholder={
+                    !formData.state ? "Select state first" : 
+                    locationLoading.districts ? "Loading..." : 
+                    "Select district"
+                  }
+                  disabled={!formData.state || locationLoading.districts}
+                  loading={locationLoading.districts}
+                  searchPlaceholder="Search districts..."
+                  emptyText="No districts found."
                 />
+                {locationLoading.districts && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    Loading districts...
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="city">City *</Label>
+                <SearchableLocationDropdown
+                  options={cities.map(city => ({
+                    value: city.id,
+                    label: city.name,
+                    searchText: `${city.name}, ${city.districtId}`
+                  }))}
+                  value={formData.city}
+                  onValueChange={(value) => handleLocationChange('city', value)}
+                  placeholder={
+                    !formData.district ? "Select district first" : 
+                    locationLoading.cities ? "Loading..." : 
+                    "Select city"
+                  }
+                  disabled={!formData.district || locationLoading.cities}
+                  loading={locationLoading.cities}
+                  searchPlaceholder="Search cities..."
+                  emptyText="No cities found."
+                />
+                {locationLoading.cities && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    Loading cities...
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="taluk">Taluk/Block *</Label>
+                <SearchableLocationDropdown
+                  options={taluks.map(taluk => ({
+                    value: taluk.id,
+                    label: taluk.name,
+                    searchText: `${taluk.name}, ${taluk.cityId}`
+                  }))}
+                  value={formData.taluk}
+                  onValueChange={(value) => handleLocationChange('taluk', value)}
+                  placeholder={
+                    !formData.city ? "Select city first" : 
+                    locationLoading.taluks ? "Loading..." : 
+                    "Select taluk"
+                  }
+                  disabled={!formData.city || locationLoading.taluks}
+                  loading={locationLoading.taluks}
+                  searchPlaceholder="Search taluks..."
+                  emptyText="No taluks found."
+                />
+                {locationLoading.taluks && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    Loading taluks...
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="pincode">Pincode *</Label>
-                <Input
-                  id="pincode"
-                  placeholder="e.g., 400050"
-                  value={formData.pincode}
-                  onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
+                <Label htmlFor="locationName">Location Name (Village/Urban) *</Label>
+                <SearchableLocationDropdown
+                  options={locationNames.map(locationName => ({
+                    value: locationName.id,
+                    label: locationName.name,
+                    searchText: locationName.pincode ? `${locationName.name}, ${locationName.type}, Pincode: ${locationName.pincode}` : `${locationName.name}, ${locationName.type}`
+                  }))}
+                  value={formData.locationName}
+                  onValueChange={(value) => handleLocationChange('locationName', value)}
+                  placeholder={
+                    !formData.taluk ? "Select taluk first" : 
+                    locationLoading.locationNames ? "Loading..." : 
+                    "Select location"
+                  }
+                  disabled={!formData.taluk || locationLoading.locationNames}
+                  loading={locationLoading.locationNames}
+                  searchPlaceholder="Search locations..."
+                  emptyText="No locations found."
                 />
+                {locationLoading.locationNames && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    Loading locations...
+                  </div>
+                )}
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pincode">Pincode/ZIP Code *</Label>
+              <div className="relative">
+                <Input
+                  id="pincode"
+                  placeholder="Enter pincode to auto-detect location"
+                  value={formData.pincode}
+                  onChange={(e) => handlePincodeChange(e.target.value)}
+                />
+                {locationLoading.pincode && (
+                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter pincode to automatically detect and fill location details
+              </p>
+            </div>
+
+            {formData.pincode && !locationService.isPincodeValid(formData.pincode, formData.country) && (
+              <Alert>
+                <AlertDescription>
+                  Please enter a valid {formData.country === 'IN' ? '6-digit Indian' : ''} pincode.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         );
 
@@ -657,8 +1147,12 @@ const AddProperty = () => {
                   
                   <div>
                     <h3 className="font-semibold mb-2">Location</h3>
-                    <p><strong>City:</strong> {formData.city}</p>
-                    <p><strong>Locality:</strong> {formData.locality}</p>
+                    <p><strong>Country:</strong> {countries.find(c => c.code === formData.country)?.name}</p>
+                    <p><strong>State:</strong> {states.find(s => s.stateCode === formData.state)?.name}</p>
+                    <p><strong>District:</strong> {districts.find(d => d.id === formData.district)?.name}</p>
+                    <p><strong>City:</strong> {cities.find(c => c.id === formData.city)?.name}</p>
+                    <p><strong>Taluk:</strong> {taluks.find(t => t.id === formData.taluk)?.name}</p>
+                    <p><strong>Location:</strong> {locationNames.find(l => l.id === formData.locationName)?.name}</p>
                     <p><strong>Pincode:</strong> {formData.pincode}</p>
                   </div>
                   

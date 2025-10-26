@@ -12,7 +12,7 @@
       "emailVerified": true,
       "avatar": null,
       "bio": null,
-      "lastLogin": "2025-10-23T10:36:27.308Z",
+      "lastLogin": "2025-10-24T08:48:12.045Z",
       "preferences": {
         "notifications": {
           "email": true,
@@ -45,7 +45,7 @@
       }
     },
     "createdAt": "2025-10-21T10:59:31.034Z",
-    "updatedAt": "2025-10-23T10:36:27.319Z",
+    "updatedAt": "2025-10-24T08:48:12.060Z",
     "__v": 1
   },
   {
@@ -116,7 +116,7 @@
         }
       },
       "avatar": null,
-      "lastLogin": "2025-10-23T12:03:02.986Z",
+      "lastLogin": "2025-10-26T04:33:54.369Z",
       "vendorInfo": {
         "certifications": [],
         "experience": 0,
@@ -138,7 +138,7 @@
       }
     },
     "createdAt": "2025-10-22T10:25:37.241Z",
-    "updatedAt": "2025-10-23T12:03:02.987Z",
+    "updatedAt": "2025-10-26T04:33:54.384Z",
     "__v": 1
   },
   {
@@ -268,11 +268,11 @@
       },
       "avatar": null,
       "bio": null,
-      "emailVerified": false,
-      "lastLogin": null
+      "emailVerified": true,
+      "lastLogin": "2025-10-25T04:59:30.772Z"
     },
     "createdAt": "2025-10-23T11:59:28.457Z",
-    "updatedAt": "2025-10-23T11:59:28.457Z",
+    "updatedAt": "2025-10-25T04:59:30.791Z",
     "__v": 0
   }
 ]
