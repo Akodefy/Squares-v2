@@ -1,0 +1,167 @@
+import { authService } from './authService';
+import { toast } from "@/hooks/use-toast";
+
+export interface AdminPropertyResponse {
+  success: boolean;
+  data: {
+    properties: any[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalProperties: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+      limit: number;
+    };
+  };
+}
+
+export interface AdminPropertyFilters {
+  page?: number;
+  limit?: number;
+  status?: string;
+  type?: string;
+  owner?: string;
+  search?: string;
+}
+
+class AdminPropertyService {
+  private async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const token = authService.getToken();
+    
+    const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin${endpoint}`, config);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async getProperties(filters: AdminPropertyFilters = {}): Promise<AdminPropertyResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+
+      const endpoint = `/properties${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await this.makeRequest<AdminPropertyResponse>(endpoint);
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch properties";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async updatePropertyStatus(propertyId: string, status: string, reason?: string): Promise<void> {
+    try {
+      await this.makeRequest(`/properties/${propertyId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, reason }),
+      });
+
+      toast({
+        title: "Success",
+        description: "Property status updated successfully!",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update property status";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async deleteProperty(propertyId: string): Promise<void> {
+    try {
+      await this.makeRequest(`/properties/${propertyId}`, {
+        method: "DELETE",
+      });
+
+      toast({
+        title: "Success",
+        description: "Property deleted successfully!",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async togglePropertyFeatured(propertyId: string, featured: boolean): Promise<void> {
+    try {
+      await this.makeRequest(`/properties/${propertyId}/featured`, {
+        method: "PATCH",
+        body: JSON.stringify({ featured }),
+      });
+
+      toast({
+        title: "Success",
+        description: `Property ${featured ? 'marked as featured' : 'removed from featured'}!`,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  getStatusOptions() {
+    return [
+      { label: "Active", value: "active" },
+      { label: "Inactive", value: "inactive" },
+      { label: "Pending", value: "pending" },
+      { label: "Sold", value: "sold" },
+      { label: "Rented", value: "rented" },
+    ];
+  }
+
+  getPropertyTypeOptions() {
+    return [
+      { label: "Apartment", value: "apartment" },
+      { label: "House", value: "house" },
+      { label: "Villa", value: "villa" },
+      { label: "Plot", value: "plot" },
+      { label: "Commercial", value: "commercial" },
+      { label: "Office", value: "office" },
+    ];
+  }
+}
+
+export const adminPropertyService = new AdminPropertyService();
+export default adminPropertyService;

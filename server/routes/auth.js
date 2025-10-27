@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const User = require('../models/User');
+const Vendor = require('../models/Vendor');
 const { asyncHandler, validateRequest } = require('../middleware/errorMiddleware');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { sendEmail } = require('../utils/emailService');
@@ -71,6 +72,71 @@ router.post('/register', validateRequest(registerSchema), asyncHandler(async (re
 
   await user.save();
 
+  // Create vendor profile for agents
+  let vendor = null;
+  if (role === 'agent') {
+    const vendorData = {
+      user: user._id,
+      businessInfo: {
+        companyName: businessInfo?.businessName || `${firstName} ${lastName}`.trim() || 'Unknown Business',
+        businessType: businessInfo?.businessType || 'individual',
+        licenseNumber: businessInfo?.licenseNumber || undefined,
+        gstNumber: businessInfo?.gstNumber || undefined,
+        panNumber: businessInfo?.panNumber || undefined,
+        website: businessInfo?.website || undefined
+      },
+      professionalInfo: {
+        experience: businessInfo?.experience || 0,
+        specializations: businessInfo?.specializations || [],
+        serviceAreas: businessInfo?.serviceAreas ? businessInfo.serviceAreas.map(area => ({
+          city: area,
+          state: '',
+          pincode: '',
+          locality: ''
+        })) : [],
+        languages: ['english'],
+        certifications: []
+      },
+      contactInfo: {
+        officeAddress: {
+          street: businessInfo?.address || '',
+          area: '',
+          city: businessInfo?.city || '',
+          state: businessInfo?.state || '',
+          country: 'India',
+          pincode: businessInfo?.pincode || '',
+          landmark: ''
+        },
+        officePhone: phone || '',
+        whatsappNumber: phone || '',
+        socialMedia: {
+          facebook: '',
+          instagram: '',
+          linkedin: '',
+          twitter: '',
+          youtube: ''
+        }
+      },
+      verification: {
+        isVerified: false,
+        verificationLevel: 'none',
+        documents: documents || []
+      },
+      status: 'pending_verification',
+      metadata: {
+        source: 'website',
+        notes: 'Created during registration'
+      }
+    };
+
+    vendor = new Vendor(vendorData);
+    await vendor.save();
+
+    // Link user to vendor profile
+    user.vendorProfile = vendor._id;
+    await user.save();
+  }
+
   // Generate email verification token
   const verificationToken = jwt.sign(
     { userId: user._id, type: 'email_verification' },
@@ -95,14 +161,17 @@ router.post('/register', validateRequest(registerSchema), asyncHandler(async (re
 
   res.status(201).json({
     success: true,
-    message: 'User registered successfully. Please check your email for verification.',
+    message: role === 'agent' 
+      ? 'Vendor registration successful. Please check your email for verification and wait for admin approval.'
+      : 'User registered successfully. Please check your email for verification.',
     data: {
       user: {
         id: user._id,
         email: user.email,
         role: user.role,
         status: user.status
-      }
+      },
+      ...(vendor && { vendor: { id: vendor._id, status: vendor.status } })
     }
   });
 }));

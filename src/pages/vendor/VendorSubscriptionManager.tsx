@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Circle, Calendar, CreditCard, Plus, Crown, Star, Shield } from 'lucide-react';
-import { useToast } from '../../hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { addonService } from '../../services/addonService';
-import { paymentService } from '../../services/paymentService';
+import { addonService } from '@/services/addonService';
+import { paymentService } from '@/services/paymentService';
 
 interface Subscription {
   id: string;
@@ -218,9 +218,13 @@ const VendorSubscriptionManager: React.FC = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Subscription Management</h1>
-          <p className="text-gray-600 mt-2">Manage your subscription and addon services</p>
+        <div className="sm:flex sm:items-center">
+          <div className="sm:flex-auto">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Subscription Management</h1>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              Manage your subscription and addon services
+            </p>
+          </div>
         </div>
         {!subscription && (
           <Button onClick={() => navigate('/vendor/subscription-plans')}>
@@ -318,12 +322,12 @@ const VendorSubscriptionManager: React.FC = () => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Total Amount</p>
-                    <p className="font-semibold text-lg">₹{subscription.amount.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600 dark:text-black">Total Amount</p>
+                    <p className="font-semibold text-lg dark:text-black">₹{subscription.amount.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Billing</p>
-                    <p className="font-medium">{subscription.billingCycle}</p>
+                    <p className="text-sm text-gray-600 dark:text-black">Billing</p>
+                    <p className="font-medium dark:text-black">{subscription.billingCycle}</p>
                   </div>
                 </div>
               </div>

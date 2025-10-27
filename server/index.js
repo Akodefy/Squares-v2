@@ -100,7 +100,10 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/locations', locationRoutes);
 // app.use('/api/services', authenticateToken, serviceRoutes);
 
-// Socket.IO for real-time messaging
+// Import admin real-time service
+const adminRealtimeService = require('./services/adminRealtimeService');
+
+// Socket.IO authentication middleware
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) {
@@ -118,11 +121,32 @@ io.use((socket, next) => {
   }
 });
 
+// Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log(`User ${socket.userId} connected`);
+  console.log(`User ${socket.userId} connected with role: ${socket.userRole}`);
   
   // Join user to their personal room
   socket.join(`user_${socket.userId}`);
+  
+  // Handle admin connections for real-time admin dashboard
+  if (socket.userRole === 'admin') {
+    const clientId = `admin_${socket.userId}_${Date.now()}`;
+    adminRealtimeService.addClient(clientId, socket, socket.userId);
+    
+    // Store clientId in socket for cleanup
+    socket.adminClientId = clientId;
+    
+    // Handle admin-specific events
+    socket.on('admin:request-metrics', async () => {
+      await adminRealtimeService.sendLiveMetrics(clientId);
+    });
+    
+    socket.on('admin:broadcast-notification', (notification) => {
+      adminRealtimeService.broadcastNotification(notification);
+    });
+    
+    console.log(`Admin ${socket.userId} connected to real-time dashboard`);
+  }
   
   // Handle joining conversation rooms
   socket.on('join_conversation', (conversationId) => {
@@ -156,6 +180,15 @@ io.on('connection', (socket) => {
         message: message.substring(0, 100)
       });
       
+      // Notify admins of new message activity
+      adminRealtimeService.broadcastNotification({
+        type: 'new_message',
+        title: 'New Message',
+        message: `New message from user ${socket.userId}`,
+        priority: 'low',
+        data: { conversationId, sender: socket.userId, recipient: recipientId }
+      });
+      
     } catch (error) {
       socket.emit('message_error', { error: error.message });
     }
@@ -169,8 +202,38 @@ io.on('connection', (socket) => {
     });
   });
   
+  // Handle user activity tracking
+  socket.on('user_activity', async (activity) => {
+    try {
+      // Update user's last activity
+      const User = require('./models/User');
+      await User.findByIdAndUpdate(socket.userId, {
+        'profile.lastActivity': new Date(),
+        'profile.lastActivityType': activity.type
+      });
+      
+      // Notify admins of significant user activities
+      if (['property_view', 'subscription_purchase', 'profile_update'].includes(activity.type)) {
+        adminRealtimeService.broadcastNotification({
+          type: 'user_activity',
+          title: 'User Activity',
+          message: `User ${socket.userId} performed: ${activity.type}`,
+          priority: 'low',
+          data: { userId: socket.userId, activity }
+        });
+      }
+    } catch (error) {
+      console.error('Error tracking user activity:', error);
+    }
+  });
+  
   socket.on('disconnect', () => {
     console.log(`User ${socket.userId} disconnected`);
+    
+    // Clean up admin real-time connection
+    if (socket.adminClientId) {
+      adminRealtimeService.removeClient(socket.adminClientId);
+    }
   });
 });
 

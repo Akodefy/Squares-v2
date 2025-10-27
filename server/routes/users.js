@@ -28,6 +28,9 @@ router.get('/', asyncHandler(async (req, res) => {
   // Build filter object
   const filter = {};
   
+  // Always exclude superadmin users from the list
+  filter.role = { $ne: 'superadmin' };
+  
   if (search) {
     filter.$or = [
       { email: { $regex: search, $options: 'i' } },
@@ -36,7 +39,8 @@ router.get('/', asyncHandler(async (req, res) => {
     ];
   }
   
-  if (role) {
+  if (role && role !== 'superadmin') {
+    // If role filter is provided, combine it with the superadmin exclusion
     filter.role = role;
   }
   
@@ -68,25 +72,6 @@ router.get('/', asyncHandler(async (req, res) => {
         hasPrevPage: page > 1
       }
     }
-  });
-}));
-
-// @desc    Get single user
-// @route   GET /api/users/:id
-// @access  Private
-router.get('/:id', asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).select('-password -verificationToken');
-  
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: 'User not found'
-    });
-  }
-
-  res.json({
-    success: true,
-    data: { user }
   });
 }));
 
@@ -122,6 +107,25 @@ router.get('/profile', asyncHandler(async (req, res) => {
         }
       }
     }
+  });
+}));
+
+// @desc    Get single user
+// @route   GET /api/users/:id
+// @access  Private
+router.get('/:id', asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).select('-password -verificationToken');
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  res.json({
+    success: true,
+    data: { user }
   });
 }));
 

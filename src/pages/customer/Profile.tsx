@@ -264,18 +264,54 @@ const Profile = () => {
     // Reset form data if needed
   };
 
-  const handlePreferenceChange = (key: string, value: boolean) => {
-    setPreferences(prev => ({
-      ...prev,
+  const handlePreferenceChange = async (key: string, value: boolean) => {
+    const newPreferences = {
+      ...preferences,
       [key]: value
-    }));
+    };
+    setPreferences(newPreferences);
+    
+    // Save to backend
+    try {
+      await userService.updateUserPreferences({
+        preferences: {
+          notifications: {
+            email: newPreferences.emailNotifications,
+            sms: newPreferences.smsNotifications,
+            push: newPreferences.pushNotifications
+          }
+        }
+      });
+    } catch (error) {
+      // Revert the change if save fails
+      setPreferences(prev => ({
+        ...prev,
+        [key]: !value
+      }));
+    }
   };
 
-  const handlePrivacyChange = (key: string, value: boolean | string) => {
-    setPrivacy(prev => ({
-      ...prev,
+  const handlePrivacyChange = async (key: string, value: boolean | string) => {
+    const newPrivacy = {
+      ...privacy,
       [key]: value
-    }));
+    };
+    setPrivacy(newPrivacy);
+    
+    // Save to backend
+    try {
+      await userService.updateUserPreferences({
+        preferences: {
+          privacy: newPrivacy
+        }
+      });
+    } catch (error) {
+      // Revert the change if save fails
+      setPrivacy(prev => ({
+        ...prev,
+        [key]: typeof value === 'boolean' ? !value : prev[key as keyof typeof prev]
+      }));
+    }
   };
 
   if (loading) {

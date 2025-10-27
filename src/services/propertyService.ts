@@ -9,7 +9,7 @@ export interface Property {
   title: string;
   description: string;
   type: 'apartment' | 'house' | 'villa' | 'plot' | 'land' | 'commercial' | 'office' | 'pg';
-  status: 'available' | 'sold' | 'rented' | 'pending';
+  status: 'available' | 'sold' | 'rented' | 'pending' | 'active' | 'rejected';
   listingType: 'sale' | 'rent' | 'lease';
   price: number;
   area: {
@@ -177,9 +177,48 @@ class PropertyService {
     }
   }
 
+  async getAdminProperty(id: string): Promise<SinglePropertyResponse> {
+    try {
+      const response = await this.makeRequest<SinglePropertyResponse>(`/admin/properties/${id}`);
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   async createProperty(propertyData: Partial<Property>): Promise<SinglePropertyResponse> {
     try {
       const response = await this.makeRequest<SinglePropertyResponse>("/properties", {
+        method: "POST",
+        body: JSON.stringify(propertyData),
+      });
+
+      toast({
+        title: "Success",
+        description: "Property created successfully!",
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async createAdminProperty(propertyData: Partial<Property>): Promise<SinglePropertyResponse> {
+    try {
+      const response = await this.makeRequest<SinglePropertyResponse>("/admin/properties", {
         method: "POST",
         body: JSON.stringify(propertyData),
       });

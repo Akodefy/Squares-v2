@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Edit, Trash2, Loader2 } from "lucide-react";
+import { Eye, Trash2, Loader2, User as UserIcon, Mail, Phone, MapPin, Calendar, Shield, Activity } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -8,6 +8,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Pagination,
   PaginationContent,
@@ -18,7 +25,7 @@ import {
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { userService, User } from "@/services/userService";
 import {
   AlertDialog,
@@ -37,13 +44,14 @@ interface UserTableProps {
 }
 
 const UserTable = ({ searchQuery }: UserTableProps) => {
-  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const itemsPerPage = 10;
 
   // Fetch users when page or search changes
@@ -92,6 +100,11 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
     } finally {
       setDeletingUserId(null);
     }
+  };
+
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user);
+    setIsDetailsDialogOpen(true);
   };
 
   if (loading) {
@@ -161,9 +174,10 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => navigate(`/admin/users/edit/${user._id}`)}
+                        onClick={() => handleViewUser(user)}
+                        title="View User Details"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -243,6 +257,218 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
           </PaginationContent>
         </Pagination>
       )}
+
+      {/* User Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              Complete information about {selectedUser ? userService.getFullName(selectedUser) : 'user'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserIcon className="w-5 h-5" />
+                    Basic Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Full Name</p>
+                      <p className="text-base">{userService.getFullName(selectedUser)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Email</p>
+                      <p className="text-base">{selectedUser.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                      <p className="text-base">{selectedUser.profile?.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">User ID</p>
+                      <p className="text-base font-mono text-sm">{selectedUser._id}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Account Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Account Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Role</p>
+                      <Badge variant={selectedUser.role === "admin" ? "default" : "secondary"} className="mt-1">
+                        {selectedUser.role}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Status</p>
+                      <Badge
+                        variant={
+                          selectedUser.status === "active"
+                            ? "default"
+                            : selectedUser.status === "pending"
+                            ? "secondary"
+                            : "destructive"
+                        }
+                        className="mt-1"
+                      >
+                        {selectedUser.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Email Verified</p>
+                      <Badge variant={selectedUser.emailVerified ? "default" : "destructive"} className="mt-1">
+                        {selectedUser.emailVerified ? "Verified" : "Not Verified"}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Phone Verified</p>
+                      <Badge variant={selectedUser.phoneVerified ? "default" : "destructive"} className="mt-1">
+                        {selectedUser.phoneVerified ? "Verified" : "Not Verified"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Address Information */}
+              {selectedUser.profile?.address && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Address Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedUser.profile?.address?.street && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Street</p>
+                          <p className="text-base">{selectedUser.profile.address.street}</p>
+                        </div>
+                      )}
+                      {selectedUser.profile?.address?.city && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">City</p>
+                          <p className="text-base">{selectedUser.profile.address.city}</p>
+                        </div>
+                      )}
+                      {selectedUser.profile?.address?.state && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">State</p>
+                          <p className="text-base">{selectedUser.profile.address.state}</p>
+                        </div>
+                      )}
+                      {selectedUser.profile?.address?.pincode && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Pincode</p>
+                          <p className="text-base">{selectedUser.profile.address.pincode}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Preferences */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    User Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Language</p>
+                      <p className="text-base">{selectedUser.preferences?.language || 'Not set'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Currency</p>
+                      <p className="text-base">{selectedUser.preferences?.currency || 'Not set'}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedUser.preferences?.notifications && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Notification Preferences</p>
+                      <div className="flex gap-2 flex-wrap">
+                        <Badge variant={selectedUser.preferences.notifications.email ? "default" : "secondary"}>
+                          Email: {selectedUser.preferences.notifications.email ? "Enabled" : "Disabled"}
+                        </Badge>
+                        <Badge variant={selectedUser.preferences.notifications.sms ? "default" : "secondary"}>
+                          SMS: {selectedUser.preferences.notifications.sms ? "Enabled" : "Disabled"}
+                        </Badge>
+                        <Badge variant={selectedUser.preferences.notifications.push ? "default" : "secondary"}>
+                          Push: {selectedUser.preferences.notifications.push ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Account Timestamps */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5" />
+                    Account Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Created At</p>
+                      <p className="text-base">{userService.formatCreationDate(selectedUser.createdAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
+                      <p className="text-base">{userService.formatCreationDate(selectedUser.updatedAt)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsDetailsDialogOpen(false)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

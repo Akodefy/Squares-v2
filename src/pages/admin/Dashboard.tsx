@@ -131,6 +131,7 @@ const Dashboard = () => {
                       activity.type === 'property_listed' ? 'bg-green-500' :
                       activity.type === 'property_sold' ? 'bg-emerald-500' :
                       activity.type === 'property_rented' ? 'bg-purple-500' :
+                      activity.type === 'subscription_purchased' ? 'bg-yellow-500' :
                       'bg-primary'
                     }`} />
                     <div className="flex-1">

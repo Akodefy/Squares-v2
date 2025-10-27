@@ -14,7 +14,7 @@ export interface DashboardStats {
 
 export interface RecentActivity {
   _id: string;
-  type: 'user_registered' | 'property_listed' | 'property_sold' | 'property_rented' | 'inquiry_received';
+  type: 'user_registered' | 'property_listed' | 'property_sold' | 'property_rented' | 'inquiry_received' | 'subscription_purchased';
   description: string;
   timestamp: string;
   metadata?: any;
@@ -117,6 +117,8 @@ class DashboardService {
         return `Property rented: ${activity.metadata?.title || 'Unknown'}`;
       case 'inquiry_received':
         return `New inquiry received for: ${activity.metadata?.propertyTitle || 'Unknown'}`;
+      case 'subscription_purchased':
+        return `Subscription purchased: ${activity.metadata?.planName || 'Unknown'} - ₹${activity.metadata?.amount || 0}`;
       default:
         return activity.description;
     }

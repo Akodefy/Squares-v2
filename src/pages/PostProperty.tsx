@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, CheckCircle2, Upload } from "lucide-react";
+import { Building2, CheckCircle2, Upload, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { pincodeService } from "@/services/postcodeService";
 
 const propertyFormSchema = z.object({
   // Personal Details
@@ -29,6 +30,8 @@ const propertyFormSchema = z.object({
   city: z.string().min(1, "City is required"),
   locality: z.string().min(1, "Locality is required"),
   street: z.string().optional(),
+  state: z.string().min(1, "State is required"),
+  pincode: z.string().regex(/^\d{6}$/, "Pincode must be exactly 6 digits"),
   
   // Property Features
   bathrooms: z.string().optional(),
@@ -62,6 +65,7 @@ type PropertyFormValues = z.infer<typeof propertyFormSchema>;
 const PostProperty = () => {
   const { toast } = useToast();
   const [uploadedPhotos, setUploadedPhotos] = useState<File[]>([]);
+  const [isLoadingPostcode, setIsLoadingPostcode] = useState(false);
   
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertyFormSchema),
@@ -83,6 +87,57 @@ const PostProperty = () => {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setUploadedPhotos(Array.from(e.target.files));
+    }
+  };
+
+  const handlePincodeChange = async (pincode: string) => {
+    // Update the pincode field first
+    form.setValue('pincode', pincode);
+    
+    // Only fetch location if pincode is valid length (6 digits for India)
+    if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
+      setIsLoadingPostcode(true);
+      
+      try {
+        const result = await pincodeService.getLocationByPincode(pincode);
+        
+        if (result.success && result.data) {
+          // Auto-fill location fields based on pincode data
+          if (result.data.district) {
+            form.setValue('city', result.data.district);
+          }
+          if (result.data.state) {
+            form.setValue('state', result.data.state);
+          }
+          if (result.data.area) {
+            // If locality is empty, fill it with area name
+            const currentLocality = form.getValues('locality');
+            if (!currentLocality) {
+              form.setValue('locality', result.data.area);
+            }
+          }
+          
+          toast({
+            title: "Location Found ✓",
+            description: `Auto-filled: ${result.data.area}, ${result.data.district}, ${result.data.state}`,
+          });
+        } else {
+          toast({
+            title: "Pincode not found",
+            description: "Please enter location details manually",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching pincode data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch location details. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingPostcode(false);
+      }
     }
   };
 
@@ -408,12 +463,12 @@ const PostProperty = () => {
                   <div className="space-y-4">
                     <FormField
                       control={form.control}
-                      name="city"
+                      name="street"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>City *</FormLabel>
+                          <FormLabel>Street / Society (Optional)</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter city" {...field} />
+                            <Input placeholder="Enter street or society name" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -434,19 +489,69 @@ const PostProperty = () => {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="street"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Street / Society (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter street or society name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter city" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter state" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="border-t pt-4 mt-6">
+                      <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        Enter pincode to auto-fill location details
+                      </p>
+                      <FormField
+                        control={form.control}
+                        name="pincode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Pincode *</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input 
+                                  placeholder="Enter 6-digit pincode" 
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handlePincodeChange(e.target.value);
+                                  }}
+                                />
+                                {isLoadingPostcode && (
+                                  <div className="absolute right-3 top-3">
+                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                 </div>
 

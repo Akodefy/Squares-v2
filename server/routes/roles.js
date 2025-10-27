@@ -8,6 +8,39 @@ const router = express.Router();
 // Apply auth middleware
 router.use(authenticateToken);
 
+// @desc    Get available permissions
+// @route   GET /api/roles/permissions
+// @access  Private/Admin
+router.get('/permissions', asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  const permissions = [
+    'create_property',
+    'read_property', 
+    'update_property',
+    'delete_property',
+    'manage_users',
+    'manage_roles',
+    'manage_plans',
+    'view_dashboard',
+    'manage_settings',
+    'manage_content',
+    'send_messages',
+    'moderate_content',
+    'access_analytics'
+  ];
+
+  res.json({
+    success: true,
+    data: { permissions }
+  });
+}));
+
 // @desc    Get all roles
 // @route   GET /api/roles
 // @access  Private/Admin
@@ -234,39 +267,6 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: 'Role deleted successfully'
-  });
-}));
-
-// @desc    Get available permissions
-// @route   GET /api/roles/permissions
-// @access  Private/Admin
-router.get('/permissions', asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Admin access required'
-    });
-  }
-
-  const permissions = [
-    'create_property',
-    'read_property', 
-    'update_property',
-    'delete_property',
-    'manage_users',
-    'manage_roles',
-    'manage_plans',
-    'view_dashboard',
-    'manage_settings',
-    'manage_content',
-    'send_messages',
-    'moderate_content',
-    'access_analytics'
-  ];
-
-  res.json({
-    success: true,
-    data: { permissions }
   });
 }));
 

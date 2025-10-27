@@ -215,6 +215,18 @@ class RoleService {
     }
   }
 
+  // Helper method to get available permissions from API
+  async getPermissions(): Promise<string[]> {
+    try {
+      const response = await this.makeRequest<{ success: boolean; data: { permissions: string[] } }>('/roles/permissions');
+      return response.data.permissions;
+    } catch (error) {
+      console.error('Failed to fetch permissions:', error);
+      // Fallback to local permissions if API fails
+      return this.getAvailablePermissions();
+    }
+  }
+
   // Helper method to get available permissions
   getAvailablePermissions(): string[] {
     return [

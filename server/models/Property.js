@@ -89,6 +89,11 @@ const propertySchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  // Reference to vendor if property is listed by an agent/vendor
+  vendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor'
+  },
   agent: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -104,6 +109,31 @@ const propertySchema = new mongoose.Schema({
   verified: {
     type: Boolean,
     default: false
+  },
+  // Approval tracking
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  approvedAt: {
+    type: Date
+  },
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  rejectedAt: {
+    type: Date
+  },
+  rejectionReason: {
+    type: String
+  },
+  modifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  modifiedAt: {
+    type: Date
   }
 }, {
   timestamps: true
@@ -113,8 +143,32 @@ const propertySchema = new mongoose.Schema({
 propertySchema.index({ 'address.city': 1, type: 1, listingType: 1 });
 propertySchema.index({ price: 1 });
 propertySchema.index({ owner: 1 });
+propertySchema.index({ vendor: 1 });
 propertySchema.index({ agent: 1 });
 propertySchema.index({ featured: 1 });
+
+// Pre-save middleware to set vendor reference
+propertySchema.pre('save', async function(next) {
+  try {
+    // If owner is changed and no vendor is set, check if owner is an agent
+    if (this.isModified('owner') && !this.vendor) {
+      const User = require('./User');
+      const Vendor = require('./Vendor');
+      
+      const user = await User.findById(this.owner);
+      if (user && user.role === 'agent') {
+        const vendor = await Vendor.findByUserId(this.owner);
+        if (vendor) {
+          this.vendor = vendor._id;
+          this.agent = this.owner; // Set agent field as well for backward compatibility
+        }
+      }
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Virtual for primary image
 propertySchema.virtual('primaryImage').get(function() {

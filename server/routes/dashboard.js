@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Property = require('../models/Property');
 const Message = require('../models/Message');
 const Favorite = require('../models/Favorite');
+const Subscription = require('../models/Subscription');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const router = express.Router();
@@ -38,7 +39,11 @@ router.get('/', asyncHandler(async (req, res) => {
     newUsersThisMonth,
     newPropertiesThisMonth,
     newUsersLastMonth,
-    newPropertiesLastMonth
+    newPropertiesLastMonth,
+    // Revenue calculations from subscriptions
+    totalRevenue,
+    revenueThisMonth,
+    revenueLastMonth
   ] = await Promise.all([
     User.countDocuments(),
     Property.countDocuments(),
@@ -58,15 +63,69 @@ router.get('/', asyncHandler(async (req, res) => {
         $gte: firstDayOfLastMonth, 
         $lte: lastDayOfLastMonth 
       } 
-    })
+    }),
+    // Calculate total revenue from all subscriptions
+    Subscription.aggregate([
+      {
+        $match: {
+          status: { $in: ['active', 'expired'] }, // Include completed payments
+          lastPaymentDate: { $exists: true }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' }
+        }
+      }
+    ]).then(result => result.length > 0 ? result[0].totalAmount : 0),
+    // Calculate revenue this month
+    Subscription.aggregate([
+      {
+        $match: {
+          status: { $in: ['active', 'expired'] },
+          lastPaymentDate: { $gte: firstDayOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' }
+        }
+      }
+    ]).then(result => result.length > 0 ? result[0].totalAmount : 0),
+    // Calculate revenue last month
+    Subscription.aggregate([
+      {
+        $match: {
+          status: { $in: ['active', 'expired'] },
+          lastPaymentDate: { 
+            $gte: firstDayOfLastMonth, 
+            $lte: lastDayOfLastMonth 
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' }
+        }
+      }
+    ]).then(result => result.length > 0 ? result[0].totalAmount : 0)
   ]);
 
   // Calculate engagement rate (favorites per property)
   const engagementRate = totalProperties > 0 ? (totalFavorites / totalProperties) * 100 : 0;
 
-  // Mock revenue calculation (in a real app, this would come from payment records)
-  const mockRevenue = totalProperties * 5000; // Mock ₹5000 per property listing
-  const mockRevenueThisMonth = newPropertiesThisMonth * 5000;
+  // Get recent subscription activities
+  const recentSubscriptions = await Subscription.find({
+    status: { $in: ['active', 'expired'] },
+    lastPaymentDate: { $exists: true }
+  })
+    .sort({ lastPaymentDate: -1 })
+    .limit(3)
+    .populate('user', 'email profile.firstName profile.lastName')
+    .populate('plan', 'name price');
 
   // Get recent activities
   const recentActivities = [];
@@ -107,6 +166,20 @@ router.get('/', asyncHandler(async (req, res) => {
     }
   })));
 
+  // Recent subscription purchases
+  recentActivities.push(...recentSubscriptions.map(subscription => ({
+    _id: subscription._id,
+    type: 'subscription_purchased',
+    description: `Subscription purchased: ${subscription.plan.name}`,
+    timestamp: subscription.lastPaymentDate || subscription.createdAt,
+    metadata: {
+      planName: subscription.plan.name,
+      amount: subscription.amount,
+      userName: `${subscription.user.profile.firstName} ${subscription.user.profile.lastName}`,
+      email: subscription.user.email
+    }
+  })));
+
   // Recent messages
   const recentMessages = await Message.find()
     .sort({ createdAt: -1 })
@@ -134,11 +207,11 @@ router.get('/', asyncHandler(async (req, res) => {
   const stats = {
     totalUsers,
     totalProperties,
-    totalRevenue: mockRevenue,
+    totalRevenue: totalRevenue || 0,
     activeListings: activeProperties,
     newUsersThisMonth,
     newPropertiesThisMonth,
-    revenueThisMonth: mockRevenueThisMonth,
+    revenueThisMonth: revenueThisMonth || 0,
     engagementRate: Math.round(engagementRate * 10) / 10, // Round to 1 decimal
     // Growth percentages
     userGrowth: newUsersLastMonth > 0 ? 
@@ -146,7 +219,10 @@ router.get('/', asyncHandler(async (req, res) => {
       (newUsersThisMonth > 0 ? 100 : 0),
     propertyGrowth: newPropertiesLastMonth > 0 ? 
       Math.round(((newPropertiesThisMonth - newPropertiesLastMonth) / newPropertiesLastMonth) * 100 * 10) / 10 : 
-      (newPropertiesThisMonth > 0 ? 100 : 0)
+      (newPropertiesThisMonth > 0 ? 100 : 0),
+    revenueGrowth: revenueLastMonth > 0 ? 
+      Math.round(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100 * 10) / 10 : 
+      (revenueThisMonth > 0 ? 100 : 0)
   };
 
   res.json({

@@ -11,9 +11,9 @@ import {
   MyFavorites,
   PropertyComparison,
   MyProperties,
-  PostCustomerProperty,
   ServiceRequests,
   CustomerProfile,
+  CustomerSettings,
   Messages,
   ReviewsRatings
 } from "@/routes/CustomerLazyImports";
@@ -75,6 +75,11 @@ const CustomerRoutes = () => {
           <Route path="profile" element={
             <Suspense fallback={<PageLoader />}>
               <CustomerProfile />
+            </Suspense>
+          } />
+          <Route path="settings" element={
+            <Suspense fallback={<PageLoader />}>
+              <CustomerSettings />
             </Suspense>
           } />
         </Route>

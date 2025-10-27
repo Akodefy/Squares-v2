@@ -27,7 +27,9 @@ const CustomerProfileDropdown = () => {
     navigate("/customer/profile");
   };
 
-
+  const handleSettings = () => {
+    navigate("/customer/settings");
+  };
 
   const handleLogout = () => {
     authService.logout();
@@ -75,7 +77,10 @@ const CustomerProfileDropdown = () => {
           <span>My Profile</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem 
+          onClick={handleSettings}
+          className="cursor-pointer"
+        >
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
         </DropdownMenuItem>

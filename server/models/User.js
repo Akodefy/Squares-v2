@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['customer', 'agent', 'admin'],
+    enum: ['customer', 'agent', 'admin', 'superadmin'],
     default: 'customer'
   },
   status: {
@@ -73,64 +73,25 @@ const userSchema = new mongoose.Schema({
         showPhone: { type: Boolean, default: false }
       }
     },
-    // Vendor-specific fields
-    vendorInfo: {
-      licenseNumber: {
-        type: String,
-        default: null
+    // Basic preferences
+    preferences: {
+      notifications: {
+        email: { type: Boolean, default: true },
+        sms: { type: Boolean, default: false },
+        push: { type: Boolean, default: true }
       },
-      gstNumber: {
-        type: String,
-        default: null
-      },
-      panNumber: {
-        type: String,
-        default: null
-      },
-      companyName: {
-        type: String,
-        default: null
-      },
-      experience: {
-        type: Number,
-        default: 0
-      },
-      website: {
-        type: String,
-        default: null
-      },
-      specializations: [{
-        type: String
-      }],
-      serviceAreas: [{
-        type: String
-      }],
-      certifications: [{
-        name: String,
-        issuedBy: String,
-        date: String,
-        verified: { type: Boolean, default: false }
-      }],
-      vendorPreferences: {
-        emailNotifications: { type: Boolean, default: true },
-        smsNotifications: { type: Boolean, default: true },
-        leadAlerts: { type: Boolean, default: true },
-        marketingEmails: { type: Boolean, default: false },
-        weeklyReports: { type: Boolean, default: true }
-      },
-      rating: {
-        average: { type: Number, default: 0 },
-        count: { type: Number, default: 0 }
-      },
-      responseTime: {
-        type: String,
-        default: "Not calculated"
-      },
-      memberSince: {
-        type: Date,
-        default: Date.now
+      privacy: {
+        showEmail: { type: Boolean, default: false },
+        showPhone: { type: Boolean, default: false }
       }
     }
+  },
+  
+  // Reference to vendor profile if user is an agent
+  vendorProfile: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor',
+    default: null
   }
 }, {
   timestamps: true,
@@ -180,6 +141,21 @@ userSchema.methods.getPublicProfile = function() {
     },
     createdAt: this.createdAt
   };
+};
+
+// Method to get vendor profile if user is an agent
+userSchema.methods.getVendorProfile = async function() {
+  if (this.role !== 'agent' || !this.vendorProfile) {
+    return null;
+  }
+  
+  const Vendor = require('./Vendor');
+  return await Vendor.findById(this.vendorProfile);
+};
+
+// Method to check if user is a vendor
+userSchema.methods.isVendor = function() {
+  return this.role === 'agent' && this.vendorProfile;
 };
 
 module.exports = mongoose.model('User', userSchema);

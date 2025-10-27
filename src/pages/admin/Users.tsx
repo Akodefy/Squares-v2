@@ -14,7 +14,7 @@ const Users = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Users</h1>
-          <p className="text-muted-foreground mt-1">Manage system users</p>
+          <p className="text-muted-foreground mt-1">View and manage system users</p>
         </div>
         <Button onClick={() => navigate("/admin/users/add")}>
           <Plus className="h-4 w-4 mr-2" />

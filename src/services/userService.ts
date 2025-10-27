@@ -15,7 +15,7 @@ export interface User {
       pincode?: string;
     };
   };
-  preferences: {
+  preferences?: {
     language: string;
     currency: string;
     notifications: {
@@ -269,6 +269,29 @@ class UserService {
       return response;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async updateUserPreferences(preferencesData: any): Promise<SingleUserResponse> {
+    try {
+      // First get current user to get their ID
+      const currentUserResponse = await this.getCurrentUser();
+      const userId = currentUserResponse.data.user._id;
+      
+      const response = await this.makeRequest<SingleUserResponse>(`/users/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify(preferencesData),
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update preferences";
       toast({
         title: "Error",
         description: errorMessage,

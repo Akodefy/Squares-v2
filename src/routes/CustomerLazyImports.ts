@@ -8,5 +8,6 @@ export const PropertyComparison = lazy(() => import("@/pages/customer/PropertyCo
 export const MyProperties = lazy(() => import("@/pages/customer/MyProperties"));
 export const ServiceRequests = lazy(() => import("@/pages/customer/ServiceRequests"));
 export const CustomerProfile = lazy(() => import("@/pages/customer/Profile"));
+export const CustomerSettings = lazy(() => import("@/pages/customer/Settings"));
 export const Messages = lazy(() => import("@/pages/customer/Messages"));
 export const ReviewsRatings = lazy(() => import("@/pages/customer/ReviewsRatings"));

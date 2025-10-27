@@ -52,6 +52,14 @@ const planSchema = new mongoose.Schema({
     videoTours: {
       type: Number,
       default: 0
+    },
+    leads: {
+      type: Number,
+      default: 100 // Monthly lead limit
+    },
+    messages: {
+      type: Number,
+      default: 1000 // Monthly message limit
     }
   },
   isActive: {

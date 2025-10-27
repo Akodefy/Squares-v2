@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Loader2, Plus } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 import {
   Pagination,
@@ -18,6 +20,7 @@ import { SearchFilter } from "@/components/adminpanel/shared/SearchFilter";
 import roleService, { Role } from "@/services/roleService";
 
 const Roles = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roles, setRoles] = useState<Role[]>([]);
@@ -140,11 +143,20 @@ const Roles = () => {
 
   return (
       <div className="space-y-6 relative top-[60px]">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage user roles and permissions
-          </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage user roles and permissions
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate('/admin/roles/add')}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add New Role
+          </Button>
         </div>
 
         <Card>

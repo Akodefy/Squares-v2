@@ -3,31 +3,28 @@ import { toast } from '@/hooks/use-toast';
 
 export interface Subscription {
   _id: string;
-  userId: string;
-  planId: string;
-  status: 'active' | 'cancelled' | 'expired' | 'pending';
-  startDate: string;
-  endDate: string;
-  amount: number;
-  currency: string;
-  paymentMethod?: string;
-  isAutoRenew: boolean;
-  createdAt: string;
-  updatedAt: string;
-  
-  // Populated fields
-  user?: {
+  user: {
     _id: string;
     name: string;
     email: string;
+    phone?: string;
   };
-  plan?: {
+  plan: {
     _id: string;
     name: string;
     description: string;
     price: number;
     billingPeriod: string;
   };
+  status: 'active' | 'cancelled' | 'expired' | 'pending';
+  startDate: string;
+  endDate: string;
+  amount: number;
+  currency: string;
+  paymentMethod?: string;
+  autoRenew: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SubscriptionFilters {

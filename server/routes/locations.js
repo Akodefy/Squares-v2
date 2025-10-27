@@ -2,6 +2,885 @@ const express = require('express');
 const router = express.Router();
 const asyncHandler = require('express-async-handler');
 
+// Helper function to get state code from state name
+function getStateCode(stateName) {
+  const stateMapping = {
+    'Tamil Nadu': 'TN',
+    'Karnataka': 'KA',
+    'Maharashtra': 'MH',
+    'Kerala': 'KL',
+    'Andhra Pradesh': 'AP',
+    'Telangana': 'TG',
+    'Gujarat': 'GJ',
+    'Rajasthan': 'RJ',
+    'Punjab': 'PB',
+    'Haryana': 'HR',
+    'Uttar Pradesh': 'UP',
+    'Madhya Pradesh': 'MP',
+    'Bihar': 'BR',
+    'West Bengal': 'WB',
+    'Odisha': 'OR',
+    'Jharkhand': 'JH',
+    'Assam': 'AS',
+    'Himachal Pradesh': 'HP',
+    'Uttarakhand': 'UT',
+    'Goa': 'GA',
+    'Delhi': 'DL',
+    'Jammu and Kashmir': 'JK',
+    'Ladakh': 'LA',
+    'Chandigarh': 'CH',
+    'Puducherry': 'PY',
+    'Lakshadweep': 'LD',
+    'Andaman and Nicobar Islands': 'AN',
+    'Dadra and Nagar Haveli and Daman and Diu': 'DN',
+    'Chhattisgarh': 'CG',
+    'Manipur': 'MN',
+    'Meghalaya': 'ML',
+    'Mizoram': 'MZ',
+    'Nagaland': 'NL',
+    'Sikkim': 'SK',
+    'Tripura': 'TR',
+    'Arunachal Pradesh': 'AR'
+  };
+  return stateMapping[stateName] || stateName.substring(0, 2).toUpperCase();
+}
+
+// Helper function to determine location type based on name
+function determineLocationType(locationName) {
+  const urbanKeywords = ['city', 'town', 'urban', 'metro', 'corporation', 'municipal', 'nagar', 'colony', 'layout', 'extension', 'park', 'sector', 'block', 'phase'];
+  const villageKeywords = ['village', 'gram', 'palli', 'palle', 'oor', 'ur'];
+  
+  const nameLower = locationName.toLowerCase();
+  
+  if (urbanKeywords.some(keyword => nameLower.includes(keyword))) {
+    return 'urban';
+  } else if (villageKeywords.some(keyword => nameLower.includes(keyword))) {
+    return 'village';
+  } else {
+    // Default to town for ambiguous cases
+    return 'town';
+  }
+}
+
+// Comprehensive Indian Districts Database
+const indianDistricts = {
+  'TN': [ // Tamil Nadu
+    { id: 'ariyalur', name: 'Ariyalur' },
+    { id: 'chengalpattu', name: 'Chengalpattu' },
+    { id: 'chennai', name: 'Chennai' },
+    { id: 'coimbatore', name: 'Coimbatore' },
+    { id: 'cuddalore', name: 'Cuddalore' },
+    { id: 'dharmapuri', name: 'Dharmapuri' },
+    { id: 'dindigul', name: 'Dindigul' },
+    { id: 'erode', name: 'Erode' },
+    { id: 'kallakurichi', name: 'Kallakurichi' },
+    { id: 'kanchipuram', name: 'Kanchipuram' },
+    { id: 'kanyakumari', name: 'Kanyakumari' },
+    { id: 'karur', name: 'Karur' },
+    { id: 'krishnagiri', name: 'Krishnagiri' },
+    { id: 'madurai', name: 'Madurai' },
+    { id: 'mayiladuthurai', name: 'Mayiladuthurai' },
+    { id: 'nagapattinam', name: 'Nagapattinam' },
+    { id: 'namakkal', name: 'Namakkal' },
+    { id: 'nilgiris', name: 'Nilgiris' },
+    { id: 'perambalur', name: 'Perambalur' },
+    { id: 'pudukkottai', name: 'Pudukkottai' },
+    { id: 'ramanathapuram', name: 'Ramanathapuram' },
+    { id: 'ranipet', name: 'Ranipet' },
+    { id: 'salem', name: 'Salem' },
+    { id: 'sivaganga', name: 'Sivaganga' },
+    { id: 'tenkasi', name: 'Tenkasi' },
+    { id: 'thanjavur', name: 'Thanjavur' },
+    { id: 'theni', name: 'Theni' },
+    { id: 'thoothukudi', name: 'Thoothukudi' },
+    { id: 'tiruchirappalli', name: 'Tiruchirappalli' },
+    { id: 'tirunelveli', name: 'Tirunelveli' },
+    { id: 'tirupathur', name: 'Tirupathur' },
+    { id: 'tiruppur', name: 'Tiruppur' },
+    { id: 'tiruvannamalai', name: 'Tiruvannamalai' },
+    { id: 'tiruvarur', name: 'Tiruvarur' },
+    { id: 'vellore', name: 'Vellore' },
+    { id: 'viluppuram', name: 'Viluppuram' },
+    { id: 'virudhunagar', name: 'Virudhunagar' }
+  ],
+  'KA': [ // Karnataka
+    { id: 'bagalkot', name: 'Bagalkot' },
+    { id: 'ballari', name: 'Ballari' },
+    { id: 'belagavi', name: 'Belagavi' },
+    { id: 'bengaluru-rural', name: 'Bengaluru Rural' },
+    { id: 'bengaluru-urban', name: 'Bengaluru Urban' },
+    { id: 'bidar', name: 'Bidar' },
+    { id: 'chamarajanagar', name: 'Chamarajanagar' },
+    { id: 'chikkaballapur', name: 'Chikkaballapur' },
+    { id: 'chikkamagaluru', name: 'Chikkamagaluru' },
+    { id: 'chitradurga', name: 'Chitradurga' },
+    { id: 'dakshina-kannada', name: 'Dakshina Kannada' },
+    { id: 'davanagere', name: 'Davanagere' },
+    { id: 'dharwad', name: 'Dharwad' },
+    { id: 'gadag', name: 'Gadag' },
+    { id: 'hassan', name: 'Hassan' },
+    { id: 'haveri', name: 'Haveri' },
+    { id: 'kalaburagi', name: 'Kalaburagi' },
+    { id: 'kodagu', name: 'Kodagu' },
+    { id: 'kolar', name: 'Kolar' },
+    { id: 'koppal', name: 'Koppal' },
+    { id: 'mandya', name: 'Mandya' },
+    { id: 'mysuru', name: 'Mysuru' },
+    { id: 'raichur', name: 'Raichur' },
+    { id: 'ramanagara', name: 'Ramanagara' },
+    { id: 'shivamogga', name: 'Shivamogga' },
+    { id: 'tumakuru', name: 'Tumakuru' },
+    { id: 'udupi', name: 'Udupi' },
+    { id: 'uttara-kannada', name: 'Uttara Kannada' },
+    { id: 'vijayapura', name: 'Vijayapura' },
+    { id: 'yadgir', name: 'Yadgir' }
+  ],
+  'MH': [ // Maharashtra
+    { id: 'ahmednagar', name: 'Ahmednagar' },
+    { id: 'akola', name: 'Akola' },
+    { id: 'amravati', name: 'Amravati' },
+    { id: 'aurangabad', name: 'Aurangabad' },
+    { id: 'beed', name: 'Beed' },
+    { id: 'bhandara', name: 'Bhandara' },
+    { id: 'buldhana', name: 'Buldhana' },
+    { id: 'chandrapur', name: 'Chandrapur' },
+    { id: 'dhule', name: 'Dhule' },
+    { id: 'gadchiroli', name: 'Gadchiroli' },
+    { id: 'gondia', name: 'Gondia' },
+    { id: 'hingoli', name: 'Hingoli' },
+    { id: 'jalgaon', name: 'Jalgaon' },
+    { id: 'jalna', name: 'Jalna' },
+    { id: 'kolhapur', name: 'Kolhapur' },
+    { id: 'latur', name: 'Latur' },
+    { id: 'mumbai-city', name: 'Mumbai City' },
+    { id: 'mumbai-suburban', name: 'Mumbai Suburban' },
+    { id: 'nagpur', name: 'Nagpur' },
+    { id: 'nanded', name: 'Nanded' },
+    { id: 'nandurbar', name: 'Nandurbar' },
+    { id: 'nashik', name: 'Nashik' },
+    { id: 'osmanabad', name: 'Osmanabad' },
+    { id: 'palghar', name: 'Palghar' },
+    { id: 'parbhani', name: 'Parbhani' },
+    { id: 'pune', name: 'Pune' },
+    { id: 'raigad', name: 'Raigad' },
+    { id: 'ratnagiri', name: 'Ratnagiri' },
+    { id: 'sangli', name: 'Sangli' },
+    { id: 'satara', name: 'Satara' },
+    { id: 'sindhudurg', name: 'Sindhudurg' },
+    { id: 'solapur', name: 'Solapur' },
+    { id: 'thane', name: 'Thane' },
+    { id: 'wardha', name: 'Wardha' },
+    { id: 'washim', name: 'Washim' },
+    { id: 'yavatmal', name: 'Yavatmal' }
+  ],
+  'KL': [ // Kerala
+    { id: 'alappuzha', name: 'Alappuzha' },
+    { id: 'ernakulam', name: 'Ernakulam' },
+    { id: 'idukki', name: 'Idukki' },
+    { id: 'kannur', name: 'Kannur' },
+    { id: 'kasaragod', name: 'Kasaragod' },
+    { id: 'kollam', name: 'Kollam' },
+    { id: 'kottayam', name: 'Kottayam' },
+    { id: 'kozhikode', name: 'Kozhikode' },
+    { id: 'malappuram', name: 'Malappuram' },
+    { id: 'palakkad', name: 'Palakkad' },
+    { id: 'pathanamthitta', name: 'Pathanamthitta' },
+    { id: 'thiruvananthapuram', name: 'Thiruvananthapuram' },
+    { id: 'thrissur', name: 'Thrissur' },
+    { id: 'wayanad', name: 'Wayanad' }
+  ],
+  'AP': [ // Andhra Pradesh
+    { id: 'anantapur', name: 'Anantapur' },
+    { id: 'chittoor', name: 'Chittoor' },
+    { id: 'east-godavari', name: 'East Godavari' },
+    { id: 'guntur', name: 'Guntur' },
+    { id: 'kadapa', name: 'Kadapa' },
+    { id: 'krishna', name: 'Krishna' },
+    { id: 'kurnool', name: 'Kurnool' },
+    { id: 'nellore', name: 'Nellore' },
+    { id: 'prakasam', name: 'Prakasam' },
+    { id: 'srikakulam', name: 'Srikakulam' },
+    { id: 'visakhapatnam', name: 'Visakhapatnam' },
+    { id: 'vizianagaram', name: 'Vizianagaram' },
+    { id: 'west-godavari', name: 'West Godavari' }
+  ],
+  'TG': [ // Telangana
+    { id: 'adilabad', name: 'Adilabad' },
+    { id: 'bhadradri-kothagudem', name: 'Bhadradri Kothagudem' },
+    { id: 'hyderabad', name: 'Hyderabad' },
+    { id: 'jagtial', name: 'Jagtial' },
+    { id: 'jangaon', name: 'Jangaon' },
+    { id: 'jayashankar', name: 'Jayashankar' },
+    { id: 'jogulamba', name: 'Jogulamba' },
+    { id: 'kamareddy', name: 'Kamareddy' },
+    { id: 'karimnagar', name: 'Karimnagar' },
+    { id: 'khammam', name: 'Khammam' },
+    { id: 'komaram-bheem', name: 'Komaram Bheem' },
+    { id: 'mahabubabad', name: 'Mahabubabad' },
+    { id: 'mahbubnagar', name: 'Mahbubnagar' },
+    { id: 'mancherial', name: 'Mancherial' },
+    { id: 'medak', name: 'Medak' },
+    { id: 'medchal', name: 'Medchal' },
+    { id: 'mulugu', name: 'Mulugu' },
+    { id: 'nagarkurnool', name: 'Nagarkurnool' },
+    { id: 'nalgonda', name: 'Nalgonda' },
+    { id: 'narayanpet', name: 'Narayanpet' },
+    { id: 'nirmal', name: 'Nirmal' },
+    { id: 'nizamabad', name: 'Nizamabad' },
+    { id: 'peddapalli', name: 'Peddapalli' },
+    { id: 'rajanna-sircilla', name: 'Rajanna Sircilla' },
+    { id: 'rangareddy', name: 'Rangareddy' },
+    { id: 'sangareddy', name: 'Sangareddy' },
+    { id: 'siddipet', name: 'Siddipet' },
+    { id: 'suryapet', name: 'Suryapet' },
+    { id: 'vikarabad', name: 'Vikarabad' },
+    { id: 'wanaparthy', name: 'Wanaparthy' },
+    { id: 'warangal-rural', name: 'Warangal Rural' },
+    { id: 'warangal-urban', name: 'Warangal Urban' },
+    { id: 'yadadri', name: 'Yadadri' }
+  ],
+  'GJ': [ // Gujarat
+    { id: 'ahmedabad', name: 'Ahmedabad' },
+    { id: 'amreli', name: 'Amreli' },
+    { id: 'anand', name: 'Anand' },
+    { id: 'aravalli', name: 'Aravalli' },
+    { id: 'banaskantha', name: 'Banaskantha' },
+    { id: 'bharuch', name: 'Bharuch' },
+    { id: 'bhavnagar', name: 'Bhavnagar' },
+    { id: 'botad', name: 'Botad' },
+    { id: 'chhota-udaipur', name: 'Chhota Udaipur' },
+    { id: 'dahod', name: 'Dahod' },
+    { id: 'dang', name: 'Dang' },
+    { id: 'devbhoomi-dwarka', name: 'Devbhoomi Dwarka' },
+    { id: 'gandhinagar', name: 'Gandhinagar' },
+    { id: 'gir-somnath', name: 'Gir Somnath' },
+    { id: 'jamnagar', name: 'Jamnagar' },
+    { id: 'junagadh', name: 'Junagadh' },
+    { id: 'kutch', name: 'Kutch' },
+    { id: 'kheda', name: 'Kheda' },
+    { id: 'mahisagar', name: 'Mahisagar' },
+    { id: 'mehsana', name: 'Mehsana' },
+    { id: 'morbi', name: 'Morbi' },
+    { id: 'narmada', name: 'Narmada' },
+    { id: 'navsari', name: 'Navsari' },
+    { id: 'panchmahal', name: 'Panchmahal' },
+    { id: 'patan', name: 'Patan' },
+    { id: 'porbandar', name: 'Porbandar' },
+    { id: 'rajkot', name: 'Rajkot' },
+    { id: 'sabarkantha', name: 'Sabarkantha' },
+    { id: 'surat', name: 'Surat' },
+    { id: 'surendranagar', name: 'Surendranagar' },
+    { id: 'tapi', name: 'Tapi' },
+    { id: 'vadodara', name: 'Vadodara' },
+    { id: 'valsad', name: 'Valsad' }
+  ],
+  'RJ': [ // Rajasthan
+    { id: 'ajmer', name: 'Ajmer' },
+    { id: 'alwar', name: 'Alwar' },
+    { id: 'banswara', name: 'Banswara' },
+    { id: 'baran', name: 'Baran' },
+    { id: 'barmer', name: 'Barmer' },
+    { id: 'bharatpur', name: 'Bharatpur' },
+    { id: 'bhilwara', name: 'Bhilwara' },
+    { id: 'bikaner', name: 'Bikaner' },
+    { id: 'bundi', name: 'Bundi' },
+    { id: 'chittorgarh', name: 'Chittorgarh' },
+    { id: 'churu', name: 'Churu' },
+    { id: 'dausa', name: 'Dausa' },
+    { id: 'dholpur', name: 'Dholpur' },
+    { id: 'dungarpur', name: 'Dungarpur' },
+    { id: 'hanumangarh', name: 'Hanumangarh' },
+    { id: 'jaipur', name: 'Jaipur' },
+    { id: 'jaisalmer', name: 'Jaisalmer' },
+    { id: 'jalore', name: 'Jalore' },
+    { id: 'jhalawar', name: 'Jhalawar' },
+    { id: 'jhunjhunu', name: 'Jhunjhunu' },
+    { id: 'jodhpur', name: 'Jodhpur' },
+    { id: 'karauli', name: 'Karauli' },
+    { id: 'kota', name: 'Kota' },
+    { id: 'nagaur', name: 'Nagaur' },
+    { id: 'pali', name: 'Pali' },
+    { id: 'pratapgarh', name: 'Pratapgarh' },
+    { id: 'rajsamand', name: 'Rajsamand' },
+    { id: 'sawai-madhopur', name: 'Sawai Madhopur' },
+    { id: 'sikar', name: 'Sikar' },
+    { id: 'sirohi', name: 'Sirohi' },
+    { id: 'sri-ganganagar', name: 'Sri Ganganagar' },
+    { id: 'tonk', name: 'Tonk' },
+    { id: 'udaipur', name: 'Udaipur' }
+  ],
+  'UP': [ // Uttar Pradesh
+    { id: 'agra', name: 'Agra' },
+    { id: 'aligarh', name: 'Aligarh' },
+    { id: 'ambedkar-nagar', name: 'Ambedkar Nagar' },
+    { id: 'amethi', name: 'Amethi' },
+    { id: 'amroha', name: 'Amroha' },
+    { id: 'auraiya', name: 'Auraiya' },
+    { id: 'ayodhya', name: 'Ayodhya' },
+    { id: 'azamgarh', name: 'Azamgarh' },
+    { id: 'baghpat', name: 'Baghpat' },
+    { id: 'bahraich', name: 'Bahraich' },
+    { id: 'ballia', name: 'Ballia' },
+    { id: 'balrampur', name: 'Balrampur' },
+    { id: 'banda', name: 'Banda' },
+    { id: 'barabanki', name: 'Barabanki' },
+    { id: 'bareilly', name: 'Bareilly' },
+    { id: 'basti', name: 'Basti' },
+    { id: 'bhadohi', name: 'Bhadohi' },
+    { id: 'bijnor', name: 'Bijnor' },
+    { id: 'budaun', name: 'Budaun' },
+    { id: 'bulandshahr', name: 'Bulandshahr' },
+    { id: 'chandauli', name: 'Chandauli' },
+    { id: 'chitrakoot', name: 'Chitrakoot' },
+    { id: 'deoria', name: 'Deoria' },
+    { id: 'etah', name: 'Etah' },
+    { id: 'etawah', name: 'Etawah' },
+    { id: 'farrukhabad', name: 'Farrukhabad' },
+    { id: 'fatehpur', name: 'Fatehpur' },
+    { id: 'firozabad', name: 'Firozabad' },
+    { id: 'gautam-buddha-nagar', name: 'Gautam Buddha Nagar' },
+    { id: 'ghaziabad', name: 'Ghaziabad' },
+    { id: 'ghazipur', name: 'Ghazipur' },
+    { id: 'gonda', name: 'Gonda' },
+    { id: 'gorakhpur', name: 'Gorakhpur' },
+    { id: 'hamirpur', name: 'Hamirpur' },
+    { id: 'hapur', name: 'Hapur' },
+    { id: 'hardoi', name: 'Hardoi' },
+    { id: 'hathras', name: 'Hathras' },
+    { id: 'jalaun', name: 'Jalaun' },
+    { id: 'jaunpur', name: 'Jaunpur' },
+    { id: 'jhansi', name: 'Jhansi' },
+    { id: 'kannauj', name: 'Kannauj' },
+    { id: 'kanpur-dehat', name: 'Kanpur Dehat' },
+    { id: 'kanpur-nagar', name: 'Kanpur Nagar' },
+    { id: 'kasganj', name: 'Kasganj' },
+    { id: 'kaushambi', name: 'Kaushambi' },
+    { id: 'kheri', name: 'Kheri' },
+    { id: 'kushinagar', name: 'Kushinagar' },
+    { id: 'lalitpur', name: 'Lalitpur' },
+    { id: 'lucknow', name: 'Lucknow' },
+    { id: 'maharajganj', name: 'Maharajganj' },
+    { id: 'mahoba', name: 'Mahoba' },
+    { id: 'mainpuri', name: 'Mainpuri' },
+    { id: 'mathura', name: 'Mathura' },
+    { id: 'mau', name: 'Mau' },
+    { id: 'meerut', name: 'Meerut' },
+    { id: 'mirzapur', name: 'Mirzapur' },
+    { id: 'moradabad', name: 'Moradabad' },
+    { id: 'muzaffarnagar', name: 'Muzaffarnagar' },
+    { id: 'pilibhit', name: 'Pilibhit' },
+    { id: 'pratapgarh', name: 'Pratapgarh' },
+    { id: 'prayagraj', name: 'Prayagraj' },
+    { id: 'raebareli', name: 'Raebareli' },
+    { id: 'rampur', name: 'Rampur' },
+    { id: 'saharanpur', name: 'Saharanpur' },
+    { id: 'sambhal', name: 'Sambhal' },
+    { id: 'sant-kabir-nagar', name: 'Sant Kabir Nagar' },
+    { id: 'shahjahanpur', name: 'Shahjahanpur' },
+    { id: 'shamli', name: 'Shamli' },
+    { id: 'shravasti', name: 'Shravasti' },
+    { id: 'siddharthnagar', name: 'Siddharthnagar' },
+    { id: 'sitapur', name: 'Sitapur' },
+    { id: 'sonbhadra', name: 'Sonbhadra' },
+    { id: 'sultanpur', name: 'Sultanpur' },
+    { id: 'unnao', name: 'Unnao' },
+    { id: 'varanasi', name: 'Varanasi' }
+  ],
+  'MP': [ // Madhya Pradesh
+    { id: 'agar-malwa', name: 'Agar Malwa' },
+    { id: 'alirajpur', name: 'Alirajpur' },
+    { id: 'anuppur', name: 'Anuppur' },
+    { id: 'ashoknagar', name: 'Ashoknagar' },
+    { id: 'balaghat', name: 'Balaghat' },
+    { id: 'barwani', name: 'Barwani' },
+    { id: 'betul', name: 'Betul' },
+    { id: 'bhind', name: 'Bhind' },
+    { id: 'bhopal', name: 'Bhopal' },
+    { id: 'burhanpur', name: 'Burhanpur' },
+    { id: 'chachaura', name: 'Chachaura' },
+    { id: 'chhatarpur', name: 'Chhatarpur' },
+    { id: 'chhindwara', name: 'Chhindwara' },
+    { id: 'damoh', name: 'Damoh' },
+    { id: 'datia', name: 'Datia' },
+    { id: 'dewas', name: 'Dewas' },
+    { id: 'dhar', name: 'Dhar' },
+    { id: 'dindori', name: 'Dindori' },
+    { id: 'guna', name: 'Guna' },
+    { id: 'gwalior', name: 'Gwalior' },
+    { id: 'harda', name: 'Harda' },
+    { id: 'hoshangabad', name: 'Hoshangabad' },
+    { id: 'indore', name: 'Indore' },
+    { id: 'jabalpur', name: 'Jabalpur' },
+    { id: 'jhabua', name: 'Jhabua' },
+    { id: 'katni', name: 'Katni' },
+    { id: 'khandwa', name: 'Khandwa' },
+    { id: 'khargone', name: 'Khargone' },
+    { id: 'maihar', name: 'Maihar' },
+    { id: 'mandla', name: 'Mandla' },
+    { id: 'mandsaur', name: 'Mandsaur' },
+    { id: 'morena', name: 'Morena' },
+    { id: 'narsinghpur', name: 'Narsinghpur' },
+    { id: 'neemuch', name: 'Neemuch' },
+    { id: 'nagda', name: 'Nagda' },
+    { id: 'niwari', name: 'Niwari' },
+    { id: 'panna', name: 'Panna' },
+    { id: 'raisen', name: 'Raisen' },
+    { id: 'rajgarh', name: 'Rajgarh' },
+    { id: 'ratlam', name: 'Ratlam' },
+    { id: 'rewa', name: 'Rewa' },
+    { id: 'sagar', name: 'Sagar' },
+    { id: 'satna', name: 'Satna' },
+    { id: 'sehore', name: 'Sehore' },
+    { id: 'seoni', name: 'Seoni' },
+    { id: 'shahdol', name: 'Shahdol' },
+    { id: 'shajapur', name: 'Shajapur' },
+    { id: 'sheopur', name: 'Sheopur' },
+    { id: 'shivpuri', name: 'Shivpuri' },
+    { id: 'sidhi', name: 'Sidhi' },
+    { id: 'singrauli', name: 'Singrauli' },
+    { id: 'tikamgarh', name: 'Tikamgarh' },
+    { id: 'ujjain', name: 'Ujjain' },
+    { id: 'umaria', name: 'Umaria' },
+    { id: 'vidisha', name: 'Vidisha' }
+  ],
+  'BR': [ // Bihar
+    { id: 'araria', name: 'Araria' },
+    { id: 'arwal', name: 'Arwal' },
+    { id: 'aurangabad', name: 'Aurangabad' },
+    { id: 'banka', name: 'Banka' },
+    { id: 'begusarai', name: 'Begusarai' },
+    { id: 'bhagalpur', name: 'Bhagalpur' },
+    { id: 'bhojpur', name: 'Bhojpur' },
+    { id: 'buxar', name: 'Buxar' },
+    { id: 'darbhanga', name: 'Darbhanga' },
+    { id: 'east-champaran', name: 'East Champaran' },
+    { id: 'gaya', name: 'Gaya' },
+    { id: 'gopalganj', name: 'Gopalganj' },
+    { id: 'jamui', name: 'Jamui' },
+    { id: 'jehanabad', name: 'Jehanabad' },
+    { id: 'kaimur', name: 'Kaimur' },
+    { id: 'katihar', name: 'Katihar' },
+    { id: 'khagaria', name: 'Khagaria' },
+    { id: 'kishanganj', name: 'Kishanganj' },
+    { id: 'lakhisarai', name: 'Lakhisarai' },
+    { id: 'madhepura', name: 'Madhepura' },
+    { id: 'madhubani', name: 'Madhubani' },
+    { id: 'munger', name: 'Munger' },
+    { id: 'muzaffarpur', name: 'Muzaffarpur' },
+    { id: 'nalanda', name: 'Nalanda' },
+    { id: 'nawada', name: 'Nawada' },
+    { id: 'patna', name: 'Patna' },
+    { id: 'purnia', name: 'Purnia' },
+    { id: 'rohtas', name: 'Rohtas' },
+    { id: 'saharsa', name: 'Saharsa' },
+    { id: 'samastipur', name: 'Samastipur' },
+    { id: 'saran', name: 'Saran' },
+    { id: 'sheikhpura', name: 'Sheikhpura' },
+    { id: 'sheohar', name: 'Sheohar' },
+    { id: 'sitamarhi', name: 'Sitamarhi' },
+    { id: 'siwan', name: 'Siwan' },
+    { id: 'supaul', name: 'Supaul' },
+    { id: 'vaishali', name: 'Vaishali' },
+    { id: 'west-champaran', name: 'West Champaran' }
+  ],
+  'WB': [ // West Bengal
+    { id: 'alipurduar', name: 'Alipurduar' },
+    { id: 'bankura', name: 'Bankura' },
+    { id: 'birbhum', name: 'Birbhum' },
+    { id: 'cooch-behar', name: 'Cooch Behar' },
+    { id: 'dakshin-dinajpur', name: 'Dakshin Dinajpur' },
+    { id: 'darjeeling', name: 'Darjeeling' },
+    { id: 'hooghly', name: 'Hooghly' },
+    { id: 'howrah', name: 'Howrah' },
+    { id: 'jalpaiguri', name: 'Jalpaiguri' },
+    { id: 'jhargram', name: 'Jhargram' },
+    { id: 'kalimpong', name: 'Kalimpong' },
+    { id: 'kolkata', name: 'Kolkata' },
+    { id: 'malda', name: 'Malda' },
+    { id: 'murshidabad', name: 'Murshidabad' },
+    { id: 'nadia', name: 'Nadia' },
+    { id: 'north-24-parganas', name: 'North 24 Parganas' },
+    { id: 'paschim-bardhaman', name: 'Paschim Bardhaman' },
+    { id: 'paschim-medinipur', name: 'Paschim Medinipur' },
+    { id: 'purba-bardhaman', name: 'Purba Bardhaman' },
+    { id: 'purba-medinipur', name: 'Purba Medinipur' },
+    { id: 'purulia', name: 'Purulia' },
+    { id: 'south-24-parganas', name: 'South 24 Parganas' },
+    { id: 'uttar-dinajpur', name: 'Uttar Dinajpur' }
+  ],
+  'OR': [ // Odisha
+    { id: 'angul', name: 'Angul' },
+    { id: 'balangir', name: 'Balangir' },
+    { id: 'balasore', name: 'Balasore' },
+    { id: 'bargarh', name: 'Bargarh' },
+    { id: 'bhadrak', name: 'Bhadrak' },
+    { id: 'boudh', name: 'Boudh' },
+    { id: 'cuttack', name: 'Cuttack' },
+    { id: 'deogarh', name: 'Deogarh' },
+    { id: 'dhenkanal', name: 'Dhenkanal' },
+    { id: 'gajapati', name: 'Gajapati' },
+    { id: 'ganjam', name: 'Ganjam' },
+    { id: 'jagatsinghpur', name: 'Jagatsinghpur' },
+    { id: 'jajpur', name: 'Jajpur' },
+    { id: 'jharsuguda', name: 'Jharsuguda' },
+    { id: 'kalahandi', name: 'Kalahandi' },
+    { id: 'kandhamal', name: 'Kandhamal' },
+    { id: 'kendrapara', name: 'Kendrapara' },
+    { id: 'kendujhar', name: 'Kendujhar' },
+    { id: 'khordha', name: 'Khordha' },
+    { id: 'koraput', name: 'Koraput' },
+    { id: 'malkangiri', name: 'Malkangiri' },
+    { id: 'mayurbhanj', name: 'Mayurbhanj' },
+    { id: 'nabarangpur', name: 'Nabarangpur' },
+    { id: 'nayagarh', name: 'Nayagarh' },
+    { id: 'nuapada', name: 'Nuapada' },
+    { id: 'puri', name: 'Puri' },
+    { id: 'rayagada', name: 'Rayagada' },
+    { id: 'sambalpur', name: 'Sambalpur' },
+    { id: 'subarnapur', name: 'Subarnapur' },
+    { id: 'sundargarh', name: 'Sundargarh' }
+  ],
+  'JH': [ // Jharkhand
+    { id: 'bokaro', name: 'Bokaro' },
+    { id: 'chatra', name: 'Chatra' },
+    { id: 'deoghar', name: 'Deoghar' },
+    { id: 'dhanbad', name: 'Dhanbad' },
+    { id: 'dumka', name: 'Dumka' },
+    { id: 'east-singhbhum', name: 'East Singhbhum' },
+    { id: 'garhwa', name: 'Garhwa' },
+    { id: 'giridih', name: 'Giridih' },
+    { id: 'godda', name: 'Godda' },
+    { id: 'gumla', name: 'Gumla' },
+    { id: 'hazaribagh', name: 'Hazaribagh' },
+    { id: 'jamtara', name: 'Jamtara' },
+    { id: 'khunti', name: 'Khunti' },
+    { id: 'koderma', name: 'Koderma' },
+    { id: 'latehar', name: 'Latehar' },
+    { id: 'lohardaga', name: 'Lohardaga' },
+    { id: 'pakur', name: 'Pakur' },
+    { id: 'palamu', name: 'Palamu' },
+    { id: 'ramgarh', name: 'Ramgarh' },
+    { id: 'ranchi', name: 'Ranchi' },
+    { id: 'sahibganj', name: 'Sahibganj' },
+    { id: 'seraikela-kharsawan', name: 'Seraikela Kharsawan' },
+    { id: 'simdega', name: 'Simdega' },
+    { id: 'west-singhbhum', name: 'West Singhbhum' }
+  ],
+  'AS': [ // Assam
+    { id: 'baksa', name: 'Baksa' },
+    { id: 'barpeta', name: 'Barpeta' },
+    { id: 'biswanath', name: 'Biswanath' },
+    { id: 'bongaigaon', name: 'Bongaigaon' },
+    { id: 'cachar', name: 'Cachar' },
+    { id: 'charaideo', name: 'Charaideo' },
+    { id: 'chirang', name: 'Chirang' },
+    { id: 'darrang', name: 'Darrang' },
+    { id: 'dhemaji', name: 'Dhemaji' },
+    { id: 'dhubri', name: 'Dhubri' },
+    { id: 'dibrugarh', name: 'Dibrugarh' },
+    { id: 'dima-hasao', name: 'Dima Hasao' },
+    { id: 'goalpara', name: 'Goalpara' },
+    { id: 'golaghat', name: 'Golaghat' },
+    { id: 'guwahati', name: 'Guwahati' },
+    { id: 'hailakandi', name: 'Hailakandi' },
+    { id: 'hojai', name: 'Hojai' },
+    { id: 'jorhat', name: 'Jorhat' },
+    { id: 'kamrup', name: 'Kamrup' },
+    { id: 'kamrup-metro', name: 'Kamrup Metro' },
+    { id: 'karbi-anglong', name: 'Karbi Anglong' },
+    { id: 'karimganj', name: 'Karimganj' },
+    { id: 'kokrajhar', name: 'Kokrajhar' },
+    { id: 'lakhimpur', name: 'Lakhimpur' },
+    { id: 'majuli', name: 'Majuli' },
+    { id: 'morigaon', name: 'Morigaon' },
+    { id: 'nagaon', name: 'Nagaon' },
+    { id: 'nalbari', name: 'Nalbari' },
+    { id: 'sivasagar', name: 'Sivasagar' },
+    { id: 'sonitpur', name: 'Sonitpur' },
+    { id: 'south-salmara-mankachar', name: 'South Salmara Mankachar' },
+    { id: 'tinsukia', name: 'Tinsukia' },
+    { id: 'udalguri', name: 'Udalguri' },
+    { id: 'west-karbi-anglong', name: 'West Karbi Anglong' }
+  ],
+  'PB': [ // Punjab
+    { id: 'amritsar', name: 'Amritsar' },
+    { id: 'barnala', name: 'Barnala' },
+    { id: 'bathinda', name: 'Bathinda' },
+    { id: 'faridkot', name: 'Faridkot' },
+    { id: 'fatehgarh-sahib', name: 'Fatehgarh Sahib' },
+    { id: 'fazilka', name: 'Fazilka' },
+    { id: 'ferozepur', name: 'Ferozepur' },
+    { id: 'gurdaspur', name: 'Gurdaspur' },
+    { id: 'hoshiarpur', name: 'Hoshiarpur' },
+    { id: 'jalandhar', name: 'Jalandhar' },
+    { id: 'kapurthala', name: 'Kapurthala' },
+    { id: 'ludhiana', name: 'Ludhiana' },
+    { id: 'mansa', name: 'Mansa' },
+    { id: 'moga', name: 'Moga' },
+    { id: 'muktsar', name: 'Muktsar' },
+    { id: 'nawanshahr', name: 'Nawanshahr' },
+    { id: 'pathankot', name: 'Pathankot' },
+    { id: 'patiala', name: 'Patiala' },
+    { id: 'rupnagar', name: 'Rupnagar' },
+    { id: 'sangrur', name: 'Sangrur' },
+    { id: 'sas-nagar', name: 'SAS Nagar' },
+    { id: 'shaheed-bhagat-singh-nagar', name: 'Shaheed Bhagat Singh Nagar' },
+    { id: 'tarn-taran', name: 'Tarn Taran' }
+  ],
+  'HR': [ // Haryana
+    { id: 'ambala', name: 'Ambala' },
+    { id: 'bhiwani', name: 'Bhiwani' },
+    { id: 'charkhi-dadri', name: 'Charkhi Dadri' },
+    { id: 'faridabad', name: 'Faridabad' },
+    { id: 'fatehabad', name: 'Fatehabad' },
+    { id: 'gurugram', name: 'Gurugram' },
+    { id: 'hisar', name: 'Hisar' },
+    { id: 'jhajjar', name: 'Jhajjar' },
+    { id: 'jind', name: 'Jind' },
+    { id: 'kaithal', name: 'Kaithal' },
+    { id: 'karnal', name: 'Karnal' },
+    { id: 'kurukshetra', name: 'Kurukshetra' },
+    { id: 'mahendragarh', name: 'Mahendragarh' },
+    { id: 'nuh', name: 'Nuh' },
+    { id: 'palwal', name: 'Palwal' },
+    { id: 'panchkula', name: 'Panchkula' },
+    { id: 'panipat', name: 'Panipat' },
+    { id: 'rewari', name: 'Rewari' },
+    { id: 'rohtak', name: 'Rohtak' },
+    { id: 'sirsa', name: 'Sirsa' },
+    { id: 'sonipat', name: 'Sonipat' },
+    { id: 'yamunanagar', name: 'Yamunanagar' }
+  ],
+  'HP': [ // Himachal Pradesh
+    { id: 'bilaspur', name: 'Bilaspur' },
+    { id: 'chamba', name: 'Chamba' },
+    { id: 'hamirpur', name: 'Hamirpur' },
+    { id: 'kangra', name: 'Kangra' },
+    { id: 'kinnaur', name: 'Kinnaur' },
+    { id: 'kullu', name: 'Kullu' },
+    { id: 'lahaul-spiti', name: 'Lahaul and Spiti' },
+    { id: 'mandi', name: 'Mandi' },
+    { id: 'shimla', name: 'Shimla' },
+    { id: 'sirmaur', name: 'Sirmaur' },
+    { id: 'solan', name: 'Solan' },
+    { id: 'una', name: 'Una' }
+  ],
+  'UT': [ // Uttarakhand
+    { id: 'almora', name: 'Almora' },
+    { id: 'bageshwar', name: 'Bageshwar' },
+    { id: 'chamoli', name: 'Chamoli' },
+    { id: 'champawat', name: 'Champawat' },
+    { id: 'dehradun', name: 'Dehradun' },
+    { id: 'haridwar', name: 'Haridwar' },
+    { id: 'nainital', name: 'Nainital' },
+    { id: 'pauri-garhwal', name: 'Pauri Garhwal' },
+    { id: 'pithoragarh', name: 'Pithoragarh' },
+    { id: 'rudraprayag', name: 'Rudraprayag' },
+    { id: 'tehri-garhwal', name: 'Tehri Garhwal' },
+    { id: 'udham-singh-nagar', name: 'Udham Singh Nagar' },
+    { id: 'uttarkashi', name: 'Uttarkashi' }
+  ],
+  'CG': [ // Chhattisgarh
+    { id: 'balod', name: 'Balod' },
+    { id: 'baloda-bazar', name: 'Baloda Bazar' },
+    { id: 'balrampur', name: 'Balrampur' },
+    { id: 'bastar', name: 'Bastar' },
+    { id: 'bemetara', name: 'Bemetara' },
+    { id: 'bijapur', name: 'Bijapur' },
+    { id: 'bilaspur', name: 'Bilaspur' },
+    { id: 'dantewada', name: 'Dantewada' },
+    { id: 'dhamtari', name: 'Dhamtari' },
+    { id: 'durg', name: 'Durg' },
+    { id: 'gariaband', name: 'Gariaband' },
+    { id: 'gaurela-pendra-marwahi', name: 'Gaurela Pendra Marwahi' },
+    { id: 'janjgir-champa', name: 'Janjgir Champa' },
+    { id: 'jashpur', name: 'Jashpur' },
+    { id: 'kabirdham', name: 'Kabirdham' },
+    { id: 'kanker', name: 'Kanker' },
+    { id: 'kondagaon', name: 'Kondagaon' },
+    { id: 'korba', name: 'Korba' },
+    { id: 'koriya', name: 'Koriya' },
+    { id: 'mahasamund', name: 'Mahasamund' },
+    { id: 'mungeli', name: 'Mungeli' },
+    { id: 'narayanpur', name: 'Narayanpur' },
+    { id: 'raigarh', name: 'Raigarh' },
+    { id: 'raipur', name: 'Raipur' },
+    { id: 'rajnandgaon', name: 'Rajnandgaon' },
+    { id: 'sukma', name: 'Sukma' },
+    { id: 'surajpur', name: 'Surajpur' },
+    { id: 'surguja', name: 'Surguja' }
+  ],
+  'GA': [ // Goa
+    { id: 'north-goa', name: 'North Goa' },
+    { id: 'south-goa', name: 'South Goa' }
+  ],
+  'DL': [ // Delhi
+    { id: 'central-delhi', name: 'Central Delhi' },
+    { id: 'east-delhi', name: 'East Delhi' },
+    { id: 'new-delhi', name: 'New Delhi' },
+    { id: 'north-delhi', name: 'North Delhi' },
+    { id: 'north-east-delhi', name: 'North East Delhi' },
+    { id: 'north-west-delhi', name: 'North West Delhi' },
+    { id: 'shahdara', name: 'Shahdara' },
+    { id: 'south-delhi', name: 'South Delhi' },
+    { id: 'south-east-delhi', name: 'South East Delhi' },
+    { id: 'south-west-delhi', name: 'South West Delhi' },
+    { id: 'west-delhi', name: 'West Delhi' }
+  ],
+  // Union Territories
+  'JK': [ // Jammu and Kashmir
+    { id: 'anantnag', name: 'Anantnag' },
+    { id: 'bandipora', name: 'Bandipora' },
+    { id: 'baramulla', name: 'Baramulla' },
+    { id: 'budgam', name: 'Budgam' },
+    { id: 'doda', name: 'Doda' },
+    { id: 'ganderbal', name: 'Ganderbal' },
+    { id: 'jammu', name: 'Jammu' },
+    { id: 'kathua', name: 'Kathua' },
+    { id: 'kishtwar', name: 'Kishtwar' },
+    { id: 'kulgam', name: 'Kulgam' },
+    { id: 'kupwara', name: 'Kupwara' },
+    { id: 'poonch', name: 'Poonch' },
+    { id: 'pulwama', name: 'Pulwama' },
+    { id: 'rajouri', name: 'Rajouri' },
+    { id: 'ramban', name: 'Ramban' },
+    { id: 'reasi', name: 'Reasi' },
+    { id: 'samba', name: 'Samba' },
+    { id: 'shopian', name: 'Shopian' },
+    { id: 'srinagar', name: 'Srinagar' },
+    { id: 'udhampur', name: 'Udhampur' }
+  ],
+  'LA': [ // Ladakh
+    { id: 'kargil', name: 'Kargil' },
+    { id: 'leh', name: 'Leh' }
+  ],
+  'CH': [ // Chandigarh
+    { id: 'chandigarh', name: 'Chandigarh' }
+  ],
+  'PY': [ // Puducherry
+    { id: 'karaikal', name: 'Karaikal' },
+    { id: 'mahe', name: 'Mahe' },
+    { id: 'puducherry', name: 'Puducherry' },
+    { id: 'yanam', name: 'Yanam' }
+  ],
+  'LD': [ // Lakshadweep
+    { id: 'lakshadweep', name: 'Lakshadweep' }
+  ],
+  'AN': [ // Andaman and Nicobar Islands
+    { id: 'nicobar', name: 'Nicobar' },
+    { id: 'north-and-middle-andaman', name: 'North and Middle Andaman' },
+    { id: 'south-andaman', name: 'South Andaman' }
+  ],
+  'DN': [ // Dadra and Nagar Haveli and Daman and Diu
+    { id: 'dadra-and-nagar-haveli', name: 'Dadra and Nagar Haveli' },
+    { id: 'daman', name: 'Daman' },
+    { id: 'diu', name: 'Diu' }
+  ],
+  // North East States
+  'MN': [ // Manipur
+    { id: 'bishnupur', name: 'Bishnupur' },
+    { id: 'chandel', name: 'Chandel' },
+    { id: 'churachandpur', name: 'Churachandpur' },
+    { id: 'imphal-east', name: 'Imphal East' },
+    { id: 'imphal-west', name: 'Imphal West' },
+    { id: 'jiribam', name: 'Jiribam' },
+    { id: 'kakching', name: 'Kakching' },
+    { id: 'kamjong', name: 'Kamjong' },
+    { id: 'kangpokpi', name: 'Kangpokpi' },
+    { id: 'noney', name: 'Noney' },
+    { id: 'pherzawl', name: 'Pherzawl' },
+    { id: 'senapati', name: 'Senapati' },
+    { id: 'tamenglong', name: 'Tamenglong' },
+    { id: 'tengnoupal', name: 'Tengnoupal' },
+    { id: 'thoubal', name: 'Thoubal' },
+    { id: 'ukhrul', name: 'Ukhrul' }
+  ],
+  'ML': [ // Meghalaya
+    { id: 'east-garo-hills', name: 'East Garo Hills' },
+    { id: 'east-jaintia-hills', name: 'East Jaintia Hills' },
+    { id: 'east-khasi-hills', name: 'East Khasi Hills' },
+    { id: 'north-garo-hills', name: 'North Garo Hills' },
+    { id: 'ri-bhoi', name: 'Ri Bhoi' },
+    { id: 'south-garo-hills', name: 'South Garo Hills' },
+    { id: 'south-west-garo-hills', name: 'South West Garo Hills' },
+    { id: 'south-west-khasi-hills', name: 'South West Khasi Hills' },
+    { id: 'west-garo-hills', name: 'West Garo Hills' },
+    { id: 'west-jaintia-hills', name: 'West Jaintia Hills' },
+    { id: 'west-khasi-hills', name: 'West Khasi Hills' }
+  ],
+  'MZ': [ // Mizoram
+    { id: 'aizawl', name: 'Aizawl' },
+    { id: 'champhai', name: 'Champhai' },
+    { id: 'hnahthial', name: 'Hnahthial' },
+    { id: 'kolasib', name: 'Kolasib' },
+    { id: 'khawzawl', name: 'Khawzawl' },
+    { id: 'lawngtlai', name: 'Lawngtlai' },
+    { id: 'lunglei', name: 'Lunglei' },
+    { id: 'mamit', name: 'Mamit' },
+    { id: 'saiha', name: 'Saiha' },
+    { id: 'saitual', name: 'Saitual' },
+    { id: 'serchhip', name: 'Serchhip' }
+  ],
+  'NL': [ // Nagaland
+    { id: 'dimapur', name: 'Dimapur' },
+    { id: 'kiphire', name: 'Kiphire' },
+    { id: 'kohima', name: 'Kohima' },
+    { id: 'longleng', name: 'Longleng' },
+    { id: 'mokokchung', name: 'Mokokchung' },
+    { id: 'mon', name: 'Mon' },
+    { id: 'noklak', name: 'Noklak' },
+    { id: 'peren', name: 'Peren' },
+    { id: 'phek', name: 'Phek' },
+    { id: 'tuensang', name: 'Tuensang' },
+    { id: 'wokha', name: 'Wokha' },
+    { id: 'zunheboto', name: 'Zunheboto' }
+  ],
+  'SK': [ // Sikkim
+    { id: 'east-sikkim', name: 'East Sikkim' },
+    { id: 'north-sikkim', name: 'North Sikkim' },
+    { id: 'south-sikkim', name: 'South Sikkim' },
+    { id: 'west-sikkim', name: 'West Sikkim' }
+  ],
+  'TR': [ // Tripura
+    { id: 'dhalai', name: 'Dhalai' },
+    { id: 'gomati', name: 'Gomati' },
+    { id: 'khowai', name: 'Khowai' },
+    { id: 'north-tripura', name: 'North Tripura' },
+    { id: 'sepahijala', name: 'Sepahijala' },
+    { id: 'south-tripura', name: 'South Tripura' },
+    { id: 'unakoti', name: 'Unakoti' },
+    { id: 'west-tripura', name: 'West Tripura' }
+  ],
+  'AR': [ // Arunachal Pradesh
+    { id: 'anjaw', name: 'Anjaw' },
+    { id: 'central-siang', name: 'Central Siang' },
+    { id: 'changlang', name: 'Changlang' },
+    { id: 'dibang-valley', name: 'Dibang Valley' },
+    { id: 'east-kameng', name: 'East Kameng' },
+    { id: 'east-siang', name: 'East Siang' },
+    { id: 'itanagar', name: 'Itanagar' },
+    { id: 'kamle', name: 'Kamle' },
+    { id: 'kra-daadi', name: 'Kra Daadi' },
+    { id: 'kurung-kumey', name: 'Kurung Kumey' },
+    { id: 'lepa-rada', name: 'Lepa Rada' },
+    { id: 'lohit', name: 'Lohit' },
+    { id: 'longding', name: 'Longding' },
+    { id: 'lower-dibang-valley', name: 'Lower Dibang Valley' },
+    { id: 'lower-siang', name: 'Lower Siang' },
+    { id: 'lower-subansiri', name: 'Lower Subansiri' },
+    { id: 'namsai', name: 'Namsai' },
+    { id: 'pakke-kessang', name: 'Pakke Kessang' },
+    { id: 'papum-pare', name: 'Papum Pare' },
+    { id: 'shi-yomi', name: 'Shi Yomi' },
+    { id: 'tawang', name: 'Tawang' },
+    { id: 'tirap', name: 'Tirap' },
+    { id: 'upper-siang', name: 'Upper Siang' },
+    { id: 'upper-subansiri', name: 'Upper Subansiri' },
+    { id: 'west-kameng', name: 'West Kameng' },
+    { id: 'west-siang', name: 'West Siang' }
+  ]
+};
+
 // Sample location names data - In production, this would come from a database
 const locationNamesDatabase = {
   'mumbai-island-city': [
@@ -160,49 +1039,45 @@ router.get('/cities/:districtId', asyncHandler(async (req, res) => {
     // Normalize district ID
     const normalizedDistrictId = districtId.toLowerCase().replace(/\s+/g, '-');
     
-    // Enhanced cities database with more comprehensive mapping
-    const citiesDatabase = {
-      'mumbai': [
-        { id: 'mumbai-city', name: 'Mumbai City', districtId: 'mumbai', stateCode: 'MH', countryCode: 'IN' },
-        { id: 'thane', name: 'Thane', districtId: 'mumbai', stateCode: 'MH', countryCode: 'IN' },
-        { id: 'navi-mumbai', name: 'Navi Mumbai', districtId: 'mumbai', stateCode: 'MH', countryCode: 'IN' }
-      ],
-      'pune': [
-        { id: 'pune-city', name: 'Pune City', districtId: 'pune', stateCode: 'MH', countryCode: 'IN' },
-        { id: 'pimpri-chinchwad', name: 'Pimpri-Chinchwad', districtId: 'pune', stateCode: 'MH', countryCode: 'IN' },
-        { id: 'lonavala', name: 'Lonavala', districtId: 'pune', stateCode: 'MH', countryCode: 'IN' }
-      ],
-      'bangalore-urban': [
-        { id: 'bangalore', name: 'Bangalore', districtId: 'bangalore-urban', stateCode: 'KA', countryCode: 'IN' },
-        { id: 'bengaluru', name: 'Bengaluru', districtId: 'bangalore-urban', stateCode: 'KA', countryCode: 'IN' }
-      ],
-      'chennai': [
-        { id: 'chennai-city', name: 'Chennai City', districtId: 'chennai', stateCode: 'TN', countryCode: 'IN' },
-        { id: 'tambaram', name: 'Tambaram', districtId: 'chennai', stateCode: 'TN', countryCode: 'IN' }
-      ],
-      'coimbatore': [
-        { id: 'coimbatore-city', name: 'Coimbatore City', districtId: 'coimbatore', stateCode: 'TN', countryCode: 'IN' }
-      ],
-      'tiruppur': [
-        { id: 'tiruppur-city', name: 'Tiruppur City', districtId: 'tiruppur', stateCode: 'TN', countryCode: 'IN' }
-      ],
-      'erode': [
-        { id: 'erode-city', name: 'Erode City', districtId: 'erode', stateCode: 'TN', countryCode: 'IN' }
-      ],
-      'salem': [
-        { id: 'salem-city', name: 'Salem City', districtId: 'salem', stateCode: 'TN', countryCode: 'IN' }
-      ],
-      'delhi': [
-        { id: 'new-delhi', name: 'New Delhi', districtId: 'delhi', stateCode: 'DL', countryCode: 'IN' },
-        { id: 'delhi-city', name: 'Delhi City', districtId: 'delhi', stateCode: 'DL', countryCode: 'IN' }
-      ],
-      'gurgaon': [
-        { id: 'gurgaon-city', name: 'Gurgaon', districtId: 'gurgaon', stateCode: 'HR', countryCode: 'IN' },
-        { id: 'gurugram', name: 'Gurugram', districtId: 'gurgaon', stateCode: 'HR', countryCode: 'IN' }
-      ]
-    };
+    // Generate cities dynamically for any district
+    function generateCitiesForDistrict(districtId, stateCode) {
+      const districtName = districtId.split('-').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+      
+      const cities = [];
+      
+      // Main city (district headquarters)
+      cities.push({
+        id: `${districtId}-city`,
+        name: `${districtName}`,
+        districtId: districtId,
+        stateCode: stateCode,
+        countryCode: 'IN'
+      });
+      
+      // Generate common city patterns for Indian cities
+      const cityPatterns = [
+        'Municipal Corporation',
+        'Town',
+        'Urban Area',
+        'Metropolitan Area'
+      ];
+      
+      cityPatterns.forEach((pattern, index) => {
+        cities.push({
+          id: `${districtId}-${pattern.toLowerCase().replace(/\s+/g, '-')}`,
+          name: `${districtName} ${pattern}`,
+          districtId: districtId,
+          stateCode: stateCode,
+          countryCode: 'IN'
+        });
+      });
+      
+      return cities;
+    }
     
-    const cities = citiesDatabase[normalizedDistrictId] || [];
+    const cities = generateCitiesForDistrict(normalizedDistrictId, state);
     
     res.json({
       success: true,
@@ -227,25 +1102,50 @@ router.get('/taluks/:cityId', asyncHandler(async (req, res) => {
     // Normalize city ID
     const normalizedCityId = cityId.toLowerCase().replace(/\s+/g, '-');
     
-    // Sample taluks data - would come from database in production
-    const taluksDatabase = {
-      'mumbai-city': [
-        { id: 'mumbai-island-city', name: 'Mumbai Island City', cityId: 'mumbai-city', districtId: 'mumbai', stateCode: 'MH', countryCode: 'IN' }
-      ],
-      'mumbai-suburban': [
-        { id: 'andheri', name: 'Andheri', cityId: 'mumbai-suburban', districtId: 'mumbai', stateCode: 'MH', countryCode: 'IN' },
-        { id: 'borivali', name: 'Borivali', cityId: 'mumbai-suburban', districtId: 'mumbai', stateCode: 'MH', countryCode: 'IN' }
-      ],
-      'bangalore': [
-        { id: 'bangalore-north', name: 'Bangalore North', cityId: 'bangalore', districtId: 'bangalore-urban', stateCode: 'KA', countryCode: 'IN' },
-        { id: 'bangalore-south', name: 'Bangalore South', cityId: 'bangalore', districtId: 'bangalore-urban', stateCode: 'KA', countryCode: 'IN' }
-      ],
-      'tiruppur-city': [
-        { id: 'tiruppur-taluk', name: 'Tiruppur Taluk', cityId: 'tiruppur-city', districtId: 'tiruppur', stateCode: 'TN', countryCode: 'IN' }
-      ]
-    };
+    // Generate taluks dynamically for any city
+    function generateTaluksForCity(cityId) {
+      // Extract district and state from city ID pattern
+      const cityParts = cityId.split('-');
+      const baseName = cityParts[0];
+      const districtId = cityParts.length > 1 && cityParts[1] !== 'city' ? 
+        cityParts.slice(0, -1).join('-') : cityParts[0];
+      
+      const talukName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+      
+      const taluks = [];
+      
+      // Main taluk
+      taluks.push({
+        id: `${baseName}-taluk`,
+        name: `${talukName} Taluk`,
+        cityId: cityId,
+        districtId: districtId,
+        stateCode: 'IN', // Will be set by frontend
+        countryCode: 'IN'
+      });
+      
+      // Additional taluks/blocks based on Indian administrative patterns
+      const talukPatterns = [
+        'Block',
+        'Tehsil',
+        'Sub-Division'
+      ];
+      
+      talukPatterns.forEach((pattern, index) => {
+        taluks.push({
+          id: `${baseName}-${pattern.toLowerCase().replace(/\s+/g, '-')}`,
+          name: `${talukName} ${pattern}`,
+          cityId: cityId,
+          districtId: districtId,
+          stateCode: 'IN',
+          countryCode: 'IN'
+        });
+      });
+      
+      return taluks;
+    }
     
-    const taluks = taluksDatabase[normalizedCityId] || [];
+    const taluks = generateTaluksForCity(normalizedCityId);
     
     res.json({
       success: true,
@@ -270,9 +1170,62 @@ router.get('/location-names/:talukId', asyncHandler(async (req, res) => {
     // Normalize taluk ID
     const normalizedTalukId = talukId.toLowerCase().replace(/\s+/g, '-');
     
+    // Generate location names dynamically for any taluk
+    function generateLocationNamesForTaluk(talukId) {
+      // Extract base name from taluk ID
+      const baseName = talukId.split('-')[0];
+      const locationName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+      
+      const locationNames = [];
+      
+      // Common Indian location name patterns
+      const locationPatterns = [
+        { suffix: '', type: 'urban' }, // Main location
+        { suffix: 'Nagar', type: 'urban' },
+        { suffix: 'Colony', type: 'urban' },
+        { suffix: 'Layout', type: 'urban' },
+        { suffix: 'Extension', type: 'urban' },
+        { suffix: 'Market', type: 'urban' },
+        { suffix: 'Junction', type: 'urban' },
+        { suffix: 'Cross', type: 'urban' },
+        { suffix: 'Road', type: 'urban' },
+        { suffix: 'Village', type: 'village' },
+        { suffix: 'Gram', type: 'village' },
+        { suffix: 'Patti', type: 'village' },
+        { suffix: 'Town', type: 'town' },
+        { suffix: 'City', type: 'urban' },
+        { suffix: 'Area', type: 'urban' }
+      ];
+      
+      locationPatterns.forEach((pattern, index) => {
+        const name = pattern.suffix ? `${locationName} ${pattern.suffix}` : locationName;
+        const id = pattern.suffix ? 
+          `${baseName}-${pattern.suffix.toLowerCase()}` : 
+          `${baseName}-main`;
+          
+        locationNames.push({
+          id: id,
+          name: name,
+          type: pattern.type,
+          talukId: talukId,
+          cityId: '', // Will be populated by frontend
+          districtId: '', // Will be populated by frontend
+          pincode: null // Will be populated when available
+        });
+      });
+      
+      return locationNames;
+    }
+    
+    // First try existing database, then generate dynamic data
+    const existingLocationNames = locationNamesDatabase[normalizedTalukId];
+    const locationNames = existingLocationNames && existingLocationNames.length > 0 
+      ? existingLocationNames 
+      : generateLocationNamesForTaluk(normalizedTalukId);
+    
     res.json({
       success: true,
-      locationNames: locationNamesDatabase[normalizedTalukId] || []
+      locationNames: locationNames
     });
   } catch (error) {
     console.error('Error fetching location names:', error);
@@ -317,11 +1270,18 @@ router.get('/pincode/:pincode', asyncHandler(async (req, res) => {
           const locationData = {
             pincode: pincode,
             country: 'India',
+            countryCode: 'IN',
             state: postOffice.State,
-            city: postOffice.District,
+            stateCode: getStateCode(postOffice.State),
+            district: postOffice.District,
+            city: postOffice.District, // District is used as city in Indian context
             locality: postOffice.Name,
-            area: postOffice.Block,
-            district: postOffice.District
+            area: postOffice.Block || postOffice.Name,
+            region: postOffice.Region || postOffice.Division || '',
+            // Additional fields for better dropdown matching
+            taluk: postOffice.Block || postOffice.Taluk || '',
+            locationName: postOffice.Name,
+            locationType: determineLocationType(postOffice.Name)
           };
           
           res.json({
@@ -511,25 +1471,34 @@ router.get('/districts/:stateCode', asyncHandler(async (req, res) => {
     const { stateCode } = req.params;
     const { country = 'IN' } = req.query;
     
-    // For now, return a comprehensive list based on available data
-    const districts = new Set();
+    // Use comprehensive Indian districts database
+    let districtList = [];
     
-    // Extract districts from our location data
-    Object.values(locationNamesDatabase).flat().forEach(item => {
-      if (item.districtId) {
-        districts.add(item.districtId);
-      }
-    });
+    if (country === 'IN' && indianDistricts[stateCode]) {
+      districtList = indianDistricts[stateCode].map(district => ({
+        id: district.id,
+        name: district.name,
+        stateCode: stateCode,
+        countryCode: country
+      }));
+    } else {
+      // Fallback to extracting from sample location data
+      const districts = new Set();
+      Object.values(locationNamesDatabase).flat().forEach(item => {
+        if (item.districtId) {
+          districts.add(item.districtId);
+        }
+      });
 
-    // Convert to proper format
-    const districtList = Array.from(districts).map(districtId => ({
-      id: districtId,
-      name: districtId.split('-').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' '),
-      stateCode: stateCode,
-      countryCode: country
-    }));
+      districtList = Array.from(districts).map(districtId => ({
+        id: districtId,
+        name: districtId.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' '),
+        stateCode: stateCode,
+        countryCode: country
+      }));
+    }
 
     res.json({
       success: true,

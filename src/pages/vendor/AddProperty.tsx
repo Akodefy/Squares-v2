@@ -28,6 +28,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { vendorService } from "@/services/vendorService";
 import { locationService, type Country, type State, type District, type City, type Taluk, type LocationName } from "@/services/locationService";
+import { pincodeService } from "@/services/postcodeService";
 import SearchableLocationDropdown from "@/components/form-components/SearchableLocationDropdown";
 import { toast } from "@/hooks/use-toast";
 
@@ -106,6 +107,8 @@ const AddProperty = () => {
     locationNames: false,
     pincode: false
   });
+
+
 
   // Load countries on component mount
   useEffect(() => {
@@ -423,65 +426,116 @@ const AddProperty = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Handle pincode change and auto-detect location
+  // Enhanced pincode change handler with auto-fill and dropdown integration
   const handlePincodeChange = async (pincode: string) => {
     setFormData(prev => ({ ...prev, pincode }));
 
-    if (pincode.length >= 6 && locationService.isPincodeValid(pincode, formData.country)) {
+    // Only fetch location if pincode is valid length (6 digits for India)
+    if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
       setLocationLoading(prev => ({ ...prev, pincode: true }));
+      
       try {
-        const pincodeData = await locationService.getLocationByPincode(pincode);
+        const result = await pincodeService.getLocationByPincode(pincode);
         
-        if (pincodeData) {
-          // Find matching country
-          const matchingCountry = countries.find(c => c.name === pincodeData.country);
-          if (matchingCountry) {
-            setFormData(prev => ({ ...prev, country: matchingCountry.code }));
+        if (result.success && result.data) {
+          // Auto-detect and set location dropdowns based on enhanced pincode data
+          
+          // 1. Set country to India
+          if (result.data.countryCode) {
+            setFormData(prev => ({ ...prev, country: result.data.countryCode }));
             
-            // Load states for the detected country
-            const statesData = await locationService.getStatesByCountry(matchingCountry.code);
+            // Load states for India
+            const statesData = await locationService.getStatesByCountry(result.data.countryCode);
             setStates(statesData);
             
-            // Find matching state
-            const matchingState = statesData.find(s => s.name === pincodeData.state);
+            // 2. Find and set matching state using state code or name
+            let matchingState = null;
+            if (result.data.stateCode) {
+              matchingState = statesData.find(s => s.stateCode === result.data.stateCode);
+            }
+            if (!matchingState && result.data.state) {
+              matchingState = statesData.find(s => 
+                s.name.toLowerCase() === result.data.state.toLowerCase()
+              );
+            }
+            
             if (matchingState) {
               setFormData(prev => ({ ...prev, state: matchingState.stateCode }));
               
               // Load districts for the detected state
-              const districtsData = await locationService.getDistrictsByState(matchingState.stateCode, matchingCountry.code);
+              const districtsData = await locationService.getDistrictsByState(matchingState.stateCode, result.data.countryCode);
               setDistricts(districtsData);
               
-              // Find matching district (using city name as district for now)
-              const matchingDistrict = districtsData.find(d => d.name === pincodeData.city);
+              // 3. Find and set matching district
+              const matchingDistrict = districtsData.find(d => 
+                d.name.toLowerCase() === result.data.district.toLowerCase() ||
+                d.name.toLowerCase() === result.data.city?.toLowerCase()
+              );
+              
               if (matchingDistrict) {
                 setFormData(prev => ({ ...prev, district: matchingDistrict.id }));
                 
                 // Load cities for the detected district
-                const citiesData = await locationService.getCitiesByDistrict(matchingDistrict.id, matchingState.stateCode, matchingCountry.code);
+                const citiesData = await locationService.getCitiesByDistrict(matchingDistrict.id, matchingState.stateCode, result.data.countryCode);
                 setCities(citiesData);
                 
-                // Auto-select first city for now (can be improved)
-                if (citiesData.length > 0) {
-                  const firstCity = citiesData[0];
-                  setFormData(prev => ({ ...prev, city: firstCity.id }));
+                // 4. Find matching city (district name often matches city name in Indian context)
+                let matchingCity = citiesData.find(c => 
+                  c.name.toLowerCase() === result.data.city?.toLowerCase() ||
+                  c.name.toLowerCase() === result.data.district.toLowerCase()
+                );
+                
+                if (!matchingCity && citiesData.length > 0) {
+                  matchingCity = citiesData[0]; // Fallback to first city
+                }
+                
+                if (matchingCity) {
+                  setFormData(prev => ({ ...prev, city: matchingCity.id }));
                   
                   // Load taluks for the detected city
-                  const taluksData = await locationService.getTaluksByCity(firstCity.id);
+                  const taluksData = await locationService.getTaluksByCity(matchingCity.id);
                   setTaluks(taluksData);
                   
-                  // Auto-select first taluk for now (can be improved)
-                  if (taluksData.length > 0) {
-                    const firstTaluk = taluksData[0];
-                    setFormData(prev => ({ ...prev, taluk: firstTaluk.id }));
+                  // 5. Find matching taluk based on area/block data
+                  let matchingTaluk = null;
+                  if (result.data.taluk) {
+                    matchingTaluk = taluksData.find(t => 
+                      t.name.toLowerCase().includes(result.data.taluk.toLowerCase()) ||
+                      result.data.taluk.toLowerCase().includes(t.name.toLowerCase())
+                    );
+                  }
+                  
+                  if (!matchingTaluk && taluksData.length > 0) {
+                    matchingTaluk = taluksData[0]; // Fallback to first taluk
+                  }
+                  
+                  if (matchingTaluk) {
+                    setFormData(prev => ({ ...prev, taluk: matchingTaluk.id }));
                     
                     // Load location names for the detected taluk
-                    const locationNamesData = await locationService.getLocationNamesByTaluk(firstTaluk.id);
+                    const locationNamesData = await locationService.getLocationNamesByTaluk(matchingTaluk.id);
                     setLocationNames(locationNamesData);
                     
-                    // Find matching location name
-                    const matchingLocationName = locationNamesData.find(l => 
-                      l.name === pincodeData.locality || l.pincode === pincode
-                    );
+                    // 6. Find matching location name based on locality/area
+                    let matchingLocationName = null;
+                    if (result.data.locationName) {
+                      matchingLocationName = locationNamesData.find(l => 
+                        l.name.toLowerCase().includes(result.data.locationName.toLowerCase()) ||
+                        result.data.locationName.toLowerCase().includes(l.name.toLowerCase())
+                      );
+                    }
+                    
+                    if (!matchingLocationName && result.data.locality) {
+                      matchingLocationName = locationNamesData.find(l => 
+                        l.name.toLowerCase().includes(result.data.locality.toLowerCase()) ||
+                        result.data.locality.toLowerCase().includes(l.name.toLowerCase())
+                      );
+                    }
+                    
+                    if (!matchingLocationName) {
+                      matchingLocationName = locationNamesData.find(l => l.pincode === pincode);
+                    }
+                    
                     if (matchingLocationName) {
                       setFormData(prev => ({ ...prev, locationName: matchingLocationName.id }));
                     }
@@ -492,12 +546,23 @@ const AddProperty = () => {
           }
 
           toast({
-            title: "Location Auto-Detected",
-            description: `Found: ${pincodeData.locality}, ${pincodeData.city}, ${pincodeData.state}`,
+            title: "Location Auto-Detected ✓",
+            description: `Found: ${result.data.area}, ${result.data.district}, ${result.data.state}`,
+          });
+        } else {
+          toast({
+            title: "Pincode not found",
+            description: "Please select location details manually from dropdowns",
+            variant: "destructive",
           });
         }
       } catch (error) {
         console.error('Error detecting location from pincode:', error);
+        toast({
+          title: "Error",
+          description: "Failed to auto-detect location. Please fill manually.",
+          variant: "destructive",
+        });
       } finally {
         setLocationLoading(prev => ({ ...prev, pincode: false }));
       }
@@ -776,28 +841,34 @@ const AddProperty = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="pincode">Pincode/ZIP Code *</Label>
-              <div className="relative">
-                <Input
-                  id="pincode"
-                  placeholder="Enter pincode to auto-detect location"
-                  value={formData.pincode}
-                  onChange={(e) => handlePincodeChange(e.target.value)}
-                />
-                {locationLoading.pincode && (
-                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Enter pincode to automatically detect and fill location details
+            <div className="border-t pt-4 mt-6">
+              <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Enter pincode to auto-detect and fill all location dropdowns above
               </p>
+              <div className="space-y-2">
+                <Label htmlFor="pincode">Pincode/ZIP Code *</Label>
+                <div className="relative">
+                  <Input
+                    id="pincode"
+                    placeholder="Enter 6-digit pincode to auto-fill location dropdowns"
+                    value={formData.pincode}
+                    onChange={(e) => handlePincodeChange(e.target.value)}
+                  />
+                  {locationLoading.pincode && (
+                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  🎯 Smart Feature: Enter pincode to automatically detect and fill all location dropdowns above
+                </p>
+              </div>
             </div>
 
-            {formData.pincode && !locationService.isPincodeValid(formData.pincode, formData.country) && (
+            {formData.pincode && !/^\d{6}$/.test(formData.pincode) && (
               <Alert>
                 <AlertDescription>
-                  Please enter a valid {formData.country === 'IN' ? '6-digit Indian' : ''} pincode.
+                  Please enter a valid 6-digit Indian pincode for auto-detection.
                 </AlertDescription>
               </Alert>
             )}

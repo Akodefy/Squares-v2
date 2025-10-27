@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const Vendor = require('../models/Vendor');
 const Property = require('../models/Property');
 const Message = require('../models/Message');
 const { asyncHandler } = require('../middleware/errorMiddleware');
@@ -10,8 +11,8 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(authenticateToken);
 
-// Middleware to check if user is vendor/agent
-const requireVendorRole = (req, res, next) => {
+// Middleware to check if user is vendor/agent and get vendor profile
+const requireVendorRole = asyncHandler(async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
       success: false,
@@ -20,7 +21,6 @@ const requireVendorRole = (req, res, next) => {
   }
 
   // Allow both 'agent' and 'admin' roles to access vendor routes
-  // Also allow users who might be registered as vendors but have different role
   if (!['agent', 'admin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
@@ -28,8 +28,70 @@ const requireVendorRole = (req, res, next) => {
     });
   }
 
+  // For agents, get their vendor profile
+  if (req.user.role === 'agent') {
+    const vendor = await Vendor.findByUserId(req.user.id);
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor profile not found. Please complete your vendor registration.'
+      });
+    }
+    req.vendor = vendor;
+  }
+
   next();
-};
+});
+
+// @desc    Get vendor profile
+// @route   GET /api/vendors/profile
+// @access  Private/Agent
+router.get('/profile', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendor = req.vendor; // From requireVendorRole middleware
+
+  if (!vendor) {
+    return res.status(404).json({
+      success: false,
+      message: 'Vendor profile not found'
+    });
+  }
+
+  res.json({
+    success: true,
+    data: { vendor: vendor.getPublicProfile() }
+  });
+}));
+
+// @desc    Update vendor profile
+// @route   PUT /api/vendors/profile
+// @access  Private/Agent
+router.put('/profile', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendor = req.vendor; // From requireVendorRole middleware
+  const updateData = req.body;
+
+  // Update allowed fields
+  const allowedUpdates = [
+    'businessInfo',
+    'professionalInfo', 
+    'contactInfo',
+    'settings',
+    'financial'
+  ];
+
+  allowedUpdates.forEach(field => {
+    if (updateData[field]) {
+      vendor[field] = { ...vendor[field], ...updateData[field] };
+    }
+  });
+
+  await vendor.save();
+
+  res.json({
+    success: true,
+    message: 'Vendor profile updated successfully',
+    data: { vendor: vendor.getPublicProfile() }
+  });
+}));
 
 // @desc    Get vendor dashboard data
 // @route   GET /api/vendors/dashboard
@@ -555,6 +617,7 @@ router.patch('/leads/:id/status', requireVendorRole, asyncHandler(async (req, re
 // @access  Private/Agent
 router.get('/statistics', requireVendorRole, asyncHandler(async (req, res) => {
   const vendorId = req.user.id;
+  const vendor = req.vendor; // From requireVendorRole middleware
 
   // Get vendor's properties count
   const totalProperties = await Property.countDocuments({ owner: vendorId });
@@ -597,21 +660,15 @@ router.get('/statistics', requireVendorRole, asyncHandler(async (req, res) => {
     type: { $in: ['inquiry', 'lead', 'property_inquiry'] }
   });
 
-  // Calculate average response time (simplified - you may want to make this more sophisticated)
-  const recentMessages = await Message.find({
-    sender: vendorId,
-    createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
-  }).sort({ createdAt: -1 }).limit(10);
+  // Get average response time from vendor model
+  const avgResponseTime = vendor?.performance?.statistics?.responseTime?.average 
+    ? `${Math.round(vendor.performance.statistics.responseTime.average / 60)} hours` 
+    : "Not calculated";
 
-  let avgResponseTime = "Not calculated";
-  if (recentMessages.length > 0) {
-    // Simplified calculation - in real scenario, you'd need to track inquiry-response pairs
-    avgResponseTime = "2.3 hours"; // Placeholder
-  }
-
-  // Get vendor profile for additional stats
-  const vendor = await User.findById(vendorId);
-  const totalSales = vendor?.profile?.vendorInfo?.rating?.count || 0;
+  // Get vendor rating from vendor model
+  const rating = vendor?.performance?.rating?.average || 0;
+  const reviewCount = vendor?.performance?.rating?.count || 0;
+  const totalSales = vendor?.performance?.statistics?.soldProperties || 0;
 
   res.json({
     success: true,
@@ -622,8 +679,8 @@ router.get('/statistics', requireVendorRole, asyncHandler(async (req, res) => {
       totalLeads,
       totalViews,
       avgResponseTime,
-      rating: vendor?.profile?.vendorInfo?.rating?.average || 0,
-      reviewCount: vendor?.profile?.vendorInfo?.rating?.count || 0,
+      rating,
+      reviewCount,
       activeProperties,
       soldProperties,
       pendingProperties
@@ -644,34 +701,23 @@ router.post('/rating', asyncHandler(async (req, res) => {
     });
   }
 
-  const vendor = await User.findById(vendorId);
-  if (!vendor || vendor.role !== 'agent') {
+  // Find vendor by user ID
+  const vendor = await Vendor.findByUserId(vendorId);
+  if (!vendor) {
     return res.status(404).json({
       success: false,
       message: 'Vendor not found'
     });
   }
 
-  // Calculate new rating
-  const currentRating = vendor.profile.vendorInfo.rating.average || 0;
-  const currentCount = vendor.profile.vendorInfo.rating.count || 0;
-  
-  const newCount = currentCount + 1;
-  const newAverage = ((currentRating * currentCount) + rating) / newCount;
-
-  // Update vendor rating
-  vendor.profile.vendorInfo.rating = {
-    average: Math.round(newAverage * 10) / 10, // Round to 1 decimal
-    count: newCount
-  };
-
-  await vendor.save();
+  // Use the vendor model's updateRating method
+  await vendor.updateRating(rating);
 
   res.json({
     success: true,
     message: 'Rating submitted successfully',
     data: {
-      newRating: vendor.profile.vendorInfo.rating
+      newRating: vendor.performance.rating
     }
   });
 }));
@@ -1803,7 +1849,7 @@ router.get('/invoices', requireVendorRole, asyncHandler(async (req, res) => {
   }
 }));
 
-// @desc    Get vendor billing stats
+// @desc    Get vendor billing stats (Business Revenue/Earnings)
 // @route   GET /api/vendors/billing/stats
 // @access  Private/Agent
 router.get('/billing/stats', requireVendorRole, asyncHandler(async (req, res) => {
@@ -1811,86 +1857,184 @@ router.get('/billing/stats', requireVendorRole, asyncHandler(async (req, res) =>
 
   try {
     const Subscription = require('../models/Subscription');
+    const Property = require('../models/Property');
+    const Message = require('../models/Message');
+    const ServiceBooking = require('../models/ServiceBooking');
+    const Vendor = require('../models/Vendor');
+    const mongoose = require('mongoose');
     
-    // Get all vendor subscriptions
-    const subscriptions = await Subscription.find({ user: vendorId });
+    // Calculate vendor business earnings from services and property sales
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    // Calculate stats
-    const totalRevenue = subscriptions.reduce((sum, sub) => sum + (sub.amount || 0), 0);
-    const totalInvoices = subscriptions.length;
+    // Get vendor record to access vendorId for service bookings
+    const vendor = await Vendor.findByUserId(vendorId);
+    const vendorObjectId = vendor ? vendor._id : null;
     
-    // Get active subscription for next billing
+    // Calculate service earnings (completed and paid bookings)
+    const serviceEarnings = await ServiceBooking.aggregate([
+      {
+        $match: {
+          vendorId: vendorId,
+          status: 'completed',
+          paymentStatus: 'paid'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: '$amount' },
+          totalBookings: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Calculate monthly service earnings
+    const monthlyServiceEarnings = await ServiceBooking.aggregate([
+      {
+        $match: {
+          vendorId: vendorId,
+          status: 'completed',
+          paymentStatus: 'paid',
+          serviceDate: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          monthlyEarnings: { $sum: '$amount' },
+          monthlyBookings: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Calculate property earnings (estimate based on sold properties)
+    // For properties without explicit sale tracking, we estimate 2% commission
+    const soldProperties = await Property.find({
+      $or: [
+        { agent: vendorId },
+        { vendor: vendorObjectId }
+      ],
+      status: 'sold'
+    });
+    
+    const propertyEarnings = soldProperties.reduce((total, property) => {
+      // Estimate 2% commission on property price for sales
+      const estimatedCommission = property.price * 0.02;
+      return total + estimatedCommission;
+    }, 0);
+    
+    // Monthly sold properties
+    const monthlySoldProperties = await Property.find({
+      $or: [
+        { agent: vendorId },
+        { vendor: vendorObjectId }
+      ],  
+      status: 'sold',
+      updatedAt: { $gte: thirtyDaysAgo } // Assuming updatedAt reflects when status changed to sold
+    });
+    
+    const monthlyPropertyEarnings = monthlySoldProperties.reduce((total, property) => {
+      const estimatedCommission = property.price * 0.02;
+      return total + estimatedCommission;
+    }, 0);
+    
+    // Combine all earnings
+    const totalServiceEarnings = serviceEarnings[0]?.totalEarnings || 0;
+    const totalRevenue = totalServiceEarnings + propertyEarnings;
+    const monthlyRevenue = (monthlyServiceEarnings[0]?.monthlyEarnings || 0) + monthlyPropertyEarnings;
+    
+    // Get active subscription for platform costs
     const activeSubscription = await Subscription.findOne({
       user: vendorId,
       status: 'active',
       endDate: { $gt: new Date() }
-    });
+    }).populate('plan');
     
     const nextBillingAmount = activeSubscription ? activeSubscription.amount : 0;
+    const nextBillingDate = activeSubscription ? activeSubscription.endDate : new Date();
+    
+    // Get usage statistics
+    const [
+      propertiesUsed,
+      leadsReceived,
+      messagesCount,
+      totalServiceBookings,
+      activeServiceBookings
+    ] = await Promise.all([
+      Property.countDocuments({ 
+        $or: [
+          { agent: vendorId },
+          { vendor: vendorObjectId }
+        ]
+      }),
+      Message.countDocuments({ 
+        recipient: vendorId,
+        createdAt: { $gte: thirtyDaysAgo }
+      }),
+      Message.countDocuments({ 
+        $or: [
+          { sender: vendorId },
+          { recipient: vendorId }
+        ],
+        createdAt: { $gte: thirtyDaysAgo }
+      }),
+      ServiceBooking.countDocuments({ vendorId: vendorId }),
+      ServiceBooking.countDocuments({ vendorId: vendorId, status: { $in: ['confirmed', 'in_progress'] } })
+    ]);
 
-    // Mock usage stats
+    // Get plan limits from active subscription
+    const planLimits = activeSubscription?.plan ? {
+      properties: activeSubscription.plan.limits?.properties || 50,
+      leads: activeSubscription.plan.limits?.leads || 100,
+      messages: activeSubscription.plan.limits?.messages || 1000
+    } : {
+      properties: 0,
+      leads: 0,
+      messages: 0
+    };
+
     const usageStats = {
-      propertiesPosted: 5,
-      maxProperties: activeSubscription ? 50 : 0,
-      leadsReceived: 25,
-      maxLeads: activeSubscription ? 100 : 0,
-      usagePercentage: 50
+      properties: { 
+        used: propertiesUsed, 
+        limit: planLimits.properties 
+      },
+      leads: { 
+        used: leadsReceived, 
+        limit: planLimits.leads 
+      },
+      messages: { 
+        used: messagesCount, 
+        limit: planLimits.messages 
+      }
     };
 
     res.json({
       success: true,
       data: {
-        totalRevenue,
+        // Business earnings (main revenue)
+        totalRevenue: Math.round(totalRevenue),
+        monthlyRevenue: Math.round(monthlyRevenue),
+        
+        // Breakdown
+        serviceEarnings: Math.round(totalServiceEarnings),
+        propertyEarnings: Math.round(propertyEarnings),
+        totalBookings: serviceEarnings[0]?.totalBookings || 0,
+        soldProperties: soldProperties.length,
+        
+        // Platform subscription costs
+        platformCosts: nextBillingAmount,
         nextBillingAmount,
-        totalInvoices,
+        nextBillingDate: nextBillingDate.toISOString(),
+        subscriptionStatus: activeSubscription ? activeSubscription.status : 'inactive',
+        
+        // Invoice/billing counts (for subscription management)
+        activeSubscriptions: activeSubscription ? 1 : 0,
+        totalInvoices: 1, // Simplified - one invoice per active subscription
+        paidInvoices: activeSubscription ? 1 : 0,
+        overdueInvoices: 0,
+        
         usageStats
-      }
-    });
-  } catch (error) {
-    console.error('Get billing stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch billing stats'
-    });
-  }
-}));
-
-// @desc    Get vendor billing stats
-// @route   GET /api/vendors/billing/stats
-// @access  Private/Agent
-router.get('/billing/stats', requireVendorRole, asyncHandler(async (req, res) => {
-  const vendorId = req.user.id;
-
-  try {
-    const Subscription = require('../models/Subscription');
-    
-    // Get current subscription
-    const currentSubscription = await Subscription.findOne({
-      user: vendorId,
-      status: 'active',
-      endDate: { $gt: new Date() }
-    }).populate('plan');
-
-    // Calculate stats
-    const totalSpent = await Subscription.aggregate([
-      { $match: { user: vendorId } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-
-    const totalTransactions = await Subscription.countDocuments({ user: vendorId });
-    
-    const nextBilling = currentSubscription ? currentSubscription.endDate : null;
-    const monthlySpend = currentSubscription ? currentSubscription.amount : 0;
-
-    res.json({
-      success: true,
-      data: {
-        totalSpent: totalSpent[0]?.total || 0,
-        monthlySpend,
-        totalTransactions,
-        nextBilling,
-        currency: 'INR',
-        savings: billingCycle === 'yearly' ? Math.round(monthlySpend * 2) : 0 // 2 months free calculation
       }
     });
   } catch (error) {

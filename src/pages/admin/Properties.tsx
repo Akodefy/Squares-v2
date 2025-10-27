@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { usePagination } from "@/hooks/usePagination";
 import {
   Pagination,
@@ -13,13 +15,49 @@ import {
 import { Property, propertyService } from "@/services/propertyService";
 import { Column, DataTable } from "@/components/adminpanel/shared/DataTable";
 import { SearchFilter } from "@/components/adminpanel/shared/SearchFilter";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, MoreHorizontal, Eye, Edit, Trash2, Star, StarOff } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { adminPropertyService } from "@/services/adminPropertyService";
+import { useToast } from "@/hooks/use-toast";
 
 const Properties = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -54,6 +92,75 @@ const Properties = () => {
 
   const { paginatedItems, currentPage, totalPages, goToPage, nextPage, previousPage } =
     usePagination(filteredProperties, 10);
+
+  const handleDeleteProperty = async () => {
+    if (!selectedProperty) return;
+    
+    try {
+      await adminPropertyService.deleteProperty(selectedProperty._id);
+      setProperties(properties.filter(p => p._id !== selectedProperty._id));
+      setDeleteDialogOpen(false);
+      setSelectedProperty(null);
+    } catch (error) {
+      console.error("Failed to delete property:", error);
+    }
+  };
+
+  const handleToggleFeatured = async (property: Property) => {
+    try {
+      await adminPropertyService.togglePropertyFeatured(property._id, !property.featured);
+      setProperties(properties.map(p => 
+        p._id === property._id ? { ...p, featured: !p.featured } : p
+      ));
+    } catch (error) {
+      console.error("Failed to toggle featured status:", error);
+    }
+  };
+
+  const handleApproveProperty = async (property: Property) => {
+    try {
+      await adminPropertyService.updatePropertyStatus(property._id, 'active');
+      setProperties(properties.map(p => 
+        p._id === property._id ? { ...p, status: 'active', verified: true } : p
+      ));
+      toast({
+        title: "Success",
+        description: "Property approved and listed successfully!",
+      });
+    } catch (error) {
+      console.error("Failed to approve property:", error);
+    }
+  };
+
+  const handleRejectProperty = async () => {
+    if (!selectedProperty || !rejectionReason.trim()) return;
+    
+    try {
+      await adminPropertyService.updatePropertyStatus(selectedProperty._id, 'rejected', rejectionReason);
+      setProperties(properties.map(p => 
+        p._id === selectedProperty._id ? { ...p, status: 'rejected' } : p
+      ));
+      setRejectDialogOpen(false);
+      setSelectedProperty(null);
+      setRejectionReason("");
+      toast({
+        title: "Property Rejected",
+        description: "Property has been rejected and vendor has been notified.",
+      });
+    } catch (error) {
+      console.error("Failed to reject property:", error);
+    }
+  };
+
+  const openDeleteDialog = (property: Property) => {
+    setSelectedProperty(property);
+    setDeleteDialogOpen(true);
+  };
+
+  const openRejectDialog = (property: Property) => {
+    setSelectedProperty(property);
+    setRejectDialogOpen(true);
+  };
 
   // Create extended type for DataTable
   type PropertyWithId = Property & { id: string };
@@ -106,30 +213,91 @@ const Properties = () => {
     {
       key: "status",
       label: "Status",
+      render: (property) => {
+        const statusColors: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
+          active: "default",
+          available: "default",
+          pending: "outline",
+          rejected: "destructive",
+          sold: "secondary",
+          rented: "secondary",
+        };
+        return (
+          <Badge variant={statusColors[property.status] || "secondary"}>
+            {property.status}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "featured",
+      label: "Featured",
       render: (property) => (
-        <Badge
-          variant={
-            property.status === "available"
-              ? "default"
-              : property.status === "sold"
-              ? "secondary"
-              : property.status === "rented"
-              ? "outline"
-              : "destructive"
-          }
-          className="capitalize"
-        >
-          {property.status}
+        <Badge variant={property.featured ? "default" : "secondary"}>
+          {property.featured ? "Featured" : "Regular"}
         </Badge>
       ),
     },
     {
-      key: "verified",
-      label: "Verified",
+      key: "actions",
+      label: "Actions",
       render: (property) => (
-        <Badge variant={property.verified ? "default" : "secondary"}>
-          {property.verified ? "Verified" : "Pending"}
-        </Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate(`/admin/properties/edit/${property._id}`)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            
+            {/* Approval Actions for Pending Properties */}
+            {property.status === 'pending' && (
+              <>
+                <DropdownMenuItem onClick={() => handleApproveProperty(property)}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Approve & List
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openRejectDialog(property)} className="text-red-600">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Reject
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
+            {/* Featured Toggle for Active Properties */}
+            {property.status === 'active' && (
+              <DropdownMenuItem onClick={() => handleToggleFeatured(property)}>
+                {property.featured ? (
+                  <>
+                    <StarOff className="w-4 h-4 mr-2" />
+                    Remove Featured
+                  </>
+                ) : (
+                  <>
+                    <Star className="w-4 h-4 mr-2" />
+                    Mark Featured
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
+
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => openDeleteDialog(property)}
+              className="text-red-600"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
@@ -145,11 +313,17 @@ const Properties = () => {
 
   return (
     <div className="space-y-6 relative top-[60px]">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Property Management</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage property listings and details
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Property Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage property listings and details
+          </p>
+        </div>
+        <Button onClick={() => navigate("/admin/properties/add")}>
+          <Plus className="w-4 h-4 mr-2" />
+          Add Property
+        </Button>
       </div>
 
       <Card>
@@ -215,6 +389,24 @@ const Properties = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Property</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedProperty?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProperty} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

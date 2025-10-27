@@ -8,6 +8,7 @@ import {
   Wrench,
   Star,
   User,
+  Settings,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -31,6 +32,7 @@ const navItems = [
   { icon: Wrench, label: "Services", path: "/customer/services" },
   { icon: Star, label: "Reviews", path: "/customer/reviews" },
   { icon: User, label: "Profile", path: "/customer/profile" },
+  { icon: Settings, label: "Settings", path: "/customer/settings" },
 ];
 
 const CustomerSidebar = ({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: CustomerSidebarProps) => {
