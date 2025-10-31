@@ -22,8 +22,10 @@ export interface Property {
   bathrooms: number;
   address: {
     street: string;
-    locality: string;
+    district?: string;
     city: string;
+    taluk?: string;
+    locationName?: string;
     state: string;
     pincode: string;
     coordinates?: {

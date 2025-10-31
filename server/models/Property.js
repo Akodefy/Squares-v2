@@ -75,13 +75,18 @@ const propertySchema = new mongoose.Schema({
       type: String,
       required: true
     },
-    locality: {
-      type: String,
-      required: true
+    district: {
+      type: String
     },
     city: {
       type: String,
       required: true
+    },
+    taluk: {
+      type: String
+    },
+    locationName: {
+      type: String
     },
     state: {
       type: String,

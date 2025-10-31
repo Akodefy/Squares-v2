@@ -94,8 +94,6 @@ const AddProperty = () => {
     districtCode: "",
     city: "",
     cityCode: "",
-    taluk: "",
-    locationName: "",
     pincode: "",
     
     // Property Details
@@ -132,6 +130,14 @@ const AddProperty = () => {
 
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadedVideos, setUploadedVideos] = useState([]);
+
+  // Store selected location names for display
+  const [selectedLocationNames, setSelectedLocationNames] = useState({
+    country: 'India',
+    state: '',
+    district: '',
+    city: ''
+  });
 
   // Location data states
   const [countries, setCountries] = useState<Country[]>([]);
@@ -198,9 +204,13 @@ const AddProperty = () => {
           state: '', 
           district: '',
           city: '', 
-          taluk: '',
-          locationName: '', 
           pincode: '' 
+        }));
+        setSelectedLocationNames(prev => ({
+          ...prev,
+          state: '',
+          district: '',
+          city: ''
         }));
         setDistricts([]);
         setCities([]);
@@ -238,9 +248,12 @@ const AddProperty = () => {
           ...prev, 
           district: '',
           city: '', 
-          taluk: '',
-          locationName: '', 
           pincode: '' 
+        }));
+        setSelectedLocationNames(prev => ({
+          ...prev,
+          district: '',
+          city: ''
         }));
         setCities([]);
         setTaluks([]);
@@ -276,9 +289,11 @@ const AddProperty = () => {
         setFormData(prev => ({ 
           ...prev, 
           city: '', 
-          taluk: '',
-          locationName: '', 
           pincode: '' 
+        }));
+        setSelectedLocationNames(prev => ({
+          ...prev,
+          city: ''
         }));
         setTaluks([]);
         setLocationNames([]);
@@ -297,90 +312,51 @@ const AddProperty = () => {
     loadCities();
   }, [formData.district]);
 
-  // Load taluks when city changes
+  // No longer loading taluks or location names since they're not needed
+
+  // Update selectedLocationNames when form data and arrays change
   useEffect(() => {
-    const loadTaluks = async () => {
-      if (!formData.city) {
-        setTaluks([]);
-        return;
+    if (states.length > 0 && formData.state) {
+      const selectedState = states.find(s => s.stateCode === formData.state);
+      if (selectedState) {
+        setSelectedLocationNames(prev => ({ ...prev, state: selectedState.name }));
       }
+    }
+  }, [states, formData.state]);
 
-      setLocationLoading(prev => ({ ...prev, taluks: true }));
-      try {
-        const taluksData = await locationService.getTaluksByCity(formData.city);
-        setTaluks(taluksData);
-        // Reset dependent fields
-        setFormData(prev => ({ 
-          ...prev, 
-          taluk: '', 
-          locationName: '',
-          pincode: '' 
-        }));
-        setLocationNames([]);
-      } catch (error) {
-        console.error('Error loading taluks:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load taluks. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLocationLoading(prev => ({ ...prev, taluks: false }));
-      }
-    };
-
-    loadTaluks();
-  }, [formData.city]);
-
-  // Load location names when taluk changes
   useEffect(() => {
-    const loadLocationNames = async () => {
-      if (!formData.taluk) {
-        setLocationNames([]);
-        return;
+    if (districts.length > 0 && formData.district) {
+      const selectedDistrict = districts.find(d => d.id === formData.district);
+      if (selectedDistrict) {
+        setSelectedLocationNames(prev => ({ ...prev, district: selectedDistrict.name }));
       }
+    }
+  }, [districts, formData.district]);
 
-      setLocationLoading(prev => ({ ...prev, locationNames: true }));
-      try {
-        const locationNamesData = await locationService.getLocationNamesByTaluk(formData.taluk);
-        setLocationNames(locationNamesData);
-        // Reset dependent fields
-        setFormData(prev => ({ 
-          ...prev, 
-          locationName: '',
-          pincode: '' 
-        }));
-      } catch (error) {
-        console.error('Error loading location names:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load location names. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLocationLoading(prev => ({ ...prev, locationNames: false }));
-      }
-    };
-
-    loadLocationNames();
-  }, [formData.taluk]);
-
-  // Auto-detect pincode when location name changes
   useEffect(() => {
-    const autoDetectPincode = async () => {
-      if (!formData.locationName) return;
-
-      const selectedLocationName = locationNames.find(l => l.id === formData.locationName);
-      if (selectedLocationName && selectedLocationName.pincode) {
-        setFormData(prev => ({ 
-          ...prev, 
-          pincode: selectedLocationName.pincode 
-        }));
+    if (cities.length > 0 && formData.city) {
+      const selectedCity = cities.find(c => c.id === formData.city);
+      if (selectedCity) {
+        setSelectedLocationNames(prev => ({ ...prev, city: selectedCity.name }));
       }
-    };
+    }
+  }, [cities, formData.city]);
 
-    autoDetectPincode();
-  }, [formData.locationName, locationNames]);
+  // Auto-populate address field when location details are selected
+  useEffect(() => {
+    const addressParts = [];
+    if (selectedLocationNames.city) addressParts.push(selectedLocationNames.city);
+    if (selectedLocationNames.district) addressParts.push(selectedLocationNames.district);
+    if (selectedLocationNames.state) addressParts.push(selectedLocationNames.state);
+    if (formData.pincode) addressParts.push(formData.pincode);
+    
+    if (addressParts.length > 0 && !formData.address.trim()) {
+      setFormData(prev => ({ 
+        ...prev, 
+        address: addressParts.join(', ') 
+      }));
+    }
+  }, [selectedLocationNames, formData.pincode]);
 
   // Check subscription limits and property count
   useEffect(() => {
@@ -548,11 +524,11 @@ const AddProperty = () => {
         bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : 0,
         bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : 0,
         address: {
-          street: formData.address.trim() || 'Address not specified',
-          locality: locationNames.find(l => l.id === formData.locationName)?.name || 'Location not specified',
-          city: cities.find(c => c.id === formData.city)?.name || 'City not specified',
-          state: states.find(s => s.stateCode === formData.state)?.name || 'State not specified',
-          pincode: formData.pincode || '000000'
+          street: formData.address.trim(),
+          district: districts.find(d => d.id === formData.district)?.name || selectedLocationNames.district || '',
+          city: cities.find(c => c.id === formData.city)?.name || selectedLocationNames.city || '',
+          state: states.find(s => s.stateCode === formData.state)?.name || selectedLocationNames.state || '',
+          pincode: formData.pincode
         },
         amenities: formData.amenities || [],
         images: uploadedImageUrls || [],
@@ -900,24 +876,31 @@ const AddProperty = () => {
                 value={{
                   country: formData.country,
                   countryCode: formData.countryCode,
-                  state: formData.state,
-                  stateCode: formData.stateCode,
-                  district: formData.district,
-                  districtCode: formData.districtCode,
-                  city: formData.city,
-                  cityCode: formData.cityCode
+                  state: selectedLocationNames.state,
+                  stateCode: formData.state,
+                  district: selectedLocationNames.district,
+                  districtCode: formData.district,
+                  city: selectedLocationNames.city,
+                  cityCode: formData.city
                 }}
                 onChange={(locationData) => {
                   setFormData(prev => ({
                     ...prev,
                     country: locationData.country || "India",
                     countryCode: locationData.countryCode || "IN",
+                    // Use the Code fields for IDs (these are what the backend expects)
+                    state: locationData.stateCode || "",
+                    district: locationData.districtCode || "",
+                    city: locationData.cityCode || ""
+                  }));
+                  
+                  // Immediately update display names with the selected values
+                  setSelectedLocationNames(prev => ({
+                    ...prev,
+                    country: "India",
                     state: locationData.state || "",
-                    stateCode: locationData.stateCode || "",
                     district: locationData.district || "",
-                    districtCode: locationData.districtCode || "",
-                    city: locationData.city || "",
-                    cityCode: locationData.cityCode || ""
+                    city: locationData.city || ""
                   }));
                 }}
                 showLabels={true}
@@ -930,6 +913,8 @@ const AddProperty = () => {
                 showValidation={true}
               />
             </div>
+
+
 
             <div className="space-y-2">
               <Label htmlFor="pincode">PIN Code</Label>
@@ -1335,13 +1320,12 @@ const AddProperty = () => {
                   
                   <div>
                     <h3 className="font-semibold mb-2">Location</h3>
-                    <p><strong>Country:</strong> {countries.find(c => c.code === formData.country)?.name}</p>
-                    <p><strong>State:</strong> {states.find(s => s.stateCode === formData.state)?.name}</p>
-                    <p><strong>District:</strong> {districts.find(d => d.id === formData.district)?.name}</p>
-                    <p><strong>City:</strong> {cities.find(c => c.id === formData.city)?.name}</p>
-                    <p><strong>Taluk:</strong> {taluks.find(t => t.id === formData.taluk)?.name}</p>
-                    <p><strong>Location:</strong> {locationNames.find(l => l.id === formData.locationName)?.name}</p>
+                    <p><strong>Country:</strong> {countries.find(c => c.code === formData.country)?.name || selectedLocationNames.country || 'India'}</p>
+                    <p><strong>State:</strong> {states.find(s => s.stateCode === formData.state)?.name || selectedLocationNames.state || 'Not selected'}</p>
+                    <p><strong>District:</strong> {districts.find(d => d.id === formData.district)?.name || selectedLocationNames.district || 'Not selected'}</p>
+                    <p><strong>City:</strong> {cities.find(c => c.id === formData.city)?.name || selectedLocationNames.city || 'Not selected'}</p>
                     <p><strong>Pincode:</strong> {formData.pincode}</p>
+                    <p><strong>Address:</strong> {formData.address || 'Not provided'}</p>
                   </div>
                   
                   <div>

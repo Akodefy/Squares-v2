@@ -29,7 +29,7 @@ const propertyFormSchema = z.object({
   
   // Property Location
   city: z.string().min(1, "City is required"),
-  locality: z.string().min(1, "Locality is required"),
+
   street: z.string().optional(),
   state: z.string().min(1, "State is required"),
   pincode: z.string().regex(/^\d{6}$/, "Pincode must be exactly 6 digits"),
@@ -432,15 +432,13 @@ const PostProperty = () => {
                         if (locationData.city || locationData.district) {
                           form.setValue('city', locationData.city || locationData.district || '');
                         }
-                        if (locationData.locationName) {
-                          form.setValue('locality', locationData.locationName);
-                        }
+
                       }}
                       initialData={{
                         pincode: form.watch('pincode') || '',
                         state: form.watch('state') || '',
                         city: form.watch('city') || '',
-                        locationName: form.watch('locality') || ''
+                        locationName: ''
                       }}
                       showPincodeFirst={true}
                     />
