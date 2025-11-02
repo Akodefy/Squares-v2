@@ -109,7 +109,7 @@ git push --force
 ### 8. **Production URLs**
 
 Once deployed successfully:
-- **Frontend:** https://squares-swart.vercel.app
+- **Frontend:** https://squares-smoky.vercel.app
 - **Backend API:** https://squares-9d84.onrender.com
 
 ### 9. **Post-Deployment Verification**

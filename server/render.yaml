@@ -15,7 +15,7 @@ services:
           name: ninety-nine-acres-server
           property: port
       - key: CLIENT_URL
-        value: https://squares-swart.vercel.app
+        value: https://squares-smoky.vercel.app
       - key: JWT_SECRET
         value: ninety_nine_acres_super_secret_jwt_key_2024_production_render_deployment_secure_long_key
       - key: JWT_EXPIRE

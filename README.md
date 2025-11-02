@@ -77,7 +77,7 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 This application supports both local development and production deployment:
 
 ### 🚀 Live URLs
-- **Frontend (Vercel)**: https://squares-swart.vercel.app/
+- **Frontend (Vercel)**: https://squares-smoky.vercel.app/
 - **Backend (Render)**: https://squares-9d84.onrender.com
 
 ### 💻 Local Development

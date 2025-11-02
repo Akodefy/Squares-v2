@@ -18,7 +18,7 @@ console.log('');
 console.log('🌐 URLs to Test:');
 console.log('  Local Frontend: http://localhost:8001');
 console.log('  Local Backend: http://localhost:8000');
-console.log('  Production Frontend: https://squares-swart.vercel.app');
+console.log('  Production Frontend: https://squares-smoky.vercel.app');
 console.log('  Production Backend: https://squares-9d84.onrender.com');
 console.log('');
 console.log('🧪 Features to Test:');
