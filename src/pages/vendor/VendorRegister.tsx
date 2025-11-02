@@ -118,7 +118,7 @@ const VendorRegister = () => {
       formData.append('file', file);
       formData.append('folder', 'vendor-documents');
 
-      const response = await fetch('http://localhost:8000/api/upload/single', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/upload/single`, {
         method: 'POST',
         body: formData,
       });
