@@ -15,6 +15,7 @@ export interface PaymentOrder {
   keyId: string;
   planName: string;
   userEmail: string;
+  isMockPayment?: boolean;
 }
 
 export interface PaymentOptions {
@@ -340,6 +341,169 @@ class PaymentService {
       return response.data;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Subscription payment verification failed";
+      throw new Error(errorMessage);
+    }
+  }
+
+  async processAddonPayment(paymentData: {
+    addons: string[];
+    totalAmount: number;
+  }): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      // Create payment order for addons only
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: PaymentOrder & { addons?: any[]; isMockPayment?: boolean };
+      }>('/payments/create-addon-order', {
+        method: 'POST',
+        body: JSON.stringify(paymentData)
+      });
+
+      if (!response.success) {
+        throw new Error('Failed to create addon payment order');
+      }
+
+      const order = response.data;
+      console.log('Addon payment order created:', order);
+
+      // Handle mock payment for development
+      if (order.isMockPayment || order.keyId === 'mock_key_for_development') {
+        console.log('Processing mock addon payment for development');
+        
+        // Simulate successful payment for development
+        try {
+          const verificationData = await this.verifyAddonPayment({
+            razorpay_order_id: order.orderId,
+            razorpay_payment_id: `mock_payment_${Date.now()}`,
+            razorpay_signature: 'mock_signature',
+            addons: paymentData.addons,
+            totalAmount: paymentData.totalAmount
+          });
+          
+          console.log('Mock addon payment verification result:', verificationData);
+
+          toast({
+            title: "Payment Successful!",
+            description: "Addons have been added to your subscription successfully.",
+          });
+
+          return {
+            success: true,
+            data: verificationData
+          };
+        } catch (error) {
+          console.error('Mock addon payment verification failed:', error);
+          return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Mock addon payment verification failed'
+          };
+        }
+      }
+
+      // Load Razorpay script for real payments
+      await this.loadRazorpayScript();
+
+      return new Promise((resolve, reject) => {
+        // Configure Razorpay options
+        const razorpayOptions = {
+          key: order.keyId,
+          amount: order.amount,
+          currency: order.currency,
+          name: "Ninety Nine Acres",
+          description: `Addon purchase - ${paymentData.addons.length} addon(s)`,
+          order_id: order.orderId,
+          prefill: {
+            email: order.userEmail,
+          },
+          theme: {
+            color: "#2563eb",
+          },
+          handler: async (response: any) => {
+            try {
+              console.log('Verifying addon payment with data:', {
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                addons: paymentData.addons,
+                totalAmount: paymentData.totalAmount
+              });
+              
+              // Verify addon payment
+              const verificationData = await this.verifyAddonPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                addons: paymentData.addons,
+                totalAmount: paymentData.totalAmount
+              });
+              
+              console.log('Addon payment verification result:', verificationData);
+
+              toast({
+                title: "Payment Successful!",
+                description: "Addons have been added to your subscription successfully.",
+              });
+
+              resolve({
+                success: true,
+                data: verificationData
+              });
+            } catch (error) {
+              console.error('Addon payment verification failed:', error);
+              reject({
+                success: false,
+                message: error instanceof Error ? error.message : 'Addon payment verification failed'
+              });
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              reject({
+                success: false,
+                message: 'Payment was cancelled by user'
+              });
+            },
+          },
+        };
+
+        // Open Razorpay checkout
+        const razorpay = new window.Razorpay(razorpayOptions);
+        razorpay.open();
+      });
+
+    } catch (error) {
+      console.error('Addon payment failed:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to process addon payment"
+      };
+    }
+  }
+
+  async verifyAddonPayment(paymentData: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    addons: string[];
+    totalAmount: number;
+  }): Promise<any> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: any;
+        message: string;
+      }>('/payments/verify-addon-payment', {
+        method: 'POST',
+        body: JSON.stringify(paymentData)
+      });
+
+      if (!response.success) {
+        throw new Error(response.message || 'Addon payment verification failed');
+      }
+
+      return response.data;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Addon payment verification failed";
       throw new Error(errorMessage);
     }
   }

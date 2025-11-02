@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +130,11 @@ const AddProperty = () => {
     availability: "",
     possession: "",
     facing: "",
-    parkingSpaces: ""
+    parkingSpaces: "",
+    
+    // Land/Plot specific
+    roadWidth: "",
+    cornerPlot: ""
   });
 
   const [uploadedImages, setUploadedImages] = useState([]);
@@ -292,44 +296,57 @@ const AddProperty = () => {
   }, [selectedLocationNames, formData.pincode]);
 
   // Check subscription limits and property count
-  useEffect(() => {
-    const checkSubscriptionLimits = async () => {
-      setIsCheckingSubscription(true);
-      try {
-        const limits = await vendorService.getSubscriptionLimits();
-        setSubscriptionLimits(limits);
-        setHasAddPropertySubscription(limits.canAddMore);
-        
-        if (!limits.canAddMore) {
-          if (limits.maxProperties === 0) {
-            toast({
-              title: "Subscription Required",
-              description: "You need an active subscription to add properties. Please upgrade your plan.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Property Limit Reached",
-              description: `You have reached your plan limit of ${limits.maxProperties} properties. Please upgrade to add more.`,
-              variant: "destructive",
-            });
-          }
+  const checkSubscriptionLimits = useCallback(async () => {
+    setIsCheckingSubscription(true);
+    try {
+      console.log('🔄 Checking subscription limits...');
+      const limits = await vendorService.getSubscriptionLimits();
+      console.log('📊 Subscription limits received:', limits);
+      setSubscriptionLimits(limits);
+      setHasAddPropertySubscription(limits.canAddMore);
+      
+      if (!limits.canAddMore) {
+        if (limits.maxProperties === 0) {
+          toast({
+            title: "Subscription Required",
+            description: "You need an active subscription to add properties. Please upgrade your plan.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Property Limit Reached",
+            description: `You have reached your plan limit of ${limits.maxProperties} properties. Please upgrade to add more.`,
+            variant: "destructive",
+          });
         }
-      } catch (error) {
-        console.error("Error checking subscription:", error);
-        setHasAddPropertySubscription(false);
-        toast({
-          title: "Error",
-          description: "Failed to check subscription status. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsCheckingSubscription(false);
       }
+    } catch (error) {
+      console.error("Error checking subscription:", error);
+      setHasAddPropertySubscription(false);
+      toast({
+        title: "Error",
+        description: "Failed to check subscription status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingSubscription(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    checkSubscriptionLimits();
+  }, [checkSubscriptionLimits]);
+
+  // Refresh subscription limits when window gains focus (user returns from payment)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Window focused - checking subscription limits...');
+      checkSubscriptionLimits();
     };
 
-    checkSubscriptionLimits();
-  }, []);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [checkSubscriptionLimits]);
 
   const steps = [
     { id: 1, title: "Basic Details", description: "Property type and listing details" },
@@ -504,6 +521,14 @@ const AddProperty = () => {
       }
       if (formData.possession?.trim()) {
         propertyData.possession = formData.possession.trim();
+      }
+      
+      // Add land/plot specific fields
+      if (formData.roadWidth?.trim()) {
+        propertyData.roadWidth = formData.roadWidth.trim();
+      }
+      if (formData.cornerPlot) {
+        propertyData.cornerPlot = formData.cornerPlot;
       }
 
       // Log the data being sent for debugging
@@ -1202,18 +1227,18 @@ const AddProperty = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="age">Road Width (ft)</Label>
+                    <Label htmlFor="roadWidth">Road Width (ft)</Label>
                     <Input
-                      id="age"
+                      id="roadWidth"
                       placeholder="e.g., 30"
-                      value={formData.age}
-                      onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
+                      value={formData.roadWidth}
+                      onChange={(e) => setFormData(prev => ({ ...prev, roadWidth: e.target.value }))}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="parkingSpaces">Corner Plot</Label>
-                    <Select value={formData.parkingSpaces} onValueChange={(value) => setFormData(prev => ({ ...prev, parkingSpaces: value }))}>
+                    <Label htmlFor="cornerPlot">Corner Plot</Label>
+                    <Select value={formData.cornerPlot} onValueChange={(value) => setFormData(prev => ({ ...prev, cornerPlot: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
@@ -1663,6 +1688,30 @@ const AddProperty = () => {
                     Upgrade Plan
                   </Button>
                 </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    console.log('Manually refreshing subscription limits...');
+                    checkSubscriptionLimits();
+                  }}
+                  disabled={isCheckingSubscription}
+                >
+                  {isCheckingSubscription ? "Checking..." : "Refresh Status"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    console.log('Cleaning up duplicate subscriptions...');
+                    const result = await vendorService.cleanupSubscriptions();
+                    if (result.success) {
+                      // Refresh the subscription limits after cleanup
+                      checkSubscriptionLimits();
+                    }
+                  }}
+                  disabled={isCheckingSubscription}
+                >
+                  Fix Multiple Subscriptions
+                </Button>
                 <Button variant="outline" onClick={() => navigate("/vendor/properties")}>
                   Back to Properties
                 </Button>
