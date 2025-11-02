@@ -7,7 +7,8 @@ async function testVendorAPI() {
     
     // Step 1: Login
     console.log('\n1. Attempting login...');
-    const loginResponse = await axios.post('http://localhost:8000/api/auth/login', {
+    const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
+    const loginResponse = await axios.post(`${BASE_URL}/api/auth/login`, {
       email: 'vendor1@ninetyneacres.com',
       password: 'vendor@123'
     });

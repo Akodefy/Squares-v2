@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const { connectDB } = require('../config/database');
 
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000/api';
 
 async function testLocationEndpoints() {
   console.log('🧪 Testing Enhanced Location Service Endpoints\n');

@@ -1,6 +1,6 @@
 // Test admin login and subscription access
 const testAdminAuth = async () => {
-  const API_BASE = 'http://localhost:8000/api';
+  const API_BASE = process.env.API_BASE_URL || 'http://localhost:8000/api';
   
   try {
     console.log('🔐 Testing admin login...');

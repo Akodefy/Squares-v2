@@ -35,9 +35,10 @@ async function testPaymentEndpoint() {
 
     // Test API endpoint manually
     const { default: fetch } = await import('node-fetch');
+    const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
     
     // First, login to get a token
-    const loginResponse = await fetch('http://localhost:8000/api/auth/login', {
+    const loginResponse = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

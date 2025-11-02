@@ -71,3 +71,39 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Deployment & Environment
+
+This application supports both local development and production deployment:
+
+### 🚀 Live URLs
+- **Frontend (Vercel)**: https://squares-swart.vercel.app/
+- **Backend (Render)**: https://squares-9d84.onrender.com
+
+### 💻 Local Development
+The app automatically falls back to localhost when no environment variables are set:
+- Frontend: http://localhost:8001
+- Backend: http://localhost:8000/api
+
+### ⚙️ Environment Configuration
+
+**For Local Development:**
+1. Copy `.env.example` to `.env.local`
+2. Update values as needed (defaults work for local development)
+
+**For Production (Vercel):**
+Add these environment variables in your Vercel dashboard:
+```bash
+VITE_API_URL=https://squares-9d84.onrender.com/api
+VITE_API_BASE_URL=https://squares-9d84.onrender.com
+```
+
+**For Backend (Render):**
+Use the variables from `server/.env.production` with your actual values.
+
+### 📋 Quick Start
+1. **Local Development**: Just run `npm run dev` - no env setup required
+2. **Production**: Set the Vite environment variables above in Vercel
+3. **Testing**: Use the live URLs above to test the deployed version
+
+> **Note**: All services use fallbacks to localhost, so local development works without any configuration.
