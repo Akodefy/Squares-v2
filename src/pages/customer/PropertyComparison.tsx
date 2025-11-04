@@ -84,14 +84,14 @@ const PropertyComparison = () => {
   }, [searchParams, loadProperties]);
 
   // Listen to realtime events for property updates
-  useRealtimeEvent('property_updated', (data) => {
+  useRealtimeEvent('property_updated', useCallback((data) => {
     if (data.propertyId && selectedProperties.includes(data.propertyId)) {
       console.log("Property updated via realtime, refreshing comparison");
       refreshData();
     }
-  });
+  }, [selectedProperties, refreshData]));
 
-  useRealtimeEvent('property_favorited', (data) => {
+  useRealtimeEvent('property_favorited', useCallback((data) => {
     if (data.propertyId && selectedProperties.includes(data.propertyId)) {
       // Update property in the list if it's favorited/unfavorited
       setProperties(prev => prev.map(prop => 
@@ -100,7 +100,7 @@ const PropertyComparison = () => {
           : prop
       ));
     }
-  });
+  }, [selectedProperties]));
 
   const formatPrice = (price: number, listingType: Property['listingType']) => {
     if (listingType === 'rent') {
