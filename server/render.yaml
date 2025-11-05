@@ -31,13 +31,15 @@ services:
       - key: CLOUDINARY_API_SECRET
         value: d4Wl2DMwVPlM4gkXWpzcNOv_ePY
       - key: SMTP_HOST
-        value: smtp.gmail.com
+        value: smtp.hostinger.com
       - key: SMTP_PORT
         value: 587
+      - key: SMTP_SECURE
+        value: false
       - key: SMTP_USER
-        value: noreply@ninety-nine-acres.com
+        value: amutha0985@gmail.com
       - key: SMTP_PASS
-        value: temp_password
+        value: csmkyylvkknuwmfa
       - key: RAZORPAY_KEY_ID
         value: rzp_test_RMylhPWMBGHzdi
       - key: RAZORPAY_KEY_SECRET

@@ -178,7 +178,7 @@ const Hero = () => {
       const timeSinceLastSearch = now - lastSearchTimeRef.current;
       if (timeSinceLastSearch < 1000 && lastSearchRef.current === query) {
         return;
-      }
+}
 
       // Cancel previous request if it exists
       if (abortControllerRef.current) {
@@ -405,37 +405,37 @@ const Hero = () => {
       </section>
 
       {/* Overlapping Search Box */}
-      <div className="relative -mt-20 z-30 px-4">
+      <div className="relative -mt-20 z-30 px-4 sm:px-6 md:px-8">
         <div className="container mx-auto">
           <div className="max-w-4xl mx-auto">
             <div 
               ref={searchContainerRef}
-              className="bg-white/60 dark:bg-card/80 backdrop-blur-lg rounded-xl p-6 shadow-2xl border border-white/20 dark:border-border/30 transform hover:scale-[1.02] transition-all duration-300"
+              className="bg-white/60 dark:bg-card/80 backdrop-blur-lg rounded-xl p-4 sm:p-6 shadow-2xl border border-white/20 dark:border-border/30 transform hover:scale-[1.02] transition-all duration-300"
             >
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-2 mb-4 flex-col xs:flex-row">
                 <Tabs defaultValue="buy" className="flex-1" onValueChange={handleTabChange}>
-                  <TabsList className="grid w-full grid-cols-4 h-12 p-1">
+                  <TabsList className="grid w-full grid-cols-4 h-10 xs:h-12 p-1">
                     <TabsTrigger 
                       value="buy" 
-                      className="text-sm font-semibold h-10 rounded-lg transition-all duration-300 hover:scale-105"
+                      className="text-xs sm:text-sm font-semibold h-8 xs:h-10 rounded-lg transition-all duration-300 hover:scale-105"
                     >
                       Buy
                     </TabsTrigger>
                     <TabsTrigger 
                       value="rent" 
-                      className="text-sm font-semibold h-10 rounded-lg transition-all duration-300 hover:scale-105"
+                      className="text-xs sm:text-sm font-semibold h-8 xs:h-10 rounded-lg transition-all duration-300 hover:scale-105"
                     >
                       Rent
                     </TabsTrigger>
                     <TabsTrigger 
                       value="lease" 
-                      className="text-sm font-semibold h-10 rounded-lg transition-all duration-300 hover:scale-105"
+                      className="text-xs sm:text-sm font-semibold h-8 xs:h-10 rounded-lg transition-all duration-300 hover:scale-105"
                     >
                       Lease
                     </TabsTrigger>
                     <TabsTrigger 
                       value="commercial" 
-                      className="text-sm font-semibold h-10 rounded-lg transition-all duration-300 hover:scale-105"
+                      className="text-xs sm:text-sm font-semibold h-8 xs:h-10 rounded-lg transition-all duration-300 hover:scale-105"
                     >
                       Commercial
                     </TabsTrigger>
@@ -447,7 +447,7 @@ const Hero = () => {
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="outline" 
-                      className="h-12 px-4 bg-white/80 dark:bg-card/80 backdrop-blur-md border border-white/20 dark:border-border/30 hover:bg-white/90 dark:hover:bg-card/90 transition-all duration-300 hover:scale-105"
+                      className="h-10 xs:h-12 px-3 xs:px-4 text-xs sm:text-sm bg-white/80 dark:bg-card/80 backdrop-blur-md border border-white/20 dark:border-border/30 hover:bg-white/90 dark:hover:bg-card/90 transition-all duration-300 hover:scale-105"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Sell
@@ -479,12 +479,12 @@ const Hero = () => {
                 </DropdownMenu>
               </div>
               
-              <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <div className="flex-1 relative group">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                   <Input 
                     placeholder="Search by locality, project, or landmark" 
-                    className="pl-10 h-12 border-2 hover:border-primary/50 focus:border-primary transition-all duration-300"
+                    className="pl-9 sm:pl-10 h-10 sm:h-12 text-sm sm:text-base border-2 hover:border-primary/50 focus:border-primary transition-all duration-300"
                     value={searchQuery}
                     onChange={handleSearchChange}
                   />
@@ -551,7 +551,7 @@ const Hero = () => {
                     <Button 
                       variant="outline" 
                       size="lg"
-                      className="h-12 px-4 shadow-lg hover:shadow-xl transition-all duration-300"
+                      className="h-10 sm:h-12 px-3 sm:px-4 text-xs sm:text-sm shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <Filter className="mr-2 h-5 w-5" />
                       Filters
@@ -644,29 +644,30 @@ const Hero = () => {
                 
                 <Button 
                   size="lg" 
-                  className="h-12 px-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95"
+                  className="h-10 sm:h-12 px-4 sm:px-8 text-xs sm:text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95"
                   onClick={handleSearchClick}
                   disabled={!searchQuery.trim() || isLoading}
                 >
-                  <Search className="mr-2 h-5 w-5" />
-                  Search Properties
+                  <Search className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden xs:inline">Search Properties</span>
+                  <span className="xs:hidden">Search</span>
                 </Button>
               </div>
               
-              <div className="mt-4 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+              <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                  <span>10,000+ Properties</span>
+                  <span className="text-[10px] xs:text-xs">10,000+ Properties</span>
                 </div>
-                <div className="w-0.5 h-0.5 bg-muted-foreground/50 rounded-full"></div>
+                <div className="w-0.5 h-0.5 bg-muted-foreground/50 rounded-full hidden xs:block"></div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span>50,000+ Happy Customers</span>
+                  <span className="text-[10px] xs:text-xs">50,000+ Customers</span>
                 </div>
-                <div className="w-0.5 h-0.5 bg-muted-foreground/50 rounded-full"></div>
+                <div className="w-0.5 h-0.5 bg-muted-foreground/50 rounded-full hidden xs:block"></div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                  <span>Trusted Platform</span>
+                  <span className="text-[10px] xs:text-xs">Trusted Platform</span>
                 </div>
               </div>
 
