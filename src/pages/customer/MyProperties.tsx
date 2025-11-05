@@ -234,7 +234,7 @@ const MyProperties = () => {
             My Properties
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage your property listings and track performance
+            Properties you are selling or renting out
           </p>
         </div>
         

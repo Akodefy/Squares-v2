@@ -44,6 +44,7 @@ import { locaService, type PincodeSuggestion } from "@/services/locaService";
 import { PincodeAutocomplete } from "@/components/PincodeAutocomplete";
 import { PasswordChangeDialog } from "@/components/PasswordChangeDialog";
 import { VendorNotificationSettings, type VendorBusinessPreferences } from "@/components/settings/VendorNotificationSettings";
+import { uploadService } from "@/services/uploadService";
 
 // Vendor Settings Configuration
 interface VendorSettingsConfig {
@@ -78,6 +79,8 @@ const VendorProfilePage: React.FC = () => {
   const [formData, setFormData] = useState<VendorProfile | null>(null);
   const [activeTab, setActiveTab] = useState("profile");
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   // Location data states from loca.json
   const [states, setStates] = useState<string[]>([]);
@@ -710,6 +713,59 @@ const VendorProfilePage: React.FC = () => {
     setIsEditing(false);
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validation = uploadService.validateImageFile(file);
+    if (!validation.valid) {
+      toast({
+        title: "Invalid File",
+        description: validation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      
+      const compressedFile = await uploadService.compressImage(file);
+      const avatarUrl = await uploadService.uploadAvatar(compressedFile);
+      
+      updateFormField("profile.avatar", avatarUrl);
+      
+      const updateData = {
+        profile: {
+          ...formData?.profile,
+          avatar: avatarUrl
+        }
+      };
+      
+      const updatedProfile = await vendorService.updateVendorProfile(updateData);
+      setVendorData(updatedProfile);
+      setFormData(updatedProfile);
+      
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully!",
+      });
+      
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const updateFormField = (path: string, value: any) => {
     if (!formData) return;
 
@@ -813,15 +869,26 @@ const VendorProfilePage: React.FC = () => {
                   {formData.profile.lastName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              {isEditing && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
-                >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+              >
+                {uploadingAvatar ? (
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
                   <Camera className="h-4 w-4" />
-                </Button>
-              )}
+                )}
+              </Button>
             </div>
 
             <div className="flex-1 space-y-4">

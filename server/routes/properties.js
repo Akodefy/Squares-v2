@@ -115,6 +115,10 @@ router.get('/:id', asyncHandler(async (req, res) => {
       });
     }
 
+    // Increment view count
+    property.views = (property.views || 0) + 1;
+    await property.save();
+
     res.json({
       success: true,
       data: { property }
@@ -391,6 +395,160 @@ router.patch('/:id/featured', authenticateToken, asyncHandler(async (req, res) =
     res.status(500).json({
       success: false,
       message: 'Failed to update property featured status'
+    });
+  }
+}));
+
+// @desc    Assign property to customer
+// @route   POST /api/properties/:id/assign-customer
+// @access  Private (Vendor/Agent/Admin)
+router.post('/:id/assign-customer', authenticateToken, asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { customerId, status, notes } = req.body;
+
+    // Validate ObjectId formats
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid property ID format'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(customerId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid customer ID format'
+      });
+    }
+
+    // Find property first to check listing type
+    const property = await Property.findById(id);
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found'
+      });
+    }
+
+    // Determine correct status based on listing type
+    let correctStatus;
+    if (property.listingType === 'sale') {
+      correctStatus = 'sold';
+    } else if (property.listingType === 'rent') {
+      correctStatus = 'rented';
+    } else if (property.listingType === 'lease') {
+      correctStatus = 'leased';
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid property listing type'
+      });
+    }
+
+    // Validate that provided status matches listing type
+    if (status && status !== correctStatus) {
+      return res.status(400).json({
+        success: false,
+        message: `Property listed for ${property.listingType} should be marked as '${correctStatus}', not '${status}'`
+      });
+    }
+
+    // Use the correct status
+    const finalStatus = correctStatus;
+
+    // Check if user owns this property or is admin/agent
+    if (property.owner.toString() !== req.user.id && 
+        !['admin', 'superadmin', 'agent'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to assign this property'
+      });
+    }
+
+    // Verify customer exists and is a customer
+    const User = require('../models/User');
+    const customer = await User.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    if (customer.role !== 'customer') {
+      return res.status(400).json({
+        success: false,
+        message: 'Selected user is not a customer'
+      });
+    }
+
+    // Update property status and assign to customer
+    const updatedProperty = await Property.findByIdAndUpdate(
+      id,
+      { 
+        status: finalStatus,
+        assignedTo: customerId,
+        assignedAt: new Date(),
+        assignedBy: req.user.id,
+        assignmentNotes: notes || '',
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    ).populate('owner', 'profile.firstName profile.lastName email')
+     .populate('assignedTo', 'profile.firstName profile.lastName email');
+
+    // Update vendor statistics if property is sold
+    if (finalStatus === 'sold') {
+      const Vendor = require('../models/Vendor');
+      const vendor = await Vendor.findByUserId(property.owner);
+      
+      if (vendor) {
+        // Initialize statistics if not exists
+        if (!vendor.performance) {
+          vendor.performance = {
+            statistics: {},
+            rating: { average: 0, count: 0 }
+          };
+        }
+        if (!vendor.performance.statistics) {
+          vendor.performance.statistics = {};
+        }
+        
+        // Increment sold properties count
+        vendor.performance.statistics.soldProperties = 
+          (vendor.performance.statistics.soldProperties || 0) + 1;
+        
+        // Calculate total revenue (sum of all sold properties)
+        const soldProps = await Property.find({ 
+          owner: property.owner, 
+          status: 'sold' 
+        }).select('price');
+        
+        const totalRevenue = soldProps.reduce((sum, prop) => {
+          const price = parseFloat(prop.price.toString().replace(/[^0-9.]/g, ''));
+          return sum + (isNaN(price) ? 0 : price);
+        }, 0);
+        
+        vendor.performance.statistics.totalRevenue = totalRevenue;
+        
+        await vendor.save();
+      }
+    }
+
+    // Optionally: Create a notification for the customer
+    // TODO: Implement notification service
+
+    res.json({
+      success: true,
+      data: { property: updatedProperty },
+      message: `Property ${status} and assigned to customer successfully`
+    });
+  } catch (error) {
+    console.error('Assign property to customer error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to assign property to customer'
     });
   }
 }));

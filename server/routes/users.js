@@ -13,10 +13,10 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(authenticateToken);
 
-// @desc    Get all users (Admin only)
+// @desc    Get all users (Admin/Vendor - Vendors can only fetch customers)
 // @route   GET /api/users
-// @access  Private/Admin
-router.get('/', asyncHandler(async (req, res) => {
+// @access  Private/Admin/Vendor
+router.get('/', authorizeRoles('admin', 'subadmin', 'superadmin', 'agent'), asyncHandler(async (req, res) => {
   const { 
     page = 1, 
     limit = 10, 
@@ -24,6 +24,8 @@ router.get('/', asyncHandler(async (req, res) => {
     role, 
     status 
   } = req.query;
+
+  console.log(`[Users API] User role: ${req.user.role}, Requested role filter: ${role}`);
 
   const skip = (parseInt(page) - 1) * parseInt(limit);
   
@@ -33,20 +35,25 @@ router.get('/', asyncHandler(async (req, res) => {
   // Always exclude superadmin users from the list
   filter.role = { $ne: 'superadmin' };
   
-  if (search) {
-    filter.$or = [
-      { email: { $regex: search, $options: 'i' } },
-      { 'profile.firstName': { $regex: search, $options: 'i' } },
-      { 'profile.lastName': { $regex: search, $options: 'i' } }
-    ];
-  }
-  
-  if (role && role !== 'superadmin') {
+  // Vendors (agents) can only fetch customers
+  if (req.user.role === 'agent') {
+    filter.role = 'customer';
+    filter.status = 'active'; // Only active customers
+  } else if (role && role !== 'superadmin') {
     // If role filter is provided, combine it with the superadmin exclusion
     filter.role = role;
   }
   
-  if (status) {
+  if (search) {
+    filter.$or = [
+      { email: { $regex: search, $options: 'i' } },
+      { 'profile.firstName': { $regex: search, $options: 'i' } },
+      { 'profile.lastName': { $regex: search, $options: 'i' } },
+      { 'profile.phone': { $regex: search, $options: 'i' } }
+    ];
+  }
+  
+  if (status && req.user.role !== 'agent') {
     filter.status = status;
   }
 

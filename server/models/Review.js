@@ -178,7 +178,7 @@ reviewSchema.post('save', async function() {
 // Static method to get vendor review stats
 reviewSchema.statics.getVendorStats = function(vendorId) {
   return this.aggregate([
-    { $match: { vendor: mongoose.Types.ObjectId(vendorId), status: 'active' } },
+    { $match: { vendor: new mongoose.Types.ObjectId(vendorId), status: 'active' } },
     {
       $group: {
         _id: null,

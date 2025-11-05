@@ -6,6 +6,7 @@ class NotificationService extends EventEmitter {
     super();
     this.clients = new Map(); // Map of userId -> Set of response objects
     this.notificationQueue = new Map(); // Queue for offline users
+    this.keepAliveIntervals = new Map(); // Keep-alive intervals for each client
   }
 
   /**
@@ -20,13 +21,14 @@ class NotificationService extends EventEmitter {
     
     this.clients.get(userId).add(res);
     
-    // Setup SSE headers
+    // Setup SSE headers with proper CORS
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control'
+      'Access-Control-Allow-Credentials': 'true',
+      'X-Accel-Buffering': 'no' // Disable nginx buffering
     });
 
     // Send initial connection confirmation
@@ -34,12 +36,31 @@ class NotificationService extends EventEmitter {
       type: 'connection',
       data: {
         message: 'Connected to real-time notifications',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        userId: userId
       }
     });
 
     // Send any queued notifications
     this.sendQueuedNotifications(userId);
+
+    // Setup keep-alive to prevent connection timeouts
+    const keepAliveInterval = setInterval(() => {
+      try {
+        // Send a comment (keep-alive ping) every 30 seconds
+        res.write(': keep-alive\n\n');
+      } catch (error) {
+        console.error('Keep-alive error:', error);
+        clearInterval(keepAliveInterval);
+        this.removeClient(userId, res);
+      }
+    }, 30000); // 30 seconds
+
+    // Store the interval ID
+    if (!this.keepAliveIntervals.has(userId)) {
+      this.keepAliveIntervals.set(userId, new Map());
+    }
+    this.keepAliveIntervals.get(userId).set(res, keepAliveInterval);
 
     // Handle client disconnect
     res.on('close', () => {
@@ -55,6 +76,19 @@ class NotificationService extends EventEmitter {
    * @param {object} res - Express response object
    */
   removeClient(userId, res) {
+    // Clear keep-alive interval
+    if (this.keepAliveIntervals.has(userId)) {
+      const interval = this.keepAliveIntervals.get(userId).get(res);
+      if (interval) {
+        clearInterval(interval);
+        this.keepAliveIntervals.get(userId).delete(res);
+      }
+      if (this.keepAliveIntervals.get(userId).size === 0) {
+        this.keepAliveIntervals.delete(userId);
+      }
+    }
+
+    // Remove client
     if (this.clients.has(userId)) {
       this.clients.get(userId).delete(res);
       if (this.clients.get(userId).size === 0) {

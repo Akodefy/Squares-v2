@@ -17,7 +17,11 @@ import {
   Pie,
   Cell,
   AreaChart,
-  Area
+  Area,
+  ComposedChart,
+  Legend,
+  RadialBarChart,
+  RadialBar
 } from "recharts";
 import {
   TrendingUp,
@@ -355,84 +359,109 @@ const VendorAnalytics = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Views & Leads Trend */}
+        {/* Property Engagement Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>Views & Leads Trend</CardTitle>
+            <CardTitle>Property Engagement Overview</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={viewsData}>
+              <LineChart data={viewsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Area 
+                <Line 
                   type="monotone" 
                   dataKey="views" 
-                  stackId="1" 
                   stroke="#8884d8" 
-                  fill="#8884d8" 
-                  fillOpacity={0.6}
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  name="Page Views"
                 />
-                <Area 
+                <Line 
                   type="monotone" 
                   dataKey="leads" 
-                  stackId="2" 
                   stroke="#82ca9d" 
-                  fill="#82ca9d" 
-                  fillOpacity={0.6}
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  name="Leads"
                 />
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Lead Sources */}
+        {/* Inquiry Response Time */}
         <Card>
           <CardHeader>
-            <CardTitle>Lead Sources</CardTitle>
+            <CardTitle>Inquiry Response Time</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Average time to respond to customer inquiries</p>
           </CardHeader>
           <CardContent>
-            {leadSources.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={leadSources}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {leadSources.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex flex-wrap justify-center gap-4 mt-4">
-                  {leadSources.map((source) => (
-                    <div key={source.name} className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2" 
-                        style={{ backgroundColor: source.color }}
-                      />
-                      <span className="text-sm">{source.name} ({source.value}%)</span>
-                    </div>
-                  ))}
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={leadsData}>
+                <defs>
+                  <linearGradient id="colorResponseTime" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#6b7280"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  tick={{ fontSize: 12 }}
+                  label={{ value: 'Hours', angle: -90, position: 'insideLeft' }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px'
+                  }}
+                  formatter={(value: number) => [`${value.toFixed(1)} hours`, 'Response Time']}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#10b981" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorResponseTime)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t">
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground">Avg Response</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {leadsData.length > 0 
+                    ? (leadsData.reduce((acc, curr) => acc + curr.value, 0) / leadsData.length).toFixed(1)
+                    : '0.0'
+                  }h
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[300px] text-center">
-                <BarChart3 className="w-16 h-16 text-gray-300 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">Coming Soon</h3>
-                <p className="text-sm text-gray-500">Lead source analytics will be available once data is collected</p>
               </div>
-            )}
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground">Fastest</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {leadsData.length > 0 
+                    ? Math.min(...leadsData.map(d => d.value)).toFixed(1)
+                    : '0.0'
+                  }h
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground">Total Inquiries</div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {overviewStats?.totalMessages || 0}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -480,21 +509,87 @@ const VendorAnalytics = () => {
               </Button>
             </div>
           ) : propertyPerformance.length > 0 ? (
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={propertyPerformance}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="title" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={100}
-                />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="views" fill="#8884d8" name="Views" />
-                <Bar dataKey="leads" fill="#82ca9d" name="Leads" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-6">
+              <ResponsiveContainer width="100%" height={400}>
+                <AreaChart 
+                  data={propertyPerformance}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                >
+                  <defs>
+                    <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis 
+                    dataKey="title" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    tick={{ fontSize: 11, fill: '#6b7280' }}
+                    interval={0}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                    label={{ value: 'Views', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.96)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                    formatter={(value: any, name: string) => [value, name]}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="views"
+                    fill="url(#colorViews)"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    name="Property Views"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+              
+              {/* Property Performance Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <div className="text-xs text-blue-600 font-medium mb-1">Total Views</div>
+                  <div className="text-2xl font-bold text-blue-700">
+                    {propertyPerformance.reduce((acc, p) => acc + (p.views || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-xs text-gray-600 font-medium mb-1">Total Leads</div>
+                  <div className="text-sm font-semibold text-gray-500 flex items-center justify-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    Coming Soon
+                  </div>
+                </div>
+                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                  <div className="text-xs text-purple-600 font-medium mb-1">Active Properties</div>
+                  <div className="text-2xl font-bold text-purple-700">
+                    {propertyPerformance.length}
+                  </div>
+                </div>
+                <div className="text-center p-3 bg-amber-50 rounded-lg">
+                  <div className="text-xs text-amber-600 font-medium mb-1">Avg Views/Property</div>
+                  <div className="text-2xl font-bold text-amber-700">
+                    {propertyPerformance.length > 0
+                      ? Math.round(propertyPerformance.reduce((acc, p) => acc + (p.views || 0), 0) / propertyPerformance.length)
+                      : '0'
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-[400px] text-center">
               <Clock className="w-16 h-16 text-muted-foreground mb-4" />

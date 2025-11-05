@@ -165,7 +165,7 @@ class CustomerReviewsService {
         }
       });
 
-      const endpoint = `/customer/reviews/my-reviews${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const endpoint = `/customer/reviews/given${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       
       const response = await this.makeRequest<{
         success: boolean;

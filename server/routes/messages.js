@@ -186,7 +186,7 @@ router.post('/', asyncHandler(async (req, res) => {
   try {
     const recipient = await User.findById(recipientId);
     if (recipient && 
-        recipient.role === 'vendor' && 
+        recipient.role === 'agent' && 
         recipient.profile?.vendorInfo?.vendorPreferences?.autoResponseEnabled &&
         recipient.profile?.vendorInfo?.vendorPreferences?.autoResponseMessage) {
       
@@ -383,7 +383,7 @@ router.post('/property-inquiry', asyncHandler(async (req, res) => {
   try {
     const recipient = await User.findById(recipientId);
     if (recipient && 
-        recipient.role === 'vendor' && 
+        recipient.role === 'agent' && 
         recipient.profile?.vendorInfo?.vendorPreferences?.autoResponseEnabled &&
         recipient.profile?.vendorInfo?.vendorPreferences?.autoResponseMessage) {
       

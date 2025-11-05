@@ -21,7 +21,7 @@ router.get('/given', authenticateToken, asyncHandler(async (req, res) => {
     sortOrder = 'desc'
   } = req.query;
 
-  const userId = req.user.userId;
+  const userId = req.user.id;
   const query = { client: userId, status: { $ne: 'deleted' } };
 
   // Apply filters
@@ -43,7 +43,7 @@ router.get('/given', authenticateToken, asyncHandler(async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .populate('vendor', 'email profile')
-      .populate('property', 'title city state price images')
+      .populate('property', 'title city state price images status type listingType address')
       .populate('service', 'name category')
       .lean(),
     Review.countDocuments(query)
@@ -82,7 +82,16 @@ router.get('/given', authenticateToken, asyncHandler(async (req, res) => {
       _id: review.property._id,
       title: review.property.title,
       location: `${review.property.city}, ${review.property.state}`,
-      image: review.property.images?.[0]
+      image: review.property.images?.[0],
+      status: review.property.status,
+      type: review.property.type,
+      listingType: review.property.listingType,
+      price: review.property.price,
+      address: review.property.address || {
+        city: review.property.city,
+        state: review.property.state
+      },
+      images: review.property.images
     } : undefined,
     service: review.service ? {
       _id: review.service._id,
@@ -116,7 +125,7 @@ router.get('/received', authenticateToken, asyncHandler(async (req, res) => {
     sortOrder = 'desc'
   } = req.query;
 
-  const userId = req.user.userId;
+  const userId = req.user.id;
   const query = { vendor: userId, status: { $ne: 'deleted' } };
 
   // Apply filters
@@ -196,7 +205,7 @@ router.get('/received', authenticateToken, asyncHandler(async (req, res) => {
 // @route   GET /api/customer/reviews/my-stats
 // @access  Private
 router.get('/my-stats', authenticateToken, asyncHandler(async (req, res) => {
-  const userId = req.user.userId;
+  const userId = req.user.id;
 
   // Get stats for reviews received by this user as a vendor
   const stats = await Review.aggregate([
@@ -281,14 +290,15 @@ router.get('/my-stats', authenticateToken, asyncHandler(async (req, res) => {
 // @route   GET /api/customer/reviews/reviewable-items
 // @access  Private
 router.get('/reviewable-items', authenticateToken, asyncHandler(async (req, res) => {
-  const userId = req.user.userId;
+  const userId = req.user.id;
 
-  // Get properties owned by user that can be reviewed
+  // Get only properties that were assigned to (sold/rented to) the customer
+  // Customers can only review properties they purchased or rented, not properties they are selling
   const properties = await Property.find({ 
-    owner: userId,
-    status: { $in: ['active', 'sold', 'rented'] }
+    assignedTo: userId,
+    status: { $in: ['sold', 'rented'] }
   })
-  .select('title city state price status createdAt')
+  .select('title city state price status createdAt assignedTo assignedAt')
   .lean();
 
   // Check which properties have been reviewed
@@ -305,11 +315,12 @@ router.get('/reviewable-items', authenticateToken, asyncHandler(async (req, res)
     _id: property._id,
     title: property.title,
     location: `${property.city}, ${property.state}`,
-    purchaseDate: property.createdAt,
+    purchaseDate: property.assignedAt || property.createdAt,
     status: property.status === 'sold' ? 'purchased' : 
             property.status === 'rented' ? 'rented' : 'leased',
     canReview: true,
-    hasReviewed: reviewedPropertyIds.has(property._id.toString())
+    hasReviewed: reviewedPropertyIds.has(property._id.toString()),
+    isAssigned: !!property.assignedTo
   }));
 
   // Get completed service bookings
@@ -414,7 +425,7 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
     images = []
   } = req.body;
 
-  const userId = req.user.userId;
+  const userId = req.user.id;
 
   // Validate required fields
   if (!rating || !title || !comment || !reviewType) {
@@ -460,7 +471,7 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
 router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { rating, title, comment, isPublic, tags, images } = req.body;
-  const userId = req.user.userId;
+  const userId = req.user.id;
 
   const review = await Review.findOne({ _id: id, client: userId });
 
@@ -501,7 +512,7 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
 // @access  Private
 router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const userId = req.user.userId;
+  const userId = req.user.id;
 
   const review = await Review.findOne({ _id: id, client: userId });
 
@@ -528,7 +539,7 @@ router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
 router.post('/:id/helpful', authenticateToken, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { isHelpful } = req.body;
-  const userId = req.user.userId;
+  const userId = req.user.id;
 
   const review = await Review.findById(id);
 
@@ -573,7 +584,7 @@ router.post('/:id/helpful', authenticateToken, asyncHandler(async (req, res) => 
 router.post('/:id/reply', authenticateToken, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { message } = req.body;
-  const userId = req.user.userId;
+  const userId = req.user.id;
 
   const review = await Review.findOne({ _id: id, vendor: userId });
 

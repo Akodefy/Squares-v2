@@ -113,15 +113,27 @@ const VendorProperties = () => {
     }
   };
 
-  const handleUpdatePropertyStatus = async (propertyId: string, newStatus: string, reason?: string) => {
+  const handleUpdatePropertyStatus = async (propertyId: string, newStatus: string, customerId?: string, reason?: string) => {
     try {
-      await propertyService.togglePropertyStatus(propertyId, newStatus);
+      // If customer is selected, assign property to customer
+      if (customerId && (newStatus === 'sold' || newStatus === 'rented' || newStatus === 'leased')) {
+        // Call API to assign property to customer
+        await propertyService.assignPropertyToCustomer(propertyId, customerId, newStatus, reason);
+        toast({
+          title: "Success",
+          description: `Property ${newStatus} and assigned to customer successfully!`,
+        });
+      } else {
+        // Just update status
+        await propertyService.togglePropertyStatus(propertyId, newStatus);
+        toast({
+          title: "Success",
+          description: `Property status updated to ${newStatus}!`,
+        });
+      }
+      
       loadProperties(); // Refresh the list
       loadStats(); // Refresh stats
-      toast({
-        title: "Success",
-        description: `Property status updated to ${newStatus}!`,
-      });
     } catch (error) {
       console.error('Failed to update property status:', error);
       toast({
@@ -283,14 +295,17 @@ const VendorProperties = () => {
               <div className="flex flex-col lg:flex-row">
                 {/* Property Image */}
                 <div className="lg:w-64 h-48 lg:h-auto bg-muted relative">
-                  <img 
-                    src={propertyService.getPrimaryImage(property)} 
-                    alt={property.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent flex items-center justify-center">
-                    <Camera className="w-12 h-12 text-muted-foreground" />
-                  </div>
+                  {property.images && property.images.length > 0 ? (
+                    <img 
+                      src={propertyService.getPrimaryImage(property)} 
+                      alt={property.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent flex items-center justify-center">
+                      <Camera className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                  )}
                   <div className="absolute top-3 left-3 flex gap-2">
                     <Badge className={`${propertyService.getStatusColor(property.status)} text-white`}>
                       {propertyService.getStatusText(property.status)}
@@ -302,9 +317,11 @@ const VendorProperties = () => {
                       <Badge className="bg-green-600 text-white">Verified</Badge>
                     )}
                   </div>
-                  <div className="absolute bottom-3 left-3 bg-black/70 text-white px-2 py-1 rounded text-sm">
-                    {property.images.length} photos
-                  </div>
+                  {property.images && property.images.length > 0 && (
+                    <div className="absolute bottom-3 left-3 bg-black/70 text-white px-2 py-1 rounded text-sm">
+                      {property.images.length} {property.images.length === 1 ? 'photo' : 'photos'}
+                    </div>
+                  )}
                 </div>
 
                 {/* Property Details */}
@@ -345,11 +362,14 @@ const VendorProperties = () => {
                           {property.featured ? 'Unfeature' : 'Promote'}
                         </DropdownMenuItem>
                         
-                        {/* Status Update Option */}
-                        <DropdownMenuItem onClick={() => openStatusDialog(property)}>
-                          <Users className="w-4 h-4 mr-2" />
-                          Update Status
-                        </DropdownMenuItem>
+                        {/* Status Update Option - Only show for approved properties */}
+                        {property.status === 'active' && (
+                          <DropdownMenuItem onClick={() => openStatusDialog(property)}>
+                            <Users className="w-4 h-4 mr-2" />
+                            {property.listingType === 'sale' ? 'Mark as Sold' : 
+                             property.listingType === 'rent' ? 'Mark as Rented' : 'Mark as Leased'}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem 
                           className="text-red-600"
                           onClick={() => handleDeleteProperty(property._id)}
@@ -419,10 +439,13 @@ const VendorProperties = () => {
                       {property.featured ? 'Unfeature' : 'Promote'}
                     </Button>
                     
-                    {/* Status Update Button */}
-                    <Button size="sm" variant="outline" onClick={() => openStatusDialog(property)}>
-                      Update Status
-                    </Button>
+                    {/* Status Update Button - Only show for approved properties */}
+                    {property.status === 'active' && (
+                      <Button size="sm" variant="outline" onClick={() => openStatusDialog(property)}>
+                        {property.listingType === 'sale' ? 'Mark as Sold' : 
+                         property.listingType === 'rent' ? 'Mark as Rented' : 'Mark as Leased'}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

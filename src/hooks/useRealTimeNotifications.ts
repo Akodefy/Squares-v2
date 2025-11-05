@@ -34,7 +34,8 @@ export const useRealTimeNotifications = () => {
     }
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-    const url = `${baseUrl}/api/notifications/stream`;
+    // EventSource doesn't support custom headers, so pass token as query param
+    const url = `${baseUrl}/api/notifications/stream?token=${encodeURIComponent(token)}`;
 
     const eventSource = new EventSource(url, {
       withCredentials: true,
@@ -64,11 +65,17 @@ export const useRealTimeNotifications = () => {
       console.error('Notification stream error:', error);
       setIsConnected(false);
       
-      // Attempt to reconnect after delay
+      // Close the current connection
+      if (eventSourceRef.current === eventSource) {
+        eventSource.close();
+        eventSourceRef.current = null;
+      }
+      
+      // Attempt to reconnect after delay (only if user is still authenticated)
       setTimeout(() => {
-        if (eventSourceRef.current === eventSource) {
-          eventSource.close();
-          eventSourceRef.current = null;
+        const currentToken = authService.getToken();
+        if (user && currentToken && !eventSourceRef.current) {
+          console.log('Attempting to reconnect to notification stream...');
           connect();
         }
       }, 5000);

@@ -17,7 +17,7 @@ const propertySchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['available', 'sold', 'rented', 'pending'],
+    enum: ['available', 'sold', 'rented', 'leased', 'pending'],
     default: 'available'
   },
   listingType: {
@@ -174,12 +174,41 @@ const propertySchema = new mongoose.Schema({
   rejectionReason: {
     type: String
   },
+  // Property assignment tracking (when sold/rented/leased)
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  assignedAt: {
+    type: Date
+  },
+  assignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  assignmentNotes: {
+    type: String
+  },
   modifiedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
   modifiedAt: {
     type: Date
+  },
+  // Admin property specific fields
+  isAdminProperty: {
+    type: Boolean,
+    default: false
+  },
+  propertyOwnerType: {
+    type: String,
+    enum: ['admin', 'client'],
+    default: 'admin'
+  },
+  clientName: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true

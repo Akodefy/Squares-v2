@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -52,6 +52,7 @@ import { PasswordChangeDialog } from "@/components/PasswordChangeDialog";
 import { Label } from "@/components/ui/label";
 import { PincodeAutocomplete } from "@/components/PincodeAutocomplete";
 import { locaService, type PincodeSuggestion } from "@/services/locaService";
+import { uploadService } from "@/services/uploadService";
 
 const profileSchema = z.object({
   first_name: z.string().min(2, "First name must be at least 2 characters"),
@@ -173,6 +174,8 @@ const Profile = () => {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Location data states
   const [states, setStates] = useState<string[]>([]);
@@ -358,34 +361,57 @@ const Profile = () => {
     });
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Error",
-          description: "Avatar image must be less than 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!file) return;
 
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Error",
-          description: "Please select a valid image file",
-          variant: "destructive",
-        });
-        return;
-      }
+    const validation = uploadService.validateImageFile(file);
+    if (!validation.valid) {
+      toast({
+        title: "Invalid File",
+        description: validation.error,
+        variant: "destructive"
+      });
+      return;
+    }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    try {
+      setUploadingAvatar(true);
+      
+      const compressedFile = await uploadService.compressImage(file);
+      const avatarUrl = await uploadService.uploadAvatar(compressedFile);
+      
+      setAvatarUrl(avatarUrl);
+      
+      // Update formData with the new avatar URL
+      if (formData) {
+        const updatedFormData = {
+          ...formData,
+          profile: {
+            ...formData.profile,
+            avatar: avatarUrl
+          }
+        };
+        setFormData(updatedFormData);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Profile picture uploaded successfully! Click 'Save Changes' to update.",
+      });
+      
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -648,13 +674,26 @@ const Profile = () => {
                   {profileData.profile?.lastName?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
               {isEditing && (
                 <Button
                   size="sm"
                   variant="outline"
                   className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
                 >
-                  <Camera className="h-4 w-4" />
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
                 </Button>
               )}
             </div>

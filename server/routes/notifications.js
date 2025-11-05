@@ -1,22 +1,52 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const notificationService = require('../services/notificationService');
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
 // @desc    Connect to real-time notifications via Server-Sent Events
 // @route   GET /api/notifications/stream
 // @access  Private
-router.get('/stream', authenticateToken, (req, res) => {
-  const userId = req.user.id;
+router.get('/stream', (req, res) => {
+  // For SSE, token comes from query params since EventSource doesn't support headers
+  const token = req.query.token;
   
-  // Add client to notification service
-  notificationService.addClient(userId, res);
-  
-  // Handle client disconnect gracefully
-  req.on('aborted', () => {
-    notificationService.removeClient(userId, res);
-  });
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication token required'
+    });
+  }
+
+  try {
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Handle both 'id' and 'userId' field names in JWT
+    const userId = decoded.userId || decoded.id;
+    
+    if (!userId) {
+      throw new Error('No user ID found in token');
+    }
+    
+    // Add client to notification service
+    notificationService.addClient(userId, res);
+    
+    // Handle client disconnect gracefully
+    req.on('aborted', () => {
+      notificationService.removeClient(userId, res);
+    });
+    
+    req.on('close', () => {
+      notificationService.removeClient(userId, res);
+    });
+  } catch (error) {
+    console.error('SSE Authentication error:', error);
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired token'
+    });
+  }
 });
 
 // @desc    Send test notification (for development)

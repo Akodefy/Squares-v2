@@ -125,9 +125,11 @@ const AddProperty = () => {
     cornerPlot: "",
     
     // Admin specific
-    isVerified: true, // Admin properties are verified by default
+    isVerified: true,
     isFeatured: false,
-    status: "active"
+    status: "active",
+    propertyOwnerType: "admin", // admin or client
+    clientName: ""
   });
 
   const [uploadedImages, setUploadedImages] = useState([]);
@@ -363,6 +365,16 @@ const AddProperty = () => {
       return;
     }
 
+    // Validate client name if client is selected
+    if (formData.propertyOwnerType === 'client' && !formData.clientName?.trim()) {
+      toast({
+        title: "Client Name Required",
+        description: "Please enter the client/owner name",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate location fields
     if (!formData.state || !formData.city) {
       toast({
@@ -429,7 +441,9 @@ const AddProperty = () => {
         isVerified: formData.isVerified,
         isFeatured: formData.isFeatured,
         status: formData.status,
-        isAdminProperty: true
+        isAdminProperty: true,
+        propertyOwnerType: formData.propertyOwnerType,
+        clientName: formData.propertyOwnerType === 'client' ? formData.clientName.trim() : undefined
       };
 
       // Only add optional fields if they have values
@@ -1075,6 +1089,66 @@ const AddProperty = () => {
             </div>
 
             <div className="grid gap-6">
+              {/* Property Owner Card */}
+              <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50/50 to-pink-50/50 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Home className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Property Owner</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Specify who owns this property
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <Label htmlFor="propertyOwnerType" className="text-base font-medium">Owner Type</Label>
+                    <Select 
+                      value={formData.propertyOwnerType} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, propertyOwnerType: value, clientName: value === 'admin' ? '' : prev.clientName }))}
+                    >
+                      <SelectTrigger className="h-12 border-2 border-purple-200/50 bg-background/50">
+                        <SelectValue placeholder="Select owner type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-blue-600" />
+                            Admin (Shows as "Squares")
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="client">
+                          <div className="flex items-center gap-2">
+                            <Home className="w-4 h-4 text-purple-600" />
+                            Client (Custom Name)
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.propertyOwnerType === 'client' && (
+                    <div className="space-y-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                      <Label htmlFor="clientName" className="text-base font-medium">Client Name *</Label>
+                      <Input
+                        id="clientName"
+                        placeholder="Enter client/owner name"
+                        value={formData.clientName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
+                        className="h-12"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        This name will be displayed as the property owner in details page
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Property Verification Card */}
               <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-blue-50/50 hover:shadow-lg transition-all duration-300">
                 <CardHeader className="pb-3">

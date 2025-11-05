@@ -1,76 +1,133 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Star,
-  ThumbsUp,
-  ThumbsDown,
+  Search,
+  Calendar,
+  MapPin,
   MessageSquare,
   User,
-  Calendar,
-  TrendingUp,
-  TrendingDown,
-  Award,
-  Search,
+  RefreshCw,
+  Send,
+  Home,
   Filter,
-  Reply,
-  Loader2,
-  Eye,
-  EyeOff,
-  Flag,
-  CheckCircle
+  TrendingUp
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { reviewsService, Review, ReviewStats, ReviewFilters } from "@/services/reviewsService";
-import { useToast } from "@/hooks/use-toast";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+interface PropertyReview {
+  _id: string;
+  rating: number;
+  title: string;
+  comment: string;
+  reviewType: 'property' | 'service' | 'general';
+  isPublic: boolean;
+  helpfulVotes: number;
+  unhelpfulVotes: number;
+  vendorResponse?: {
+    message: string;
+    respondedAt: string;
+  };
+  tags: string[];
+  images: Array<{ url: string; caption?: string }>;
+  createdAt: string;
+  updatedAt: string;
+  client: {
+    _id: string;
+    name: string;
+    email: string;
+    avatar?: string;
+  } | null;
+  property: {
+    _id: string;
+    title: string;
+    address: {
+      city: string;
+      state: string;
+      street?: string;
+    };
+    images?: Array<{
+      url: string;
+      isPrimary: boolean;
+    }>;
+    status: 'sold' | 'rented' | 'available';
+    type: string;
+    listingType: string;
+    price: number;
+  } | null;
+}
+
+interface ReviewStats {
+  totalReviews: number;
+  averageRating: number;
+  ratingDistribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+  totalHelpful: number;
+}
 
 const VendorReviews = () => {
-  const { toast } = useToast();
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [replyText, setReplyText] = useState("");
-  const [showReplyForm, setShowReplyForm] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  
-  // State for real data
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
+  const [reviews, setReviews] = useState<PropertyReview[]>([]);
+  const [stats, setStats] = useState<ReviewStats | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
 
-  const filters: ReviewFilters = {
-    page: currentPage,
-    limit: 10,
-    reviewType: (selectedFilter !== 'all' && ['property', 'service', 'general'].includes(selectedFilter)) 
-      ? selectedFilter as 'property' | 'service' | 'general' 
-      : undefined,
-    rating: ['1', '2', '3', '4', '5'].includes(selectedFilter) ? parseInt(selectedFilter) : undefined,
-    hasResponse: selectedFilter === 'no-reply' ? false : undefined,
-    search: searchQuery || undefined,
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
-  };
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
-  const loadReviewsData = async () => {
+  const loadReviews = useCallback(async () => {
     try {
       setLoading(true);
-      const [reviewsData, statsData] = await Promise.all([
-        reviewsService.getReviews(filters),
-        reviewsService.getReviewStats()
-      ]);
-      
-      setReviews(reviewsData.reviews);
-      setTotalPages(reviewsData.totalPages);
-      setReviewStats(statsData);
+      const token = localStorage.getItem('token');
+
+      const queryParams = new URLSearchParams();
+      if (ratingFilter !== 'all') queryParams.append('rating', ratingFilter);
+      if (typeFilter !== 'all') queryParams.append('reviewType', typeFilter);
+      if (searchQuery) queryParams.append('search', searchQuery);
+      queryParams.append('sortBy', sortBy === 'newest' ? 'createdAt' : sortBy === 'oldest' ? 'createdAt' : 'rating');
+      queryParams.append('sortOrder', sortBy === 'oldest' || sortBy === 'rating-low' ? 'asc' : 'desc');
+
+      const response = await fetch(`${baseUrl}/vendors/reviews?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setReviews(data.data.reviews || []);
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to load reviews",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error("Failed to load reviews:", error);
+      console.error('Failed to load reviews:', error);
       toast({
         title: "Error",
         description: "Failed to load reviews. Please try again.",
@@ -79,465 +136,358 @@ const VendorReviews = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [baseUrl, ratingFilter, typeFilter, searchQuery, sortBy]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${baseUrl}/vendors/reviews/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setStats(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  }, [baseUrl]);
+
+  const refreshReviews = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([loadReviews(), loadStats()]);
+    setRefreshing(false);
+  }, [loadReviews, loadStats]);
 
   useEffect(() => {
-    loadReviewsData();
-  }, [currentPage, selectedFilter, searchQuery]);
+    loadReviews();
+    loadStats();
+  }, [loadReviews, loadStats]);
 
-  const handleReplyToReview = async (reviewId: string) => {
-    if (!replyText.trim()) return;
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return 'N/A';
     
-    try {
-      setActionLoading(reviewId);
-      const updatedReview = await reviewsService.respondToReview({
-        reviewId,
-        message: replyText
-      });
-      
-      if (updatedReview) {
-        setReviews(reviews.map(review => 
-          review._id === reviewId ? updatedReview : review
-        ));
-        setReplyText("");
-        setShowReplyForm(null);
-      }
-    } catch (error) {
-      console.error("Failed to reply to review:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleToggleVisibility = async (reviewId: string, currentVisibility: boolean) => {
-    try {
-      setActionLoading(reviewId);
-      const updatedReview = await reviewsService.updateReviewVisibility(reviewId, !currentVisibility);
-      
-      if (updatedReview) {
-        setReviews(reviews.map(review => 
-          review._id === reviewId ? updatedReview : review
-        ));
-      }
-    } catch (error) {
-      console.error("Failed to update review visibility:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleReportReview = async (reviewId: string) => {
-    const reason = prompt("Please provide a reason for reporting this review:");
-    if (!reason) return;
+    const date = new Date(dateString);
     
-    try {
-      setActionLoading(reviewId);
-      await reviewsService.reportReview(reviewId, reason);
-    } catch (error) {
-      console.error("Failed to report review:", error);
-    } finally {
-      setActionLoading(null);
+    if (isNaN(date.getTime())) {
+      return 'N/A';
     }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading reviews...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Filter reviews based on search and selected filter
-  const filteredReviews = reviews; // API already filters based on our filters object
-
-  const renderStars = (rating: number, size: "sm" | "md" = "md") => {
-    const starSize = size === "sm" ? "w-3 h-3" : "w-4 h-4";
-    return (
-      <div className="flex">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`${starSize} ${
-              star <= rating ? "text-yellow-500 fill-current" : "text-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  const handleReply = (reviewId: string) => {
-    if (!replyText.trim()) return;
     
-    handleReplyToReview(reviewId);
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   };
+
+  const getPrimaryImage = (images?: Array<{ url: string; isPrimary: boolean }>): string => {
+    if (!images || images.length === 0) return '/placeholder-property.jpg';
+    const primaryImage = images.find(img => img.isPrimary);
+    return primaryImage?.url || images[0]?.url || '/placeholder-property.jpg';
+  };
+
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const filteredReviews = reviews;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 pt-16">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reviews & Ratings</h1>
-          <p className="text-muted-foreground">Manage customer feedback and maintain your reputation</p>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Star className="w-8 h-8 text-primary fill-primary" />
+            Reviews & Ratings
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage customer feedback and maintain your reputation
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Rating Insights
-          </Button>
-        </div>
+        
+        <Button 
+          variant="outline" 
+          onClick={refreshReviews}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-yellow-600 mb-2">
-              {reviewStats ? reviewsService.formatRating(reviewStats.averageRating) : '0.0'}
-            </div>
-            <div className="flex justify-center mb-2">
-              {renderStars(Math.round(reviewStats?.averageRating || 0))}
-            </div>
-            <p className="text-sm text-muted-foreground">Average Rating</p>
-            <div className="flex items-center justify-center mt-2">
-              {reviewStats?.recentReviews ? (
-                <>
-                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-sm text-muted-foreground">Based on {reviewStats.recentReviews} recent reviews</span>
-                </>
-              ) : (
-                <span className="text-sm text-muted-foreground">No recent activity</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">{stats.totalReviews}</p>
+                <p className="text-sm text-muted-foreground">Total Reviews</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {stats.averageRating.toFixed(1)}
+                  </p>
+                </div>
+                <p className="text-sm text-muted-foreground">Average Rating</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.ratingDistribution[5] + stats.ratingDistribution[4]}
+                </p>
+                <p className="text-sm text-muted-foreground">Positive Reviews</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600">
+                  {reviews.filter(r => r.isPublic).length}
+                </p>
+                <p className="text-sm text-muted-foreground">Public Reviews</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-2">{reviewStats?.totalReviews || 0}</div>
-            <p className="text-sm text-muted-foreground">Total Reviews</p>
-            <div className="mt-2">
-              <Badge className="bg-blue-100 text-blue-800">
-                <Award className="w-3 h-3 mr-1" />
-                Top Rated
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-green-600 mb-2">{reviewStats?.responseRate || 0}%</div>
-            <p className="text-sm text-muted-foreground">Response Rate</p>
-            <p className="text-xs text-green-600 mt-2">Excellent response rate!</p>
-          </CardContent>
-        </Card>
-
+      {stats && stats.totalReviews > 0 && (
         <Card>
           <CardContent className="p-6">
-            <h4 className="font-semibold mb-3">Rating Distribution</h4>
-            <div className="space-y-2">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Rating Distribution
+            </h3>
+            <div className="space-y-3">
               {[5, 4, 3, 2, 1].map((rating) => (
-                <div key={rating} className="flex items-center space-x-2">
-                  <span className="text-sm w-8">{rating}★</span>
-                  <Progress 
-                    value={reviewStats ? (reviewStats.ratingDistribution[rating as keyof typeof reviewStats.ratingDistribution] / Math.max(reviewStats.totalReviews, 1)) * 100 : 0} 
-                    className="flex-1 h-2" 
-                  />
-                  <span className="text-sm text-muted-foreground w-8">
-                    {reviewStats?.ratingDistribution[rating as keyof typeof reviewStats.ratingDistribution] || 0}
+                <div key={rating} className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 w-16">
+                    <span className="text-sm font-medium">{rating}</span>
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  </div>
+                  <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                    <div 
+                      className="bg-yellow-400 h-full transition-all"
+                      style={{ 
+                        width: `${stats.totalReviews > 0 ? (stats.ratingDistribution[rating as keyof typeof stats.ratingDistribution] / stats.totalReviews) * 100 : 0}%` 
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground w-12 text-right">
+                    {stats.ratingDistribution[rating as keyof typeof stats.ratingDistribution]}
                   </span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
-      <Tabs defaultValue="all-reviews" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="all-reviews">All Reviews ({reviews.length})</TabsTrigger>
-          <TabsTrigger value="pending-replies">Pending Replies ({reviewStats?.pendingReplies || 0})</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all-reviews" className="space-y-6">
-          {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                type="text"
                 placeholder="Search reviews..."
+                className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
               />
             </div>
-            <Select value={selectedFilter} onValueChange={(value: string) => setSelectedFilter(value)}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by rating" />
+            
+            <Select value={ratingFilter} onValueChange={setRatingFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Rating" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Reviews</SelectItem>
+                <SelectItem value="all">All Ratings</SelectItem>
                 <SelectItem value="5">5 Stars</SelectItem>
                 <SelectItem value="4">4 Stars</SelectItem>
                 <SelectItem value="3">3 Stars</SelectItem>
                 <SelectItem value="2">2 Stars</SelectItem>
                 <SelectItem value="1">1 Star</SelectItem>
-                <SelectItem value="property">Property Reviews</SelectItem>
-                <SelectItem value="service">Service Reviews</SelectItem>
-                <SelectItem value="general">General Reviews</SelectItem>
-                <SelectItem value="no-reply">No Reply</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="property">Property</SelectItem>
+                <SelectItem value="service">Service</SelectItem>
+                <SelectItem value="general">General</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="rating-high">Rating: High to Low</SelectItem>
+                <SelectItem value="rating-low">Rating: Low to High</SelectItem>
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Reviews List */}
-          <div className="space-y-6">
-            {filteredReviews.map((review) => (
-              <Card key={review._id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start space-x-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={review.clientAvatar} />
-                      <AvatarFallback>{review.clientName.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold">{review.clientName}</h4>
-                          <div className="flex items-center space-x-2">
-                            {renderStars(review.rating, "sm")}
-                            {review.isVerified && (
-                              <Badge variant="secondary" className="text-xs">
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Verified
-                              </Badge>
-                            )}
-                            <Badge className={reviewsService.getReviewTypeColor(review.reviewType)}>
-                              {reviewsService.getReviewTypeLabel(review.reviewType)}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">{reviewsService.formatDate(review.createdAt)}</p>
-                          <p className="text-xs text-muted-foreground">{reviewsService.getRelativeTime(review.createdAt)}</p>
-                        </div>
+      {!loading && filteredReviews.length > 0 && (
+        <div className="space-y-4">
+          {filteredReviews.map((review) => (
+            <Card key={review._id} className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex flex-col lg:flex-row">
+                  {review.property && (
+                    <div className="lg:w-48 h-48 lg:h-auto bg-muted relative">
+                      <img 
+                        src={getPrimaryImage(review.property.images)}
+                        alt={review.property.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-3 left-3 flex gap-2">
+                        <Badge className={review.property.status === 'sold' ? 'bg-purple-600 text-white' : review.property.status === 'rented' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'}>
+                          {review.property.status}
+                        </Badge>
                       </div>
-                      
-                      <h5 className="font-medium mb-2">{review.title}</h5>
-                      <p className="text-sm mb-3">{review.comment}</p>
-                      
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {review.tags.map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      
-                      {/* Review Actions */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-1">
-                            <ThumbsUp className="w-4 h-4 text-green-600" />
-                            <span className="text-sm">{review.helpfulCount}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <ThumbsDown className="w-4 h-4 text-red-600" />
-                            <span className="text-sm">{review.unhelpfulCount}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleVisibility(review._id, review.isPublic)}
-                              disabled={actionLoading === review._id}
-                            >
-                              {review.isPublic ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleReportReview(review._id)}
-                              disabled={actionLoading === review._id}
-                            >
-                              <Flag className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        {!review.vendorResponse && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setShowReplyForm(review._id)}
-                            disabled={actionLoading === review._id}
-                          >
-                            {actionLoading === review._id ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Reply className="w-4 h-4 mr-2" />
-                            )}
-                            Reply
-                          </Button>
-                        )}
-                      </div>
-                      
-                      {/* Reply Form */}
-                      {showReplyForm === review._id && (
-                        <div className="mt-4 p-4 bg-muted rounded-lg">
-                          <Textarea
-                            placeholder="Write your reply..."
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                            className="mb-3"
-                          />
-                          <div className="flex justify-end space-x-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => setShowReplyForm(null)}
-                            >
-                              Cancel
-                            </Button>
-                            <Button 
-                              size="sm"
-                              onClick={() => handleReply(review._id)}
-                              disabled={!replyText.trim() || actionLoading === review._id}
-                            >
-                              {actionLoading === review._id ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              ) : null}
-                              Post Reply
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Existing Reply */}
-                      {review.vendorResponse && (
-                        <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <User className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-800">Your Reply</span>
-                            <span className="text-xs text-blue-600">{reviewsService.formatDate(review.vendorResponse.respondedAt)}</span>
-                          </div>
-                          <p className="text-sm text-blue-800">{review.vendorResponse.message}</p>
-                        </div>
-                      )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredReviews.length === 0 && (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No reviews found</h3>
-                <p className="text-muted-foreground">
-                  {searchQuery || selectedFilter !== "all" 
-                    ? "No reviews match your search criteria" 
-                    : "Customer reviews will appear here"
-                  }
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="pending-replies" className="space-y-6">
-          <Card>
-            <CardContent className="p-12 text-center">
-              <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Pending Replies</h3>
-              <p className="text-muted-foreground mb-4">
-                Reviews that need your response will appear here
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="insights" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Most Mentioned Keywords</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {reviewStats?.commonKeywords && reviewStats.commonKeywords.length > 0 ? (
-                    reviewStats.commonKeywords.map((keyword, index) => (
-                      <div key={keyword} className="flex justify-between items-center">
-                        <span className="text-sm">{keyword}</span>
-                        <div className="flex items-center space-x-2">
-                          <Progress value={Math.max(20, 100 - (index * 15))} className="w-20 h-2" />
-                          <span className="text-xs text-muted-foreground">{Math.max(1, 25 - (index * 3))}</span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No keyword data available yet. Keywords will appear as you receive more reviews.
-                    </p>
                   )}
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Review Trends</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {reviewStats?.totalReviews && reviewStats.totalReviews > 0 ? (
-                    <>
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex-1 p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={review.client?.avatar} />
+                          <AvatarFallback>
+                            {review.client ? getInitials(review.client.name) : 'U'}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
-                          <p className="font-medium text-green-800">Current Rating</p>
-                          <p className="text-sm text-green-600">
-                            {reviewStats.averageRating.toFixed(1)} stars from {reviewStats.totalReviews} reviews
+                          <p className="font-semibold">{review.client?.name || 'Anonymous'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(review.createdAt)}
                           </p>
                         </div>
-                        <Star className="w-8 h-8 text-green-600" />
                       </div>
-                      {reviewStats.recentReviews > 0 && (
-                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                          <div>
-                            <p className="font-medium text-blue-800">Recent Activity</p>
-                            <p className="text-sm text-blue-600">
-                              {reviewStats.recentReviews} new reviews this month
-                            </p>
-                          </div>
-                          <MessageSquare className="w-8 h-8 text-blue-600" />
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-sm text-muted-foreground">No reviews yet</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Trends will appear once you start receiving reviews
-                      </p>
+                      <Badge variant="secondary" className="capitalize">
+                        {review.reviewType}
+                      </Badge>
                     </div>
-                  )}
+
+                    {review.property && (
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Home className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{review.property.title}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                          <MapPin className="w-4 h-4" />
+                          {review.property.address.city}, {review.property.address.state}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-5 h-5 ${
+                                star <= review.rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="font-semibold text-lg">{review.rating}.0</span>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <h4 className="font-semibold mb-1">{review.title}</h4>
+                      <p className="text-muted-foreground">{review.comment}</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+          ))}
+        </div>
+      )}
+
+      {loading && (
+        <Card>
+          <CardContent className="flex items-center justify-center h-32">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              <span>Loading reviews...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && filteredReviews.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Star className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">
+              {reviews.length === 0 ? 'No reviews yet' : 'No reviews match your filters'}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {reviews.length === 0 
+                ? 'Reviews from customers will appear here once they submit feedback on your properties.'
+                : 'Try adjusting your search criteria or clear some filters.'
+              }
+            </p>
+            {reviews.length > 0 && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearchQuery("");
+                  setRatingFilter("all");
+                  setTypeFilter("all");
+                  setSortBy("newest");
+                }}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Clear Filters
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

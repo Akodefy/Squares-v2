@@ -11,7 +11,7 @@ import {
   MyFavorites,
   PropertyComparison,
   PropertyDetails,
-  MyProperties,
+  OwnedProperties,
   ServiceRequests,
   CustomerProfile,
   CustomerSettings,
@@ -52,9 +52,9 @@ const CustomerRoutes = () => {
               <PropertyDetails />
             </Suspense>
           } />
-          <Route path="my-properties" element={
+          <Route path="owned-properties" element={
             <Suspense fallback={<PageLoader />}>
-              <MyProperties />
+              <OwnedProperties />
             </Suspense>
           } />
           

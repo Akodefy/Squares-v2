@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ import { customerDashboardService } from "@/services/customerDashboardService";
 import { customerPropertiesService } from "@/services/customerPropertiesService";
 import { useRealtime, useRealtimeEvent } from "@/contexts/RealtimeContext";
 import { toast } from "@/hooks/use-toast";
+import { uploadService } from "@/services/uploadService";
 
 const Profile = () => {
   const { isConnected, lastEvent } = useRealtime();
@@ -44,6 +45,8 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserType | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState({
     name: "",
@@ -73,16 +76,13 @@ const Profile = () => {
 
 
 
-  // Real stats from API
+  // Real stats from API - Customer-focused only
   const [stats, setStats] = useState({
-    propertiesPosted: 0,
-    inquiriesReceived: 0,
-    responseRate: 0,
-    avgResponseTime: "N/A",
-    rating: 0,
-    reviews: 0,
-    totalViews: 0,
-    totalFavorites: 0
+    inquiriesSent: 0,
+    savedSearches: 0,
+    propertiesViewed: 0,
+    totalFavorites: 0,
+    ownedProperties: 0
   });
 
   const [recentActivity, setRecentActivity] = useState<Array<{
@@ -206,8 +206,8 @@ const Profile = () => {
         pincode: existingAddress?.zipCode || "",
         bio: "", // Bio field not available in current User model
         joinDate: userService.formatCreationDate(userData.createdAt),
-        avatar: "", // Avatar field not available in current User model
-        verified: userData.emailVerified
+        avatar: (userData.profile as any).avatar || "", // Avatar may not be in type definition but exists in API
+        verified: userData.profile.emailVerified || false
       });
 
       // Populate location dropdowns with existing data
@@ -247,9 +247,9 @@ const Profile = () => {
         const dashStats = dashboardResponse.data.stats;
         setStats(prev => ({
           ...prev,
-          inquiriesReceived: dashStats.activeInquiries,
-          totalViews: dashStats.propertiesViewed,
-          totalFavorites: dashStats.savedFavorites
+          inquiriesSent: dashStats.activeInquiries || 0,
+          propertiesViewed: dashStats.propertiesViewed || 0,
+          totalFavorites: dashStats.savedFavorites || 0
         }));
         
         setRecentActivity(dashboardResponse.data.recentActivities.map(activity => ({
@@ -265,9 +265,8 @@ const Profile = () => {
         const propStats = propertiesResponse.data;
         setStats(prev => ({
           ...prev,
-          propertiesPosted: propStats.totalProperties,
-          responseRate: Math.round(propStats.conversionRate) || 0,
-          avgResponseTime: propStats.averageInquiries > 0 ? "< 2 hours" : "N/A"
+          ownedProperties: propStats.totalProperties || 0,
+          savedSearches: propStats.pendingApproval || 0
         }));
       }
 
@@ -305,14 +304,14 @@ const Profile = () => {
   const handlePropertyInquiry = useCallback(() => {
     setStats(prev => ({
       ...prev,
-      inquiriesReceived: prev.inquiriesReceived + 1
+      inquiriesSent: prev.inquiriesSent + 1
     }));
   }, []);
 
   const handlePropertyViewed = useCallback(() => {
     setStats(prev => ({
       ...prev,
-      totalViews: prev.totalViews + 1
+      propertiesViewed: prev.propertiesViewed + 1
     }));
   }, []);
 
@@ -406,6 +405,59 @@ const Profile = () => {
     // Reset form data if needed
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validation = uploadService.validateImageFile(file);
+    if (!validation.valid) {
+      toast({
+        title: "Invalid File",
+        description: validation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      
+      const compressedFile = await uploadService.compressImage(file);
+      const avatarUrl = await uploadService.uploadAvatar(compressedFile);
+      
+      setProfile(prev => ({ ...prev, avatar: avatarUrl }));
+      
+      if (user) {
+        await userService.updateCurrentUser({
+          profile: {
+            ...user.profile,
+            avatar: avatarUrl
+          } as any // Type assertion needed as avatar may not be in type definition
+        });
+      }
+      
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully!",
+      });
+      
+      await loadUserData();
+      
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
 
 
   if (loading) {
@@ -488,15 +540,26 @@ const Profile = () => {
                       {profile.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
-                  {isEditing && (
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="absolute -bottom-2 -right-2 rounded-full"
-                    >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="absolute -bottom-2 -right-2 rounded-full"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                  >
+                    {uploadingAvatar ? (
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : (
                       <Camera className="w-4 h-4" />
-                    </Button>
-                  )}
+                    )}
+                  </Button>
                 </div>
                 
                 <div className="flex-1 space-y-2">
@@ -536,12 +599,12 @@ const Profile = () => {
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">{stats.rating.toFixed(1)}</p>
-                    <p className="text-xs text-muted-foreground">Rating</p>
+                    <p className="text-2xl font-bold text-primary">{stats.ownedProperties}</p>
+                    <p className="text-xs text-muted-foreground">Properties</p>
                   </div>
                   <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">{stats.propertiesPosted}</p>
-                    <p className="text-xs text-muted-foreground">Properties</p>
+                    <p className="text-2xl font-bold text-primary">{stats.totalFavorites}</p>
+                    <p className="text-xs text-muted-foreground">Favorites</p>
                   </div>
                 </div>
               </div>
@@ -814,25 +877,25 @@ const Profile = () => {
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Eye className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm">Properties Posted</span>
+                      <span className="text-sm">Owned Properties</span>
                     </div>
-                    <span className="font-semibold">{stats.propertiesPosted}</span>
+                    <span className="font-semibold">{stats.ownedProperties}</span>
                   </div>
                   
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-2">
                       <MessageSquare className="w-4 h-4 text-green-500" />
-                      <span className="text-sm">Inquiries Received</span>
+                      <span className="text-sm">Inquiries Sent</span>
                     </div>
-                    <span className="font-semibold">{stats.inquiriesReceived}</span>
+                    <span className="font-semibold">{stats.inquiriesSent}</span>
                   </div>
                   
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm">Total Views</span>
+                      <span className="text-sm">Properties Viewed</span>
                     </div>
-                    <span className="font-semibold">{stats.totalViews.toLocaleString()}</span>
+                    <span className="font-semibold">{stats.propertiesViewed.toLocaleString()}</span>
                   </div>
                   
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -845,26 +908,10 @@ const Profile = () => {
                   
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-yellow-500" />
-                      <span className="text-sm">Average Rating</span>
+                      <Activity className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm">Saved Searches</span>
                     </div>
-                    <span className="font-semibold">{stats.rating.toFixed(1)}/5.0</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm">Response Rate</span>
-                    </div>
-                    <span className="font-semibold">{stats.responseRate}%</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-green-500" />
-                      <span className="text-sm">Avg Response Time</span>
-                    </div>
-                    <span className="font-semibold">{stats.avgResponseTime}</span>
+                    <span className="font-semibold">{stats.savedSearches}</span>
                   </div>
                 </div>
               </CardContent>

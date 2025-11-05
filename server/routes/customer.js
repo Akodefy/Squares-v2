@@ -26,7 +26,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
     // Properties the user has viewed (we'll track this via favorites for now)
     savedFavorites,
     savedFavoritesLastMonth,
-    // Properties owned by user
+    // Properties owned by user OR assigned to user
     myProperties,
     myPropertiesLastMonth,
     // Inquiries sent by user
@@ -49,14 +49,14 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
         $lte: lastDayOfLastMonth
       }
     }),
-    // Current month properties
+    // Current month properties (owned OR assigned)
     Property.countDocuments({ 
-      owner: userId,
+      $or: [{ owner: userId }, { assignedTo: userId }],
       createdAt: { $gte: firstDayOfMonth }
     }),
-    // Last month properties
+    // Last month properties (owned OR assigned)
     Property.countDocuments({ 
-      owner: userId,
+      $or: [{ owner: userId }, { assignedTo: userId }],
       createdAt: { 
         $gte: firstDayOfLastMonth,
         $lte: lastDayOfLastMonth
@@ -95,10 +95,10 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
     return change > 0 ? `+${change}%` : `${change}%`;
   };
 
-  // Get total counts for additional stats
+  // Get total counts for additional stats (owned OR assigned properties)
   const [totalFavorites, totalProperties] = await Promise.all([
     Favorite.countDocuments({ user: userId }),
-    Property.countDocuments({ owner: userId })
+    Property.countDocuments({ $or: [{ owner: userId }, { assignedTo: userId }] })
   ]);
 
   // Build stats object
@@ -424,6 +424,14 @@ router.get('/recommended-properties', asyncHandler(async (req, res) => {
 router.get('/properties/stats', asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
+  // Build filter for both owned and assigned properties
+  const propertyFilter = { 
+    $or: [
+      { owner: userId },
+      { assignedTo: userId }
+    ]
+  };
+
   // Get property statistics
   const [
     totalProperties,
@@ -435,14 +443,14 @@ router.get('/properties/stats', asyncHandler(async (req, res) => {
     // Aggregated views, inquiries, favorites
     propertiesData
   ] = await Promise.all([
-    Property.countDocuments({ owner: userId }),
-    Property.countDocuments({ owner: userId, status: { $in: ['active', 'available'] } }),
-    Property.countDocuments({ owner: userId, status: 'rented' }),
-    Property.countDocuments({ owner: userId, status: 'sold' }),
-    Property.countDocuments({ owner: userId, status: 'draft' }),
-    Property.countDocuments({ owner: userId, status: 'pending' }),
+    Property.countDocuments(propertyFilter),
+    Property.countDocuments({ ...propertyFilter, status: { $in: ['active', 'available'] } }),
+    Property.countDocuments({ ...propertyFilter, status: 'rented' }),
+    Property.countDocuments({ ...propertyFilter, status: 'sold' }),
+    Property.countDocuments({ ...propertyFilter, status: 'draft' }),
+    Property.countDocuments({ ...propertyFilter, status: 'pending' }),
     Property.aggregate([
-      { $match: { owner: userId } },
+      { $match: propertyFilter },
       {
         $group: {
           _id: null,
@@ -508,8 +516,13 @@ router.get('/properties', asyncHandler(async (req, res) => {
 
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  // Build filter
-  const filter = { owner: userId };
+  // Build filter - Include both owned properties AND properties assigned to customer
+  const filter = { 
+    $or: [
+      { owner: userId },
+      { assignedTo: userId }
+    ]
+  };
 
   if (status && status !== 'all') {
     filter.status = status;
@@ -579,6 +592,135 @@ router.get('/properties', asyncHandler(async (req, res) => {
       totalLeads: property.inquiries || 0
     }
   }));
+
+  const totalPages = Math.ceil(totalCount / parseInt(limit));
+
+  res.json({
+    success: true,
+    data: {
+      properties: formattedProperties,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalProperties: totalCount,
+        hasNextPage: parseInt(page) < totalPages,
+        hasPrevPage: parseInt(page) > 1,
+        limit: parseInt(limit)
+      }
+    }
+  });
+}));
+
+// @desc    Get customer owned properties (purchased/rented)
+// @route   GET /api/customer/owned-properties
+// @access  Private
+router.get('/owned-properties', asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const {
+    page = 1,
+    limit = 10,
+    status,
+    search,
+    sortBy = 'assignedAt',
+    sortOrder = 'desc'
+  } = req.query;
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  // Build filter - Only properties assigned to the customer (purchased/rented)
+  const filter = { 
+    assignedTo: userId,
+    status: { $in: ['sold', 'rented'] } // Only show sold or rented properties
+  };
+
+  if (status && status !== 'all') {
+    filter.status = status;
+  }
+
+  if (search) {
+    filter.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+      { 'address.city': { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  // Build sort
+  const sort = {};
+  sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+  // Get properties and total count
+  const [properties, totalCount] = await Promise.all([
+    Property.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('owner', 'email profile')
+      .populate('assignedBy', 'email profile')
+      .select('title description type status listingType price bedrooms bathrooms area address images assignedAt assignedBy owner')
+      .lean(),
+    Property.countDocuments(filter)
+  ]);
+
+  // Get review information for each property
+  const Review = require('../models/Review');
+  const propertyIds = properties.map(p => p._id);
+  
+  const reviews = await Review.find({
+    client: userId,
+    property: { $in: propertyIds },
+    reviewType: 'property'
+  }).select('property rating title comment createdAt').lean();
+
+  const reviewMap = new Map();
+  reviews.forEach(review => {
+    reviewMap.set(review.property.toString(), review);
+  });
+
+  // Format properties for response
+  const formattedProperties = properties.map(property => {
+    const review = reviewMap.get(property._id.toString());
+    
+    return {
+      _id: property._id,
+      title: property.title,
+      description: property.description,
+      type: property.type,
+      status: property.status,
+      listingType: property.listingType,
+      price: property.price,
+      area: property.area,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      address: property.address,
+      images: property.images || [],
+      assignedAt: property.assignedAt,
+      assignedBy: property.assignedBy ? {
+        _id: property.assignedBy._id,
+        name: property.assignedBy.profile?.firstName 
+          ? `${property.assignedBy.profile.firstName} ${property.assignedBy.profile.lastName || ''}`
+          : property.assignedBy.email,
+        email: property.assignedBy.email
+      } : null,
+      owner: property.owner ? {
+        _id: property.owner._id,
+        name: property.owner.profile?.firstName 
+          ? `${property.owner.profile.firstName} ${property.owner.profile.lastName || ''}`
+          : property.owner.email,
+        email: property.owner.email,
+        phone: property.owner.profile?.phone
+      } : null,
+      hasReviewed: !!review,
+      reviewId: review?._id,
+      review: review ? {
+        _id: review._id,
+        rating: review.rating,
+        title: review.title,
+        comment: review.comment,
+        createdAt: review.createdAt
+      } : null
+    };
+  });
 
   const totalPages = Math.ceil(totalCount / parseInt(limit));
 

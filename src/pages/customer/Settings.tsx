@@ -22,10 +22,7 @@ import {
   CheckCircle,
   XCircle,
   Settings as SettingsIcon,
-  Wifi,
-  WifiOff,
-  Zap,
-  Database
+  Zap
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -84,7 +81,6 @@ const CustomerSettings = () => {
     notifications: {
       email: true,
       push: true,
-      marketing: false,
       propertyAlerts: true,
       priceDrops: true,
       newMessages: true,
@@ -112,7 +108,7 @@ const CustomerSettings = () => {
     }
   });
 
-  // Dynamic settings management
+  // Update settings
   const updateSettings = useCallback((category: keyof SettingsConfig, key: string, value: any) => {
     setSettings(prev => ({
       ...prev,
@@ -122,7 +118,7 @@ const CustomerSettings = () => {
       }
     }));
     
-    // Real-time sync for critical settings
+    // Save immediately for critical settings
     if (category === 'security' || (category === 'privacy' && ['allowMessages', 'dataCollection'].includes(key))) {
       syncSettingRealtime(category, key, value);
     }
@@ -132,9 +128,9 @@ const CustomerSettings = () => {
     loadSettings();
   }, []);
 
-  // Real-time event handlers
+  // Event handler for settings updates
   const handleSettingsUpdated = useCallback(() => {
-    console.log("Settings updated via realtime");
+    console.log("Settings updated");
     setLastSyncTime(new Date().toISOString());
     loadSettings();
   }, []);
@@ -146,19 +142,19 @@ const CustomerSettings = () => {
     if (settings.preferences.autoSave && !loading) {
       const timeoutId = setTimeout(() => {
         saveSettings();
-      }, 1500); // Faster auto-save
+      }, 1500);
 
       return () => clearTimeout(timeoutId);
     }
   }, [settings, loading]);
 
-  // Optimized settings loading
+  // Load settings on component mount
   const loadSettings = async () => {
     try {
       setLoading(true);
       
-      // Load from localStorage first (offline-first approach)
-      const savedSettings = localStorage.getItem('dynamicUserSettings');
+      // Load from local storage first
+      const savedSettings = localStorage.getItem('userSettings');
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         setSettings(prevSettings => ({
@@ -168,13 +164,13 @@ const CustomerSettings = () => {
         setTheme(parsedSettings.preferences?.theme || theme);
       }
       
-      // Sync with backend if connected
+      // Fetch from server if connected
       try {
         const response = await userService.getCurrentUser();
         if (response.success && response.data.user.profile?.preferences) {
           const apiPrefs = response.data.user.profile.preferences as any;
           
-          // Safely merge API data with local settings using defensive access
+          // Merge server data with local settings
           const mergedSettings: SettingsConfig = {
             notifications: { 
               ...settings.notifications, 
@@ -182,17 +178,14 @@ const CustomerSettings = () => {
             },
             privacy: { 
               ...settings.privacy,
-              // Use defensive access for privacy settings
               ...(apiPrefs.privacy || {})
             },
             security: { 
               ...settings.security,
-              // Use defensive access for security settings
               ...(apiPrefs.security || {})
             },
             preferences: { 
               ...settings.preferences,
-              // Merge available preference fields
               language: apiPrefs.language || settings.preferences.language,
               currency: apiPrefs.currency || settings.preferences.currency,
               theme: apiPrefs.theme || settings.preferences.theme
@@ -200,16 +193,16 @@ const CustomerSettings = () => {
           };
           
           setSettings(mergedSettings);
-          localStorage.setItem('dynamicUserSettings', JSON.stringify(mergedSettings));
+          localStorage.setItem('userSettings', JSON.stringify(mergedSettings));
         }
       } catch (apiError) {
-        console.log("Using local settings - API unavailable");
+        console.log("Using local settings - server unavailable");
       }
     } catch (error) {
       console.error("Settings load failed:", error);
       toast({
         title: "Settings Loaded Locally",
-        description: "Using cached settings. Online sync will occur when connection is restored.",
+        description: "Using saved settings. Will update when connection is restored.",
         variant: "default"
       });
     } finally {
@@ -217,12 +210,12 @@ const CustomerSettings = () => {
     }
   };
 
-  // Optimized save with validation
+  // Save settings with validation
   const saveSettings = async () => {
     try {
       setSaving(true);
       
-      // Dynamic validation
+      // Validate settings
       const validationResult = validateSettings(settings);
       if (!validationResult.isValid) {
         toast({
@@ -241,32 +234,31 @@ const CustomerSettings = () => {
         },
         meta: {
           lastUpdated: new Date().toISOString(),
-          version: "2.0",
-          source: "optimized-settings"
+          version: "1.0"
         }
       };
 
-      // Try backend sync first
+      // Save to server
       try {
         const response = await userService.updateUserPreferences({ preferences: settingsData });
         
         if (response.success) {
-          localStorage.setItem('dynamicUserSettings', JSON.stringify(settingsData));
+          localStorage.setItem('userSettings', JSON.stringify(settingsData));
           setLastSyncTime(new Date().toISOString());
           
           toast({
-            title: "Settings Synced",
-            description: "All preferences saved and synchronized.",
+            title: "Settings Saved",
+            description: "All preferences have been saved successfully.",
           });
         } else {
-          throw new Error("Backend sync failed");
+          throw new Error("Failed to save settings");
         }
       } catch (apiError) {
-        // Offline mode - save locally
-        localStorage.setItem('dynamicUserSettings', JSON.stringify(settingsData));
+        // Save locally when offline
+        localStorage.setItem('userSettings', JSON.stringify(settingsData));
         toast({
-          title: "Saved Offline",
-          description: "Settings saved locally. Will sync when online.",
+          title: "Saved Locally",
+          description: "Settings saved on your device. Will update when you're back online.",
           variant: "default"
         });
       }
@@ -318,7 +310,7 @@ const CustomerSettings = () => {
     }
   };
 
-  // Unified real-time sync function
+  // Update individual settings
   const syncSettingRealtime = async (category: keyof SettingsConfig, key: string, value: any) => {
     try {
       const updateData = { preferences: { [category]: { ...settings[category], [key]: value } } };
@@ -335,25 +327,25 @@ const CustomerSettings = () => {
       }
     } catch (error) {
       toast({
-        title: "Sync Failed",
-        description: "Setting will sync when connection is restored.",
+        title: "Update Failed",
+        description: "Change will be saved when connection is restored.",
         variant: "destructive"
       });
     }
   };
 
-  // Optimized data export
+  // Export user data
   const exportData = async () => {
     try {
       toast({
-        title: "📦 Export Processing",
-        description: "Preparing your data...",
+        title: "📦 Preparing Export",
+        description: "Gathering your data...",
       });
 
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       toast({
-        title: "✅ Export Email Sent",
+        title: "✅ Export Ready",
         description: "Download link sent to support@buildhomemartsquares.com",
       });
 
@@ -361,24 +353,24 @@ const CustomerSettings = () => {
     } catch (error) {
       toast({
         title: "Export Failed",
-        description: "Unable to export data. Try again later.",
+        description: "Unable to export data. Please try again later.",
         variant: "destructive"
       });
     }
   };
 
-  // Optimized account deletion
+  // Delete account
   const deleteAccount = async () => {
     try {
       toast({
-        title: "🗑️ Deletion Processing",
+        title: "🗑️ Processing Request",
         description: "Initiating account deletion...",
       });
 
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       toast({
-        title: "📧 Confirmation Sent",
+        title: "📧 Confirmation Required",
         description: "Final confirmation sent to support@buildhomemartsquares.com",
         variant: "destructive"
       });
@@ -386,8 +378,8 @@ const CustomerSettings = () => {
       console.log("Account deletion requested:", new Date().toISOString());
     } catch (error) {
       toast({
-        title: "Deletion Failed",
-        description: "Contact support for assistance.",
+        title: "Request Failed",
+        description: "Please contact support for assistance.",
         variant: "destructive"
       });
     }
@@ -406,36 +398,18 @@ const CustomerSettings = () => {
 
   return (
     <div className="space-y-6 pt-16">
-      {/* Real-time Status Bar */}
+      {/* Status Bar */}
       <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            {isConnected ? (
-              <>
-                <Wifi className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-green-600 font-medium">Live Updates Active</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-4 h-4 text-orange-500" />
-                <span className="text-sm text-orange-600 font-medium">Offline Mode</span>
-              </>
-            )}
-          </div>
           {lastSyncTime && (
             <Badge variant="secondary" className="text-xs">
-              Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
-            </Badge>
-          )}
-          {lastEvent && (
-            <Badge variant="outline" className="text-xs">
-              Last update: {new Date(lastEvent.timestamp).toLocaleTimeString()}
+              Last saved: {new Date(lastSyncTime).toLocaleTimeString()}
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
-            {settings.preferences.autoSave ? 'Auto-save enabled' : 'Manual save mode'}
+            {settings.preferences.autoSave ? 'Changes save automatically' : 'Save manually'}
           </span>
           {settings.preferences.autoSave ? (
             <CheckCircle className="w-4 h-4 text-green-500" />
@@ -445,16 +419,16 @@ const CustomerSettings = () => {
         </div>
       </div>
 
-      {/* Optimized Header */}
+      {/* Main Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <SettingsIcon className="w-8 h-8 text-primary" />
-            Dynamic Settings
+            Account Settings
           </h1>
           <p className="text-muted-foreground mt-1">
-            Optimized settings with {isConnected ? 'real-time sync' : 'offline storage'}.
-            <span className="font-medium ml-1">Profile data is managed separately.</span>
+            Manage your account preferences and notification settings.
+            <span className="font-medium ml-1">View your Profile for personal information.</span>
           </p>
         </div>
         <div className="flex gap-2">
@@ -472,19 +446,19 @@ const CustomerSettings = () => {
             disabled={loading}
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Syncing...' : 'Sync'}
+            {loading ? 'Refreshing...' : 'Refresh'}
           </Button>
           {!settings.preferences.autoSave && (
             <Button onClick={saveSettings} disabled={saving}>
               {saving ? (
                 <>
-                  <Database className="w-4 h-4 mr-2 animate-spin" />
+                  <Save className="w-4 h-4 mr-2" />
                   Saving...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Save All
+                  Save Changes
                 </>
               )}
             </Button>
@@ -507,8 +481,8 @@ const CustomerSettings = () => {
             Security
           </TabsTrigger>
           <TabsTrigger value="preferences" className="flex items-center gap-2">
-            <Zap className="w-4 h-4" />
-            Preferences
+            <Palette className="w-4 h-4" />
+            Display
           </TabsTrigger>
         </TabsList>
 
@@ -561,20 +535,20 @@ const CustomerSettings = () => {
           />
         </TabsContent>
 
-        {/* Privacy Tab - Optimized */}
+        {/* Privacy Tab */}
         <TabsContent value="privacy" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lock className="w-5 h-5" />
-                Privacy & Data Control
+                Privacy Settings
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Control data usage and sharing. Personal info is managed in Profile.
+                Control your privacy and data preferences.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Dynamic Privacy Controls */}
+              {/* Privacy Controls */}
               {[
                 {
                   key: 'allowMessages',
@@ -622,7 +596,7 @@ const CustomerSettings = () => {
                 </div>
               ))}
 
-              {/* Dynamic Warnings */}
+              {/* Warnings */}
               {!settings.privacy.dataCollection && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mt-4">
                   <div className="flex items-center gap-2 mb-1">
@@ -630,17 +604,17 @@ const CustomerSettings = () => {
                     <span className="text-sm font-medium text-amber-800">Analytics Disabled</span>
                   </div>
                   <p className="text-xs text-amber-700">
-                    Personalized recommendations unavailable without analytics.
+                    Personalized recommendations may not be available without analytics.
                   </p>
                 </div>
               )}
 
-              {/* Quick Profile Link */}
+              {/* Information Notice */}
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-800">Profile Visibility</p>
-                    <p className="text-xs text-blue-700">Manage contact info display</p>
+                    <p className="text-sm font-medium text-blue-800">Personal Information</p>
+                    <p className="text-xs text-blue-700">Update your name, email, and contact details</p>
                   </div>
                   <Button 
                     size="sm" 
@@ -648,7 +622,7 @@ const CustomerSettings = () => {
                     onClick={() => window.location.href = '/customer/profile'}
                     className="border-blue-300 text-blue-700 hover:bg-blue-100"
                   >
-                    Profile →
+                    Go to Profile →
                   </Button>
                 </div>
               </div>
@@ -656,14 +630,14 @@ const CustomerSettings = () => {
           </Card>
         </TabsContent>
 
-        {/* Security Tab - Optimized */}
+        {/* Security Tab */}
         <TabsContent value="security" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="w-5 h-5" />
-                  Account Security
+                  Security Settings
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -735,7 +709,7 @@ const CustomerSettings = () => {
                   </p>
                 </div>
 
-                {/* Email Warning */}
+                {/* Email Notifications Info */}
                 {!settings.notifications.email && settings.security.loginAlerts && (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
@@ -743,19 +717,19 @@ const CustomerSettings = () => {
                       <span className="text-sm font-medium text-amber-800">Email Required</span>
                     </div>
                     <p className="text-xs text-amber-700">
-                      Enable email notifications for login alerts
+                      Please enable email notifications to receive login alerts
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Password Management */}
+            {/* Password & Account Management */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Key className="w-5 h-5" />
-                  Password & Access
+                  Password & Account
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -781,24 +755,24 @@ const CustomerSettings = () => {
                   </ul>
                 </div>
 
-                {/* Account Deletion Quick Access */}
+                {/* Account Deletion Notice */}
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-red-800">Account Deletion</p>
-                      <p className="text-xs text-red-700">Permanent action</p>
+                      <p className="text-sm font-medium text-red-800">Delete Your Account</p>
+                      <p className="text-xs text-red-700">Permanently remove your account</p>
                     </div>
                     <Button 
                       size="sm" 
                       variant="outline"
                       className="border-red-300 text-red-700 hover:bg-red-100"
                       onClick={() => {
-                        // Scroll to preferences tab -> advanced section
+                        // Navigate to preferences tab -> advanced section
                         const preferencesTab = document.querySelector('[data-value="preferences"]') as HTMLElement;
                         preferencesTab?.click();
                       }}
                     >
-                      Manage →
+                      View Options →
                     </Button>
                   </div>
                 </div>
@@ -807,15 +781,15 @@ const CustomerSettings = () => {
           </div>
         </TabsContent>
 
-        {/* Consolidated Preferences Tab */}
+        {/* Display & Preferences Tab */}
         <TabsContent value="preferences" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* User Preferences */}
+            {/* Language & Display */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Globe className="w-5 h-5" />
-                  Localization & Display
+                  Language & Region
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -886,8 +860,8 @@ const CustomerSettings = () => {
                       setTheme(value);
                       updateSettings('preferences', 'theme', value);
                       toast({
-                        title: "🎨 Theme Changed",
-                        description: `Switched to ${value} theme`,
+                        title: "Theme Updated",
+                        description: `Switched to ${value} mode`,
                       });
                     }}
                   >
@@ -926,12 +900,12 @@ const CustomerSettings = () => {
               </CardContent>
             </Card>
 
-            {/* System Preferences */}
+            {/* General Preferences */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="w-5 h-5" />
-                  System & Performance
+                  General Preferences
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -946,8 +920,8 @@ const CustomerSettings = () => {
                     onCheckedChange={(checked) => {
                       updateSettings('preferences', 'autoSave', checked);
                       toast({
-                        title: checked ? "⚡ Auto-save On" : "⏸️ Manual Save",
-                        description: checked ? "Changes save automatically" : "Use Save button",
+                        title: checked ? "Auto-save Enabled" : "Manual Save Required",
+                        description: checked ? "Changes will save automatically" : "Use the Save button to save changes",
                       });
                     }}
                   />
@@ -981,9 +955,9 @@ const CustomerSettings = () => {
 
                 <Separator />
 
-                {/* Data Management Actions */}
+                {/* Data Management */}
                 <div className="space-y-3">
-                  <p className="font-medium">Data Management</p>
+                  <p className="font-medium">Your Data</p>
                   
                   <Button 
                     variant="outline" 
@@ -992,7 +966,7 @@ const CustomerSettings = () => {
                     onClick={exportData}
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Export Data
+                    Download My Data
                   </Button>
                   
                   <Button 
@@ -1002,43 +976,43 @@ const CustomerSettings = () => {
                     onClick={() => {
                       localStorage.removeItem('dynamicUserSettings');
                       toast({
-                        title: "🧹 Cache Cleared",
-                        description: "Local data cleared. Refresh page.",
+                        title: "Cache Cleared",
+                        description: "Stored data cleared. Please refresh the page.",
                       });
                     }}
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Clear Cache
+                    Clear Stored Data
                   </Button>
                 </div>
 
                 <Separator />
 
-                {/* Account Actions */}
+                {/* Account Management */}
                 <div className="space-y-3">
-                  <p className="font-medium text-destructive">Account Actions</p>
+                  <p className="font-medium text-destructive">Account Management</p>
                   
                   <Button variant="outline" size="sm" className="w-full">
                     <AlertTriangle className="w-4 h-4 mr-2" />
-                    Deactivate Account
+                    Temporarily Deactivate
                   </Button>
                   
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" className="w-full">
                         <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Account
+                        Permanently Delete Account
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                           <AlertTriangle className="w-5 h-5 text-destructive" />
-                          Permanently Delete Account?
+                          Delete Account Permanently?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete your profile, properties, messages, and all data. 
-                          You'll receive confirmation at support@buildhomemartsquares.com
+                          This will permanently delete your account, including all your properties, messages, and saved data. 
+                          You'll receive a confirmation email at support@buildhomemartsquares.com
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -1047,7 +1021,7 @@ const CustomerSettings = () => {
                           onClick={deleteAccount}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          Delete Forever
+                          Yes, Delete Forever
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

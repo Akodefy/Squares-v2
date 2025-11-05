@@ -9,7 +9,7 @@ export interface Property {
   title: string;
   description: string;
   type: 'apartment' | 'house' | 'villa' | 'plot' | 'land' | 'commercial' | 'office' | 'pg';
-  status: 'available' | 'sold' | 'rented' | 'pending' | 'active' | 'rejected';
+  status: 'available' | 'sold' | 'rented' | 'leased' | 'pending' | 'active' | 'rejected';
   listingType: 'sale' | 'rent' | 'lease';
   price: number;
   area: {
@@ -63,6 +63,18 @@ export interface Property {
     _id: string;
     name?: string;
   };
+  assignedTo?: {
+    _id: string;
+    email: string;
+    profile: {
+      firstName: string;
+      lastName: string;
+      phone: string;
+    };
+  };
+  assignedAt?: string;
+  assignedBy?: string;
+  assignmentNotes?: string;
   views: number;
   featured: boolean;
   verified: boolean;
@@ -73,6 +85,12 @@ export interface Property {
   rejectedAt?: string;
   createdAt: string;
   updatedAt: string;
+  propertyOwnerType?: 'admin' | 'client';
+  clientName?: string;
+  subscription?: {
+    planName?: string;
+    tier?: 'basic' | 'premium' | 'enterprise';
+  };
 }
 
 export interface PropertyFilters {
@@ -461,6 +479,37 @@ class PropertyService {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to update property featured status";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async assignPropertyToCustomer(
+    propertyId: string, 
+    customerId: string, 
+    status: string,
+    notes?: string
+  ): Promise<SinglePropertyResponse> {
+    try {
+      const response = await this.makeRequest<SinglePropertyResponse>(
+        `/properties/${propertyId}/assign-customer`, 
+        {
+          method: "POST",
+          body: JSON.stringify({ 
+            customerId, 
+            status,
+            notes 
+          }),
+        }
+      );
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to assign property to customer";
       toast({
         title: "Error",
         description: errorMessage,
