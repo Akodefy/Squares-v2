@@ -17,8 +17,8 @@ const propertySchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['available', 'sold', 'rented', 'leased', 'pending'],
-    default: 'available'
+    enum: ['available', 'sold', 'rented', 'leased', 'pending', 'rejected', 'active'],
+    default: 'pending'
   },
   listingType: {
     type: String,

@@ -96,9 +96,12 @@ router.get('/', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
+    
+    console.log('Fetching property with ID:', id);
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log('Invalid property ID format:', id);
       return res.status(400).json({
         success: false,
         message: 'Invalid property ID format'
@@ -106,18 +109,31 @@ router.get('/:id', asyncHandler(async (req, res) => {
     }
 
     const property = await Property.findById(id)
-      .populate('owner', 'profile.firstName profile.lastName email');
+      .populate('owner', 'profile.firstName profile.lastName email phone')
+      .populate('agent', 'profile.firstName profile.lastName email phone')
+      .populate('assignedTo', 'profile.firstName profile.lastName email phone')
+      .populate('approvedBy', 'profile.firstName profile.lastName email')
+      .populate('rejectedBy', 'profile.firstName profile.lastName email')
+      .populate('assignedBy', 'profile.firstName profile.lastName email')
+      .lean();
 
     if (!property) {
+      console.log('Property not found with ID:', id);
       return res.status(404).json({
         success: false,
         message: 'Property not found'
       });
     }
 
-    // Increment view count
-    property.views = (property.views || 0) + 1;
-    await property.save();
+    console.log('Property found:', {
+      id: property._id,
+      title: property.title,
+      status: property.status,
+      listingType: property.listingType
+    });
+
+    // Increment view count (need to update without lean())
+    await Property.findByIdAndUpdate(id, { $inc: { views: 1 } });
 
     res.json({
       success: true,
@@ -127,7 +143,8 @@ router.get('/:id', asyncHandler(async (req, res) => {
     console.error('Get property error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch property'
+      message: 'Failed to fetch property',
+      error: error.message
     });
   }
 }));

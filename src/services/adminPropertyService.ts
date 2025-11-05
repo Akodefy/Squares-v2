@@ -76,19 +76,40 @@ class AdminPropertyService {
     }
   }
 
-  async updatePropertyStatus(propertyId: string, status: string, reason?: string): Promise<void> {
+  async approveProperty(propertyId: string): Promise<void> {
     try {
-      await this.makeRequest(`/properties/${propertyId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, reason }),
+      await this.makeRequest(`/properties/${propertyId}/approve`, {
+        method: "POST",
       });
 
       toast({
         title: "Success",
-        description: "Property status updated successfully!",
+        description: "Property approved successfully!",
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to update property status";
+      const errorMessage = error instanceof Error ? error.message : "Failed to approve property";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async rejectProperty(propertyId: string, reason: string): Promise<void> {
+    try {
+      await this.makeRequest(`/properties/${propertyId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+
+      toast({
+        title: "Success",
+        description: "Property rejected successfully!",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to reject property";
       toast({
         title: "Error",
         description: errorMessage,

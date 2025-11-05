@@ -101,13 +101,12 @@ const PropertyApprovals = () => {
     try {
       const token = authService.getToken();
       
-      const response = await fetch(`${baseUrl}/admin/properties/${propertyId}/status`, {
-        method: 'PATCH',
+      const response = await fetch(`${baseUrl}/admin/properties/${propertyId}/approve`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: 'active' })
+        }
       });
 
       const data = await response.json();
@@ -143,14 +142,13 @@ const PropertyApprovals = () => {
     try {
       const token = authService.getToken();
       
-      const response = await fetch(`${baseUrl}/admin/properties/${selectedProperty._id}/status`, {
-        method: 'PATCH',
+      const response = await fetch(`${baseUrl}/admin/properties/${selectedProperty._id}/reject`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          status: 'rejected',
           reason: rejectionReason
         })
       });
@@ -160,7 +158,7 @@ const PropertyApprovals = () => {
       if (data.success) {
         toast({
           title: "Success",
-          description: "Property rejected",
+          description: "Property rejected successfully",
         });
         setIsRejectDialogOpen(false);
         setRejectionReason("");

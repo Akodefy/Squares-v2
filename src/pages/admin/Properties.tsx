@@ -47,7 +47,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { adminPropertyService } from "@/services/adminPropertyService";
 import { useToast } from "@/hooks/use-toast";
 import { ViewPropertyDialog } from "@/components/adminpanel/ViewPropertyDialog";
-import PropertyStatusDialog from "@/components/PropertyStatusDialog";
 import authService from "@/services/authService";
 
 const Properties = () => {
@@ -61,7 +60,6 @@ const Properties = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -157,10 +155,10 @@ const Properties = () => {
 
   const handleApproveProperty = async (property: Property) => {
     try {
-      await adminPropertyService.updatePropertyStatus(property._id, 'active');
+      await adminPropertyService.approveProperty(property._id);
       // Realtime update: Update in state
       setProperties(properties.map(p => 
-        p._id === property._id ? { ...p, status: 'active', verified: true } : p
+        p._id === property._id ? { ...p, status: 'available', verified: true } : p
       ));
       toast({
         title: "Success",
@@ -176,32 +174,11 @@ const Properties = () => {
     }
   };
 
-  const handleUpdatePropertyStatus = async (propertyId: string, newStatus: string, reason?: string) => {
-    try {
-      await adminPropertyService.updatePropertyStatus(propertyId, newStatus, reason);
-      // Realtime update: Update in state
-      setProperties(properties.map(p => 
-        p._id === propertyId ? { ...p, status: newStatus as Property['status'] } : p
-      ));
-      toast({
-        title: "Success",
-        description: `Property status updated to ${newStatus}!`,
-      });
-    } catch (error) {
-      console.error("Failed to update property status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update property status",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleRejectProperty = async () => {
     if (!selectedProperty || !rejectionReason.trim()) return;
     
     try {
-      await adminPropertyService.updatePropertyStatus(selectedProperty._id, 'rejected', rejectionReason);
+      await adminPropertyService.rejectProperty(selectedProperty._id, rejectionReason);
       // Realtime update: Update in state
       setProperties(properties.map(p => 
         p._id === selectedProperty._id ? { ...p, status: 'rejected' } : p
@@ -236,11 +213,6 @@ const Properties = () => {
   const openViewDialog = (property: Property) => {
     setSelectedProperty(property);
     setViewDialogOpen(true);
-  };
-
-  const openStatusDialog = (property: Property) => {
-    setSelectedProperty(property);
-    setStatusDialogOpen(true);
   };
 
   // Helper function to check if property was created by admin
@@ -389,13 +361,6 @@ const Properties = () => {
                   </DropdownMenuItem>
                 </>
               )}
-
-              {/* Status Update Options */}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => openStatusDialog(property)}>
-                <Eye className="w-4 h-4 mr-2" />
-                Update Status
-              </DropdownMenuItem>
 
               {/* Featured Toggle for Active Properties */}
               {property.status === 'active' && (
@@ -643,14 +608,6 @@ const Properties = () => {
         property={selectedProperty}
         open={viewDialogOpen}
         onOpenChange={setViewDialogOpen}
-      />
-
-      {/* Property Status Dialog */}
-      <PropertyStatusDialog
-        property={selectedProperty}
-        open={statusDialogOpen}
-        onOpenChange={setStatusDialogOpen}
-        onUpdateStatus={handleUpdatePropertyStatus}
       />
     </div>
   );

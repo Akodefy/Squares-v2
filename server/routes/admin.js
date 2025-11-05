@@ -1278,6 +1278,201 @@ router.post('/properties', async (req, res) => {
   }
 });
 
+// @desc    Update property status
+// @route   PATCH /api/admin/properties/:id/status
+// @access  Private/Admin
+router.patch('/properties/:id/status', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status, reason } = req.body;
+
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid property ID format'
+    });
+  }
+
+  // Validate status
+  const validStatuses = ['pending', 'active', 'available', 'rejected', 'sold', 'rented', 'leased'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+    });
+  }
+
+  const property = await Property.findById(id).populate('owner', 'email profile.firstName profile.lastName');
+
+  if (!property) {
+    return res.status(404).json({
+      success: false,
+      message: 'Property not found'
+    });
+  }
+
+  // Update property status
+  property.status = status;
+  
+  // Add rejection reason if rejecting
+  if (status === 'rejected' && reason) {
+    property.rejectionReason = reason;
+    property.rejectedAt = new Date();
+    property.rejectedBy = req.user.id;
+  }
+
+  // Add approval details if approving
+  if ((status === 'active' || status === 'available') && property.status === 'pending') {
+    property.approvedBy = req.user.id;
+    property.approvedAt = new Date();
+    property.verified = true;
+  }
+
+  await property.save();
+
+  // Send notification to property owner (non-blocking)
+  const owner = property.owner;
+  if (owner && owner.email) {
+    let emailSubject = 'Property Status Updated';
+    let emailBody = '';
+    
+    if (status === 'active') {
+      emailSubject = 'Property Approved';
+      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been approved and is now live on our platform.\n\nBest regards,\nNinety Nine Acres Team`;
+    } else if (status === 'rejected') {
+      emailSubject = 'Property Rejected';
+      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been rejected.\n\nReason: ${reason || 'Property does not meet our guidelines'}\n\nPlease update your property and resubmit for approval.\n\nBest regards,\nNinety Nine Acres Team`;
+    } else {
+      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" status has been updated to: ${status}\n\nBest regards,\nNinety Nine Acres Team`;
+    }
+    
+    sendEmail(owner.email, emailSubject, emailBody).catch(err => console.error('Email send error:', err));
+  }
+
+  res.json({
+    success: true,
+    message: `Property status updated to ${status}`,
+    data: { property }
+  });
+}));
+
+// @desc    Approve property
+// @route   POST /api/admin/properties/:id/approve
+// @access  Private/Admin
+router.post('/properties/:id/approve', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid property ID format'
+    });
+  }
+
+  const property = await Property.findById(id).populate('owner', 'email profile.firstName profile.lastName');
+
+  if (!property) {
+    return res.status(404).json({
+      success: false,
+      message: 'Property not found'
+    });
+  }
+
+  // Update property status to available (approved)
+  property.status = 'available';
+  property.verified = true;
+  property.approvedBy = req.user.id;
+  property.approvedAt = new Date();
+
+  await property.save();
+
+  // Send approval email to property owner (non-blocking)
+  const owner = property.owner;
+  if (owner && owner.email) {
+    sendEmail(
+      owner.email,
+      'Property Approved',
+      `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been approved and is now live on our platform.\n\nBest regards,\nNinety Nine Acres Team`
+    ).catch(err => console.error('Email send error:', err));
+  }
+
+  res.json({
+    success: true,
+    message: 'Property approved successfully',
+    data: { property }
+  });
+}));
+
+// @desc    Reject property
+// @route   POST /api/admin/properties/:id/reject
+// @access  Private/Admin
+router.post('/properties/:id/reject', asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid property ID format'
+      });
+    }
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required'
+      });
+    }
+
+    const property = await Property.findById(id).populate('owner', 'email profile.firstName profile.lastName');
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found'
+      });
+    }
+
+    // Update property status to rejected
+    property.status = 'rejected';
+    property.rejectionReason = reason;
+    property.rejectedAt = new Date();
+    property.rejectedBy = req.user.id;
+
+    await property.save();
+
+    // Send rejection email to property owner
+    const owner = property.owner;
+    try {
+      if (owner && owner.email) {
+        await sendTemplateEmail(owner.email, 'property-rejected', {
+          firstName: owner.profile?.firstName || 'User',
+          propertyTitle: property.title,
+          rejectionReason: reason,
+          resubmitUrl: `${process.env.FRONTEND_URL || 'https://squares-v2.vercel.app'}/vendor/properties/edit/${property._id}`
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send rejection email:', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Property rejected successfully',
+      data: { property }
+    });
+  } catch (error) {
+    console.error('Reject property error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject property'
+    });
+  }
+}));
+
 // ADDON MANAGEMENT ROUTES
 
 // @desc    Get all addon services for admin

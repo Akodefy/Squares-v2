@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,7 @@ const PropertyComparison = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showPropertyDialog, setShowPropertyDialog] = useState(false);
-  const hasInitialized = useRef(false);
+  const [initialized, setInitialized] = useState(false);
 
   // Load properties from API
   const loadProperties = useCallback(async (propertyIds: string[]) => {
@@ -74,7 +74,6 @@ const PropertyComparison = () => {
 
   // Refresh data
   const refreshData = useCallback(async () => {
-    if (selectedProperties.length === 0) return;
     setRefreshing(true);
     await loadProperties(selectedProperties);
     setRefreshing(false);
@@ -82,23 +81,26 @@ const PropertyComparison = () => {
 
   // Initialize from URL params only once on mount
   useEffect(() => {
-    if (!hasInitialized.current) {
+    if (!initialized) {
       const ids = searchParams.get('properties')?.split(',').filter(Boolean) || [];
       setSelectedProperties(ids);
       loadProperties(ids);
-      hasInitialized.current = true;
+      setInitialized(true);
     }
-  }, []);
+  }, [initialized, searchParams, loadProperties]);
 
-  // Listen to realtime events for property updates - stable callback
-  const handlePropertyUpdate = useCallback((data: any) => {
-    if (data.propertyId && selectedProperties.includes(data.propertyId)) {
-      console.log("Property updated via realtime, refreshing comparison");
-      loadProperties(selectedProperties);
-    }
-  }, [selectedProperties, loadProperties]);
+  // Listen to realtime events for property updates
+  useRealtimeEvent('property_updated', useCallback((data: any) => {
+    setSelectedProperties(prev => {
+      if (data.propertyId && prev.includes(data.propertyId)) {
+        console.log("Property updated via realtime, refreshing comparison");
+        loadProperties(prev);
+      }
+      return prev;
+    });
+  }, [loadProperties]));
 
-  const handlePropertyFavorite = useCallback((data: any) => {
+  useRealtimeEvent('property_favorited', useCallback((data: any) => {
     if (data.propertyId) {
       setProperties(prev => prev.map(prop => 
         prop._id === data.propertyId 
@@ -106,12 +108,9 @@ const PropertyComparison = () => {
           : prop
       ));
     }
-  }, []);
+  }, []));
 
-  useRealtimeEvent('property_updated', handlePropertyUpdate);
-  useRealtimeEvent('property_favorited', handlePropertyFavorite);
-
-  const formatPrice = useCallback((price: number, listingType: Property['listingType']) => {
+  const formatPrice = (price: number, listingType: Property['listingType']) => {
     if (listingType === 'rent') {
       return `₹${price.toLocaleString('en-IN')}/month`;
     } else if (listingType === 'lease') {
@@ -125,9 +124,9 @@ const PropertyComparison = () => {
         return `₹${price.toLocaleString('en-IN')}`;
       }
     }
-  }, []);
+  };
 
-  const formatArea = useCallback((area: Property['area']) => {
+  const formatArea = (area: Property['area']) => {
     if (area.builtUp) {
       return `${area.builtUp} ${area.unit}`;
     } else if (area.plot) {
@@ -136,20 +135,20 @@ const PropertyComparison = () => {
       return `${area.carpet} ${area.unit}`;
     }
     return 'N/A';
-  }, []);
+  };
 
-  const calculatePricePerSqft = useCallback((property: Property) => {
+  const calculatePricePerSqft = (property: Property) => {
     const areaValue = property.area.builtUp || property.area.carpet || property.area.plot || 0;
     if (areaValue === 0) return 0;
     return Math.round(property.price / areaValue);
-  }, []);
+  };
 
-  const getPrimaryImage = useCallback((property: Property): string => {
+  const getPrimaryImage = (property: Property): string => {
     const primaryImage = property.images.find(img => img.isPrimary);
     return primaryImage?.url || property.images[0]?.url || '/placeholder-property.jpg';
-  }, []);
+  };
 
-  const removeProperty = useCallback((propertyId: string) => {
+  const removeProperty = (propertyId: string) => {
     const newProperties = selectedProperties.filter(id => id !== propertyId);
     setSelectedProperties(newProperties);
     setProperties(prev => prev.filter(prop => prop._id !== propertyId));
@@ -160,9 +159,9 @@ const PropertyComparison = () => {
     } else {
       setSearchParams({}, { replace: true });
     }
-  }, [selectedProperties, setSearchParams]);
+  };
 
-  const addProperty = useCallback(() => {
+  const addProperty = () => {
     const maxComparisons = 10;
     
     if (selectedProperties.length >= maxComparisons) {
@@ -175,7 +174,7 @@ const PropertyComparison = () => {
     }
     
     setShowPropertyDialog(true);
-  }, [selectedProperties.length]);
+  };
 
   const handlePropertySelect = useCallback(async (propertyId: string): Promise<void> => {
     try {
@@ -217,7 +216,7 @@ const PropertyComparison = () => {
     }
   }, [selectedProperties, setSearchParams]);
 
-  const getComparisonValue = useCallback((value: any, isNumeric = false) => {
+  const getComparisonValue = (value: any, isNumeric = false) => {
     if (!value) return { display: "-", color: "text-muted-foreground" };
     
     if (isNumeric && properties.length > 1) {
@@ -237,12 +236,7 @@ const PropertyComparison = () => {
     }
     
     return { display: value, color: "text-foreground" };
-  }, [properties]);
-
-  // Memoize unique amenities
-  const uniqueAmenities = useMemo(() => {
-    return Array.from(new Set(properties.flatMap(p => p.amenities)));
-  }, [properties]);
+  };
 
   return (
     <div className="space-y-6 pt-16">
@@ -557,7 +551,7 @@ const PropertyComparison = () => {
             <CardContent>
               <div className="space-y-4">
                 {/* Get all unique amenities */}
-                {uniqueAmenities.map((amenity, index) => (
+                {Array.from(new Set(properties.flatMap(p => p.amenities))).map((amenity, index) => (
                   <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
                     <span className="font-medium min-w-[200px]">{String(amenity)}</span>
                     <div className="flex gap-4 overflow-x-auto flex-1">
