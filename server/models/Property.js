@@ -195,20 +195,6 @@ const propertySchema = new mongoose.Schema({
   },
   modifiedAt: {
     type: Date
-  },
-  // Admin property specific fields
-  isAdminProperty: {
-    type: Boolean,
-    default: false
-  },
-  propertyOwnerType: {
-    type: String,
-    enum: ['admin', 'client'],
-    default: 'admin'
-  },
-  clientName: {
-    type: String,
-    trim: true
   }
 }, {
   timestamps: true
