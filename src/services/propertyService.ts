@@ -83,6 +83,8 @@ export interface Property {
   approvedAt?: string;
   rejectedBy?: string;
   rejectedAt?: string;
+  ownerType?: 'admin' | 'client';
+  clientName?: string;
   createdAt: string;
   updatedAt: string;
 }
