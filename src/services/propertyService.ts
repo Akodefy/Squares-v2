@@ -85,12 +85,6 @@ export interface Property {
   rejectedAt?: string;
   createdAt: string;
   updatedAt: string;
-  propertyOwnerType?: 'admin' | 'client';
-  clientName?: string;
-  subscription?: {
-    planName?: string;
-    tier?: 'basic' | 'premium' | 'enterprise';
-  };
 }
 
 export interface PropertyFilters {
