@@ -39,6 +39,7 @@ export interface Property {
     caption?: string;
     isPrimary: boolean;
   }>;
+  virtualTour?: string;
   owner: {
     _id: string;
     email: string;

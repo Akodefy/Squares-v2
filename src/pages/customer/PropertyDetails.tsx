@@ -27,7 +27,8 @@ import {
   Home,
   User,
   Mail,
-  GitCompare
+  GitCompare,
+  ExternalLink
 } from 'lucide-react';
 import { propertyService, type Property } from '@/services/propertyService';
 import { favoriteService } from '@/services/favoriteService';
@@ -634,6 +635,16 @@ const PropertyDetails: React.FC = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {property.virtualTour && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => window.open(property.virtualTour, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Virtual Tour
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
