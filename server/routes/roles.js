@@ -92,19 +92,30 @@ router.get('/', asyncHandler(async (req, res) => {
   // Get total count for pagination
   const totalRoles = await Role.countDocuments(filter);
   
-  // Get roles with pagination and populate user count
+  // Get roles with pagination
   const roles = await Role.find(filter)
-    .populate('userCount')
     .sort({ level: -1, createdAt: -1 })
     .skip(skip)
-    .limit(parseInt(limit));
+    .limit(parseInt(limit))
+    .lean();
+
+  // Manually count users for each role
+  const rolesWithUserCount = await Promise.all(
+    roles.map(async (role) => {
+      const userCount = await User.countDocuments({ role: role.name });
+      return {
+        ...role,
+        userCount
+      };
+    })
+  );
 
   const totalPages = Math.ceil(totalRoles / parseInt(limit));
 
   res.json({
     success: true,
     data: {
-      roles,
+      roles: rolesWithUserCount,
       pagination: {
         currentPage: parseInt(page),
         totalPages,
@@ -127,7 +138,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
     });
   }
 
-  const role = await Role.findById(req.params.id).populate('userCount');
+  const role = await Role.findById(req.params.id).lean();
   
   if (!role) {
     return res.status(404).json({
@@ -136,9 +147,17 @@ router.get('/:id', asyncHandler(async (req, res) => {
     });
   }
 
+  // Manually count users for this role
+  const userCount = await User.countDocuments({ role: role.name });
+
   res.json({
     success: true,
-    data: { role }
+    data: { 
+      role: {
+        ...role,
+        userCount
+      }
+    }
   });
 }));
 

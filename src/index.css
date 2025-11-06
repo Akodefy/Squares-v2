@@ -32,9 +32,10 @@ All colors MUST be HSL.
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 33 29% 83%; /* Light Taupe (#E0D7C6) */
-    --input: 0 0% 100%;
+    --border: 33 29% 70%; /* Darker border for better visibility (#B8A584) */
+    --input: 0 0% 98%; /* Slightly off-white for input background (#FAFAFA) */
     --ring: 43 75% 52%; /* Warm Gold (#D4AF37) */
+    --ring-light: 240 5.9% 10%;
 
     --radius: 0.75rem;
     
@@ -735,7 +736,38 @@ All colors MUST be HSL.
 }
 
 /* ===========================================
-   10. COMPONENT-SPECIFIC RESPONSIVE UTILITIES
+   10. OTP INPUT COMPONENT STYLES
+   =========================================== */
+
+/* Ensure OTP input slots are visible in light mode */
+.otp-input-slot {
+  border: 2px solid hsl(var(--border)) !important;
+  background: hsl(var(--input)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Enhanced visibility for OTP slots */
+[data-otp-input] > div > div {
+  border: 2px solid hsl(var(--border)) !important;
+  background: hsl(var(--input)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Focus state for OTP inputs */
+[data-otp-input] > div > div:focus,
+[data-otp-input] > div > div.z-10 {
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+}
+
+/* Dark mode adjustments for OTP */
+.dark [data-otp-input] > div > div {
+  border: 2px solid hsl(var(--border)) !important;
+  background: hsl(var(--input)) !important;
+}
+
+/* ===========================================
+   11. COMPONENT-SPECIFIC RESPONSIVE UTILITIES
    =========================================== */
 
 /* Property Cards Responsive */
@@ -850,5 +882,3 @@ All colors MUST be HSL.
     grid-template-columns: repeat(4, 1fr) !important;
   }
 }
-
-
