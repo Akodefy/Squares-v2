@@ -139,6 +139,8 @@ const AddProperty = () => {
 
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadedVideos, setUploadedVideos] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingVideos, setUploadingVideos] = useState(false);
 
   // Store selected location names for display
   const [selectedLocationNames, setSelectedLocationNames] = useState({
@@ -577,27 +579,53 @@ const AddProperty = () => {
 
 
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      setUploadedImages(prev => [...prev, ...files.map(file => ({
-        id: Date.now() + Math.random(),
-        name: file.name,
-        url: URL.createObjectURL(file),
-        file: file // Store the actual file for upload
-      }))]);
+      setUploadingImages(true);
+      
+      try {
+        const imagePromises = files.map(async (file) => {
+          return {
+            id: Date.now() + Math.random(),
+            name: file.name,
+            url: URL.createObjectURL(file),
+            file: file // Store the actual file for upload
+          };
+        });
+        
+        const newImages = await Promise.all(imagePromises);
+        setUploadedImages(prev => [...prev, ...newImages]);
+      } catch (error) {
+        console.error('Error processing images:', error);
+      } finally {
+        setUploadingImages(false);
+      }
     }
   };
 
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      setUploadedVideos(prev => [...prev, ...files.map(file => ({
-        id: Date.now() + Math.random(),
-        name: file.name,
-        url: URL.createObjectURL(file),
-        file: file // Store the actual file for upload
-      }))]);
+      setUploadingVideos(true);
+      
+      try {
+        const videoPromises = files.map(async (file) => {
+          return {
+            id: Date.now() + Math.random(),
+            name: file.name,
+            url: URL.createObjectURL(file),
+            file: file // Store the actual file for upload
+          };
+        });
+        
+        const newVideos = await Promise.all(videoPromises);
+        setUploadedVideos(prev => [...prev, ...newVideos]);
+      } catch (error) {
+        console.error('Error processing videos:', error);
+      } finally {
+        setUploadingVideos(false);
+      }
     }
   };
 
@@ -1398,9 +1426,22 @@ const AddProperty = () => {
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
                 <Camera className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <div className="space-y-2">
-                  <Button variant="outline" onClick={() => document.getElementById('image-upload').click()}>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Choose Images
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('image-upload').click()}
+                    disabled={uploadingImages}
+                  >
+                    {uploadingImages ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Choose Images
+                      </>
+                    )}
                   </Button>
                   <p className="text-sm text-muted-foreground">
                     or drag and drop images here
@@ -1413,8 +1454,16 @@ const AddProperty = () => {
                   accept="image/*"
                   className="hidden"
                   onChange={handleImageUpload}
+                  disabled={uploadingImages}
                 />
               </div>
+
+              {uploadingImages && (
+                <div className="flex items-center justify-center gap-2 mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">Processing images...</span>
+                </div>
+              )}
 
               {uploadedImages.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
@@ -1448,9 +1497,22 @@ const AddProperty = () => {
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
                 <Video className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <div className="space-y-2">
-                  <Button variant="outline" onClick={() => document.getElementById('video-upload')?.click()}>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Video
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('video-upload')?.click()}
+                    disabled={uploadingVideos}
+                  >
+                    {uploadingVideos ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Video
+                      </>
+                    )}
                   </Button>
                   <p className="text-sm text-muted-foreground">
                     MP4, MOV, AVI (max 100MB)
@@ -1463,8 +1525,16 @@ const AddProperty = () => {
                   accept="video/*"
                   className="hidden"
                   onChange={handleVideoUpload}
+                  disabled={uploadingVideos}
                 />
               </div>
+
+              {uploadingVideos && (
+                <div className="flex items-center justify-center gap-2 mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">Processing videos...</span>
+                </div>
+              )}
 
               {uploadedVideos.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">

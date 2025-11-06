@@ -10,7 +10,8 @@ import {
   User,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Building2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
@@ -27,6 +28,7 @@ const navItems = [
   { icon: Search, label: "Search Properties", path: "/customer/search" },
   { icon: Heart, label: "My Favorites", path: "/customer/favorites" },
   { icon: GitCompare, label: "Compare", path: "/customer/compare" },
+  { icon: Building2, label: "My Properties", path: "/customer/my-properties" },
   { icon: HomeIcon, label: "Owned Properties", path: "/customer/owned-properties" },
   { icon: MessageSquare, label: "Messages", path: "/customer/messages" },
   { icon: Wrench, label: "Services", path: "/customer/services" },
