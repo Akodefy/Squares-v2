@@ -101,22 +101,24 @@ const PublicPropertyDetails: React.FC = () => {
   };
 
   const handleShare = async () => {
+    const publicUrl = `${window.location.origin}/property/${id}`;
+    
     if (navigator.share && property) {
       try {
         await navigator.share({
           title: property.title,
           text: `Check out this property: ${property.title}`,
-          url: window.location.href
+          url: publicUrl
         });
       } catch (error) {
-        navigator.clipboard.writeText(window.location.href);
+        navigator.clipboard.writeText(publicUrl);
         toast({
           title: "Link copied",
           description: "Property link has been copied to clipboard",
         });
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(publicUrl);
       toast({
         title: "Link copied",
         description: "Property link has been copied to clipboard",

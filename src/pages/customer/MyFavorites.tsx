@@ -506,12 +506,19 @@ const MyFavorites: React.FC = () => {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                // Share functionality
+                                // Share functionality with public URL
+                                const publicUrl = `${window.location.origin}/property/${property._id}`;
                                 if (navigator.share) {
                                   navigator.share({
                                     title: property.title,
                                     text: `Check out this property: ${property.title}`,
-                                    url: window.location.href
+                                    url: publicUrl
+                                  });
+                                } else {
+                                  navigator.clipboard.writeText(publicUrl);
+                                  toast({
+                                    title: "Link copied",
+                                    description: "Property link has been copied to clipboard",
                                   });
                                 }
                               }}
