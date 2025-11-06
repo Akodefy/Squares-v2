@@ -113,7 +113,7 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 md:gap-4">
+            <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 mr-2 xs:mr-0">
               <ThemeToggle />
               
               <VendorNotificationCenter />
@@ -134,7 +134,7 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 sm:w-56">
+                <DropdownMenuContent align="end" className="w-48 sm:w-56 mt-2">
                   <DropdownMenuLabel className="text-xs sm:text-sm">My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleProfileClick} className="text-xs sm:text-sm">

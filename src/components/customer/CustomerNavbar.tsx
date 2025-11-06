@@ -62,7 +62,7 @@ const CustomerNavbar = ({ onMenuClick }: CustomerNavbarProps) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 mr-2 xs:mr-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 xs:h-9 xs:w-9 sm:h-10 sm:w-10">
               <Bell className="h-4 w-4 xs:h-5 xs:w-5" />
             </Button>

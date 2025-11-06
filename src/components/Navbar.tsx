@@ -55,7 +55,7 @@ const Navbar = () => {
             </div>
 
             {/* Right Side Actions */}
-            <div className="flex items-center gap-2 xs:gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 xs:gap-3 sm:gap-4 mr-2 xs:mr-0">
               <Link to="/vendor/login" className="hidden md:block">
                 <Button
                   variant="ghost"

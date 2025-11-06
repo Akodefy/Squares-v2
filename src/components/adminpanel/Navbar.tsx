@@ -44,7 +44,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 mr-2 xs:mr-0">
             <ThemeToggle />
             <ProfileDropdown />
           </div>
