@@ -146,6 +146,19 @@ class SubAdminService {
     }
   }
 
+  async updateSupportTicket(ticketId: string, status: string, response: string): Promise<SupportTicket> {
+    try {
+      const res = await axios.patch(
+        `${API_BASE_URL}/subadmin/support/tickets/${ticketId}`,
+        { status, response },
+        this.getAuthHeaders()
+      );
+      return res.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update support ticket');
+    }
+  }
+
   // Vendor Performance
   async getVendorPerformance(): Promise<{ vendors: VendorPerformance[] }> {
     try {

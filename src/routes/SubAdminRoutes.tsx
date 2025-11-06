@@ -1,42 +1,40 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Suspense } from "react";
 import DashboardLayout from "@/components/adminpanel/DashboardLayout";
-import AdminProtectedRoute from "@/components/auth/AdminProtectedRoute";
+import SubAdminProtectedRoute from "@/components/auth/SubAdminProtectedRoute";
 import { PageLoader } from "@/components/ui/loader/PageLoader";
 import { 
   SubAdminDashboard, 
-  PropertyReview, 
-  PropertyApproval, 
+  PropertyReviews, 
+  PropertyRejections, 
   ContentModeration, 
   SupportTickets, 
-  PerformanceTracking, 
-  PromotionApproval, 
-  SendNotifications, 
-  GenerateReports,
-  VendorApprovals 
-} from "./SubAdminLazyImports";
+  VendorPerformance, 
+  Promotions, 
+  Notifications, 
+  Reports
+} from "@/routes/SubAdminLazyImports";
 
 const SubAdminRoutes = () => {
   return (
-    <AdminProtectedRoute>
+    <SubAdminProtectedRoute>
       <DashboardLayout>
-        <Suspense fallback={<PageLoader/>}>
+        <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/" element={<Navigate to="/admin/dashboard" />} />
+            <Route path="/" element={<Navigate to="/subadmin/dashboard" />} />
             <Route path="/dashboard" element={<SubAdminDashboard />} />
-            <Route path="/properties/review" element={<PropertyReview />} />
-            <Route path="/properties/approval" element={<PropertyApproval />} />
-            <Route path="/vendor-approvals" element={<VendorApprovals />} />
-            <Route path="/content/moderation" element={<ContentModeration />} />
-            <Route path="/support/tickets" element={<SupportTickets />} />
-            <Route path="/performance" element={<PerformanceTracking />} />
-            <Route path="/promotions/approval" element={<PromotionApproval />} />
-            <Route path="/notifications" element={<SendNotifications />} />
-            <Route path="/reports" element={<GenerateReports />} />
+            <Route path="/property-reviews" element={<PropertyReviews />} />
+            <Route path="/property-rejections" element={<PropertyRejections />} />
+            <Route path="/content-moderation" element={<ContentModeration />} />
+            <Route path="/support-tickets" element={<SupportTickets />} />
+            <Route path="/vendor-performance" element={<VendorPerformance />} />
+            <Route path="/promotions" element={<Promotions />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/reports" element={<Reports />} />
           </Routes>
         </Suspense>
       </DashboardLayout>
-    </AdminProtectedRoute>
+    </SubAdminProtectedRoute>
   );
 };
 

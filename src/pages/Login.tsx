@@ -52,8 +52,8 @@ const Login = () => {
             console.log('Login: Redirecting superadmin to admin dashboard');
             navigate("/admin/dashboard");
           } else if (user.role === 'subadmin') {
-            console.log('Login: Redirecting subadmin to admin dashboard');
-            navigate("/admin/dashboard");
+            console.log('Login: Redirecting subadmin to subadmin dashboard');
+            navigate("/subadmin/dashboard");
           } else if (user.role === 'admin') {
             console.log('Login: Redirecting admin to admin dashboard');
             navigate("/admin/dashboard");

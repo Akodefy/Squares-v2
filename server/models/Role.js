@@ -37,7 +37,11 @@ const roleSchema = new mongoose.Schema({
       'track_vendor_performance',
       'approve_promotions',
       'send_notifications',
-      'generate_reports'
+      'generate_reports',
+      // Vendor approval permissions
+      'approve_vendors',
+      'reject_vendors',
+      'review_vendors'
     ]
   }],
   isSystemRole: {
@@ -87,13 +91,31 @@ roleSchema.statics.getDefaultRoles = function() {
       level: 5
     },
     {
-      name: 'admin',
-      description: 'Administrator with full system access',
+      name: 'subadmin',
+      description: 'Sub Administrator with limited administrative access',
+      permissions: [
+        'read_property', 'update_property',
+        'review_properties', 'approve_properties', 'reject_properties',
+        'moderate_user_content', 'handle_support_tickets',
+        'track_vendor_performance', 'approve_promotions',
+        'send_notifications', 'generate_reports',
+        'approve_vendors', 'reject_vendors', 'review_vendors',
+        'view_dashboard', 'send_messages', 'moderate_content', 'access_analytics'
+      ],
+      isSystemRole: true,
+      level: 7
+    },
+    {
+      name: 'superadmin',
+      description: 'Super Administrator with full system access and control',
       permissions: [
         'create_property', 'read_property', 'update_property', 'delete_property',
         'manage_users', 'manage_roles', 'manage_plans', 'view_dashboard',
         'manage_settings', 'manage_content', 'send_messages', 'moderate_content',
-        'access_analytics'
+        'access_analytics', 'review_properties', 'approve_properties', 'reject_properties',
+        'moderate_user_content', 'handle_support_tickets', 'track_vendor_performance',
+        'approve_promotions', 'send_notifications', 'generate_reports',
+        'approve_vendors', 'reject_vendors', 'review_vendors'
       ],
       isSystemRole: true,
       level: 10

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import NotFound from "@/pages/NotFound";
 import AdminRoutes from "@/routes/AdminRoutes";
+import SubAdminRoutes from "@/routes/SubAdminRoutes";
 import UserRoutes from "@/routes/UserRoutes";
 import CustomerRoutes from "@/routes/CustomerRoutes";
 import VendorRoutes from "@/routes/VendorRoutes";
@@ -30,6 +31,7 @@ const App = () => (
             <Routes>
               <Route path="/*" element={<UserRoutes />} />
               <Route path="/admin/*" element={<AdminRoutes />} />
+              <Route path="/subadmin/*" element={<SubAdminRoutes />} />
               <Route path="/customer/*" element={<CustomerRoutes />} />
               
               {/* Vendor Authentication Routes (outside protection) */}

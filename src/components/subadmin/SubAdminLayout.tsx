@@ -38,7 +38,7 @@ const SubAdminLayout = ({ children }: SubAdminLayoutProps) => {
         <main 
           className={`flex-1 overflow-auto transition-all duration-300 ${
             isSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
-          } mt-16 p-6`}
+          } p-6`}
         >
           {children}
         </main>

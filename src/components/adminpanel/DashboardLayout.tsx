@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
-import SubAdminSidebar from "./SubAdminSidebar";
+import SubAdminSidebar from "@/components/subadmin/SubAdminSidebar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 

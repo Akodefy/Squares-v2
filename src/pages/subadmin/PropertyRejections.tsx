@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, CheckCircle, XCircle, Eye, MapPin, Calendar, User } from "lucide-react";
+import { Search, RotateCcw, Eye, MapPin, Calendar, User, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeEvent } from "@/contexts/RealtimeContext";
 
@@ -46,29 +45,32 @@ interface Property {
   };
   createdAt: string;
   rejectionReason?: string;
+  rejectedAt?: string;
+  rejectedBy?: {
+    name: string;
+    email: string;
+  };
 }
 
-const PropertyReviews = () => {
+const PropertyRejections = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchProperties();
+    fetchRejectedProperties();
   }, [currentPage, searchTerm]);
 
-  const fetchProperties = async () => {
+  const fetchRejectedProperties = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/subadmin/properties/pending?page=${currentPage}&search=${searchTerm}`, {
+      const response = await fetch(`/api/subadmin/properties/rejected?page=${currentPage}&search=${searchTerm}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -81,14 +83,14 @@ const PropertyReviews = () => {
       } else {
         toast({
           title: "Error",
-          description: "Failed to fetch properties",
+          description: "Failed to fetch rejected properties",
           variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Error fetching properties",
+        description: "Error fetching rejected properties",
         variant: "destructive",
       });
     } finally {
@@ -97,22 +99,18 @@ const PropertyReviews = () => {
   };
 
   // Real-time updates
-  useRealtimeEvent('property_created', (data) => {
+  useRealtimeEvent('property_rejected', (data) => {
     toast({
-      title: "New Property",
-      description: "A new property has been submitted for review",
+      title: "Property Rejected",
+      description: "A property has been rejected",
     });
-    fetchProperties();
+    fetchRejectedProperties();
   });
 
-  useRealtimeEvent('property_updated', (data) => {
-    fetchProperties();
-  });
-
-  const handleApprove = async (propertyId: string) => {
+  const handleReactivate = async (propertyId: string) => {
     try {
       setActionLoading({ ...actionLoading, [propertyId]: true });
-      const response = await fetch(`/api/subadmin/properties/${propertyId}/approve`, {
+      const response = await fetch(`/api/subadmin/properties/${propertyId}/reactivate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -123,72 +121,24 @@ const PropertyReviews = () => {
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Property approved successfully",
+          description: "Property reactivated and moved to pending review",
         });
-        fetchProperties();
+        fetchRejectedProperties();
       } else {
         toast({
           title: "Error",
-          description: "Failed to approve property",
+          description: "Failed to reactivate property",
           variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to approve property",
+        description: "Failed to reactivate property",
         variant: "destructive",
       });
     } finally {
       setActionLoading({ ...actionLoading, [propertyId]: false });
-    }
-  };
-
-  const handleReject = async () => {
-    if (!selectedProperty || !rejectionReason.trim()) {
-      toast({
-        title: "Error",
-        description: "Please provide a rejection reason",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setActionLoading({ ...actionLoading, [selectedProperty._id]: true });
-      const response = await fetch(`/api/subadmin/properties/${selectedProperty._id}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ reason: rejectionReason })
-      });
-      
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Property rejected successfully",
-        });
-        setRejectDialogOpen(false);
-        setRejectionReason("");
-        setSelectedProperty(null);
-        fetchProperties();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to reject property",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to reject property",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading({ ...actionLoading, [selectedProperty._id]: false });
     }
   };
 
@@ -215,9 +165,9 @@ const PropertyReviews = () => {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Property Reviews</h1>
+          <h1 className="text-3xl font-bold">Property Rejections</h1>
           <p className="text-muted-foreground mt-1">
-            Review and approve property listings
+            View and manage rejected property listings
           </p>
         </div>
         <div className="animate-pulse space-y-4">
@@ -232,9 +182,9 @@ const PropertyReviews = () => {
   return (
     <div className="p-6 space-y-6 mt-16">
       <div>
-        <h1 className="text-3xl font-bold">Property Reviews</h1>
+        <h1 className="text-3xl font-bold">Property Rejections</h1>
         <p className="text-muted-foreground mt-1">
-          Review and approve property listings
+          View and manage rejected property listings
         </p>
       </div>
 
@@ -242,31 +192,31 @@ const PropertyReviews = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search properties by title or city..."
+          placeholder="Search rejected properties by title or city..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Properties List */}
+      {/* Rejected Properties List */}
       <div className="space-y-4">
         {properties.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-              <h3 className="text-lg font-semibold">No Pending Properties</h3>
+              <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold">No Rejected Properties</h3>
               <p className="text-muted-foreground text-center">
-                All properties have been reviewed. Great job!
+                There are no rejected properties at the moment
               </p>
             </CardContent>
           </Card>
         ) : (
           properties.map((property) => (
-            <Card key={property._id}>
+            <Card key={property._id} className="border-l-4 border-l-red-500">
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <CardTitle className="text-xl">{property.title}</CardTitle>
                     <CardDescription className="space-y-1">
                       <div className="flex items-center gap-4 text-sm">
@@ -276,7 +226,7 @@ const PropertyReviews = () => {
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(property.createdAt).toLocaleDateString()}
+                          Rejected: {property.rejectedAt ? new Date(property.rejectedAt).toLocaleDateString() : 'N/A'}
                         </span>
                         <span className="flex items-center gap-1">
                           <User className="h-3 w-3" />
@@ -284,12 +234,31 @@ const PropertyReviews = () => {
                         </span>
                       </div>
                     </CardDescription>
+                    {property.rejectionReason && (
+                      <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3 mt-3">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-red-900 dark:text-red-100">Rejection Reason:</p>
+                            <p className="text-sm text-red-700 dark:text-red-300 mt-1">{property.rejectionReason}</p>
+                            {property.rejectedBy && (
+                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                Rejected by: {property.rejectedBy.name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-right ml-4">
                     <div className="text-2xl font-bold text-primary">
                       {formatPrice(property.price)}
                     </div>
-                    <Badge variant="outline">
+                    <Badge variant="destructive" className="mt-1">
+                      Rejected
+                    </Badge>
+                    <Badge variant="outline" className="mt-1 ml-1">
                       {property.type} • {property.listingType}
                     </Badge>
                   </div>
@@ -310,24 +279,12 @@ const PropertyReviews = () => {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => handleApprove(property._id)}
-                    disabled={actionLoading[property._id]}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Approve
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedProperty(property);
-                      setRejectDialogOpen(true);
-                    }}
+                    variant="secondary"
+                    onClick={() => handleReactivate(property._id)}
                     disabled={actionLoading[property._id]}
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reactivate for Review
                   </Button>
                 </div>
               </CardContent>
@@ -359,61 +316,34 @@ const PropertyReviews = () => {
         </div>
       )}
 
-      {/* Reject Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Property</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for rejecting this property listing.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium">{selectedProperty?.title}</h4>
-              <p className="text-sm text-muted-foreground">
-                {selectedProperty?.address.city}, {selectedProperty?.address.state}
-              </p>
-            </div>
-            <Textarea
-              placeholder="Enter rejection reason..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              rows={4}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setRejectDialogOpen(false);
-                setRejectionReason("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleReject}
-              disabled={!rejectionReason.trim() || actionLoading[selectedProperty?._id || ""]}
-            >
-              Reject Property
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* View Property Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedProperty?.title}</DialogTitle>
             <DialogDescription>
-              Property details and information
+              Rejected property details and information
             </DialogDescription>
           </DialogHeader>
           {selectedProperty && (
             <div className="space-y-4">
+              {selectedProperty.rejectionReason && (
+                <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-red-900 dark:text-red-100">Rejection Reason:</p>
+                      <p className="text-sm text-red-700 dark:text-red-300 mt-1">{selectedProperty.rejectionReason}</p>
+                      {selectedProperty.rejectedBy && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                          Rejected by: {selectedProperty.rejectedBy.name} ({selectedProperty.rejectedBy.email})
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-semibold">Property Details</h4>
@@ -461,10 +391,30 @@ const PropertyReviews = () => {
               )}
             </div>
           )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setViewDialogOpen(false)}
+            >
+              Close
+            </Button>
+            {selectedProperty && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  handleReactivate(selectedProperty._id);
+                  setViewDialogOpen(false);
+                }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reactivate for Review
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 };
 
-export default PropertyReviews;
+export default PropertyRejections;

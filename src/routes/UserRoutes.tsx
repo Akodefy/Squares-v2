@@ -12,6 +12,7 @@ import {
   PrivacyPolicy,
   RefundPolicy,
   PropertyDetails,
+  TrackSupport,
 } from "@/routes/UserLazyImports";
 import UserLayout from "@/layout/UserLayout";
 import { PageLoader } from "@/components/ui/loader/PageLoader";
@@ -27,6 +28,7 @@ const UserRoutes = () => {
           <Route path="/products" element={<Products />} />
           <Route path="/subscription-plans" element={<SubscriptionPlans />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/track-support" element={<TrackSupport />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/refund-policy" element={<RefundPolicy />} />
           <Route path="/property/:id" element={<PropertyDetails />} />

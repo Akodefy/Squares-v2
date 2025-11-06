@@ -34,9 +34,11 @@ import DashboardLayout from "@/components/adminpanel/DashboardLayout";
 import { SearchFilter } from "@/components/adminpanel/shared/SearchFilter";
 import { toast } from "@/hooks/use-toast";
 import roleService, { Role } from "@/services/roleService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Roles = () => {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roles, setRoles] = useState<Role[]>([]);
@@ -44,6 +46,10 @@ const Roles = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRoles, setTotalRoles] = useState(0);
+  
+  // Role type stats
+  const [superAdminRole, setSuperAdminRole] = useState<Role | null>(null);
+  const [subAdminRole, setSubAdminRole] = useState<Role | null>(null);
   
   // Dialog states
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -64,6 +70,13 @@ const Roles = () => {
       setRoles(response.data.roles);
       setTotalPages(response.data.pagination.totalPages);
       setTotalRoles(response.data.pagination.totalRoles);
+      
+      // Extract SuperAdmin and SubAdmin roles
+      const superAdmin = response.data.roles.find(r => r.name.toLowerCase() === 'superadmin');
+      const subAdmin = response.data.roles.find(r => r.name.toLowerCase() === 'subadmin');
+      
+      setSuperAdminRole(superAdmin || null);
+      setSubAdminRole(subAdmin || null);
     } catch (error) {
       console.error("Failed to fetch roles:", error);
     } finally {
@@ -145,6 +158,36 @@ const Roles = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  // Helper function to get role type badge
+  const getRoleTypeBadge = (role: Role) => {
+    const roleName = role.name.toLowerCase();
+    if (roleName === 'superadmin') {
+      return (
+        <Badge variant="destructive" className="text-xs bg-red-600">
+          <Shield className="w-3 h-3 mr-1" />
+          Super Admin
+        </Badge>
+      );
+    }
+    if (roleName === 'subadmin') {
+      return (
+        <Badge variant="default" className="text-xs bg-orange-600">
+          <Shield className="w-3 h-3 mr-1" />
+          Sub Admin
+        </Badge>
+      );
+    }
+    if (role.isSystemRole) {
+      return (
+        <Badge variant="outline" className="text-xs">
+          <Shield className="w-3 h-3 mr-1" />
+          System
+        </Badge>
+      );
+    }
+    return null;
+  };
+
   // Create extended type for DataTable
   type RoleWithId = Role & { id: string };
 
@@ -156,12 +199,7 @@ const Roles = () => {
         <div>
           <div className="font-medium flex items-center gap-2">
             {role.name}
-            {role.isSystemRole && (
-              <Badge variant="outline" className="text-xs">
-                <Shield className="w-3 h-3 mr-1" />
-                System
-              </Badge>
-            )}
+            {getRoleTypeBadge(role)}
           </div>
           <div className="text-sm text-muted-foreground">
             {role.description}
@@ -240,18 +278,17 @@ const Roles = () => {
                 e.stopPropagation();
                 navigate(`/admin/roles/edit/${role._id}`);
               }}
-              disabled={role.isSystemRole}
               className="cursor-pointer"
             >
               <Edit className="w-4 h-4 mr-2" />
-              Edit Role
+              {role.isSystemRole && !isSuperAdmin ? 'View Role' : 'Edit Role'}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggleStatus(role);
               }}
-              disabled={role.isSystemRole && role.isActive}
+              disabled={role.isSystemRole && role.isActive && !isSuperAdmin}
               className="cursor-pointer"
             >
               {role.isActive ? (
@@ -267,7 +304,7 @@ const Roles = () => {
                 e.stopPropagation();
                 openDeleteDialog(role);
               }}
-              disabled={role.isSystemRole}
+              disabled={role.isSystemRole && !isSuperAdmin}
               className="text-destructive focus:text-destructive cursor-pointer"
             >
               <Trash2 className="w-4 h-4 mr-2" />
@@ -307,7 +344,7 @@ const Roles = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           <Card>
             <CardHeader className="pb-1">
               <CardTitle className="text-xs font-medium text-gray-600">Total Roles</CardTitle>
@@ -346,7 +383,136 @@ const Roles = () => {
               </div>
             </CardContent>
           </Card>
+          <Card className="border-red-200 bg-red-50">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-red-700 flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Super Admin
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-1">
+              <div className="text-lg sm:text-xl font-bold text-red-600">
+                {superAdminRole?.userCount || 0}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Level {superAdminRole?.level || 10}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-orange-200 bg-orange-50">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-orange-700 flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Sub Admin
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-1">
+              <div className="text-lg sm:text-xl font-bold text-orange-600">
+                {subAdminRole?.userCount || 0}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Level {subAdminRole?.level || 7}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Admin Roles Section */}
+        {(superAdminRole || subAdminRole) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {superAdminRole && (
+              <Card className="border-red-200 bg-gradient-to-br from-red-50 to-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-700">
+                    <Shield className="w-5 h-5" />
+                    Super Admin Role
+                  </CardTitle>
+                  <CardDescription>{superAdminRole.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Status:</span>
+                    <Badge variant={superAdminRole.isActive ? "default" : "secondary"}>
+                      {superAdminRole.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Access Level:</span>
+                    <Badge variant="destructive">Level {superAdminRole.level}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Total Users:</span>
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-bold">{superAdminRole.userCount || 0}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Permissions:</span>
+                    <span className="font-bold text-red-600">{superAdminRole.permissions.length}</span>
+                  </div>
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => navigate(`/admin/roles/edit/${superAdminRole._id}`)}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {subAdminRole && (
+              <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-700">
+                    <Shield className="w-5 h-5" />
+                    Sub Admin Role
+                  </CardTitle>
+                  <CardDescription>{subAdminRole.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Status:</span>
+                    <Badge variant={subAdminRole.isActive ? "default" : "secondary"}>
+                      {subAdminRole.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Access Level:</span>
+                    <Badge variant="default" className="bg-orange-600">Level {subAdminRole.level}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Total Users:</span>
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-bold">{subAdminRole.userCount || 0}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Permissions:</span>
+                    <span className="font-bold text-orange-600">{subAdminRole.permissions.length}</span>
+                  </div>
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => navigate(`/admin/roles/edit/${subAdminRole._id}`)}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
         <Card>
           <CardHeader>

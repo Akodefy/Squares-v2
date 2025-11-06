@@ -123,6 +123,18 @@ class RoleService {
     }
   }
 
+  async getAdminRoles(): Promise<{ superAdmin: Role | null; subAdmin: Role | null }> {
+    try {
+      const response = await this.getRoles({ limit: 100 });
+      const superAdmin = response.data.roles.find(r => r.name.toLowerCase() === 'superadmin') || null;
+      const subAdmin = response.data.roles.find(r => r.name.toLowerCase() === 'subadmin') || null;
+      return { superAdmin, subAdmin };
+    } catch (error) {
+      console.error('Failed to fetch admin roles:', error);
+      return { superAdmin: null, subAdmin: null };
+    }
+  }
+
   async createRole(roleData: Partial<Role>): Promise<SingleRoleResponse> {
     try {
       const response = await this.makeRequest<SingleRoleResponse>("/roles", {
@@ -252,7 +264,11 @@ class RoleService {
       'track_vendor_performance',
       'approve_promotions',
       'send_notifications',
-      'generate_reports'
+      'generate_reports',
+      // Vendor approval permissions
+      'approve_vendors',
+      'reject_vendors',
+      'review_vendors'
     ];
   }
 

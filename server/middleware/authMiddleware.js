@@ -36,6 +36,7 @@ const authenticateToken = async (req, res, next) => {
       id: user._id,
       email: user.email,
       role: user.role,
+      name: user.profile ? `${user.profile.firstName} ${user.profile.lastName}` : user.email,
       profile: user.profile
     };
 
@@ -105,6 +106,7 @@ const optionalAuth = async (req, res, next) => {
         id: user._id,
         email: user.email,
         role: user.role,
+        name: user.profile ? `${user.profile.firstName} ${user.profile.lastName}` : user.email,
         profile: user.profile
       };
     } else {

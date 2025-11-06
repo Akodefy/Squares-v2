@@ -49,7 +49,7 @@ const Navbar = () => {
                   to="/contact"
                   className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
                 >
-                  Contact
+                  Support
                 </Link>
               </div>
             </div>
@@ -112,7 +112,7 @@ const Navbar = () => {
                 className="block py-2 text-sm font-medium hover:text-primary transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Contact
+                Support
               </Link>
               <Link
                 to="/vendor/login"

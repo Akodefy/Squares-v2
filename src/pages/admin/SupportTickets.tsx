@@ -37,8 +37,8 @@ const SupportTickets = () => {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [responseMessage, setResponseMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("open");
-  const [priorityFilter, setPriorityFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
 
   const fetchSupportTickets = async () => {
     setLoading(true);
@@ -206,11 +206,11 @@ const SupportTickets = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="resolved">Resolved</SelectItem>
                   <SelectItem value="closed">Closed</SelectItem>
-                  <SelectItem value="">All Status</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -220,11 +220,11 @@ const SupportTickets = () => {
                   <SelectValue placeholder="All Priorities" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
                   <SelectItem value="urgent">Urgent</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="">All Priorities</SelectItem>
                 </SelectContent>
               </Select>
             </div>

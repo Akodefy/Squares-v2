@@ -38,7 +38,7 @@ const isSubAdmin = (req, res, next) => {
   next();
 };
 
-// Check if user has any admin privileges (legacy admin becomes superadmin)
+// Check if user has any admin privileges
 const isAnyAdmin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -47,7 +47,7 @@ const isAnyAdmin = (req, res, next) => {
     });
   }
 
-  if (!['admin', 'subadmin', 'superadmin'].includes(req.user.role)) {
+  if (!['subadmin', 'superadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin access required'

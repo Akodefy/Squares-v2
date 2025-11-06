@@ -10,6 +10,7 @@ const Role = require('../models/Role');
 const AddonService = require('../models/AddonService');
 const Settings = require('../models/Settings');
 const Vendor = require('../models/Vendor');
+const SupportTicket = require('../models/SupportTicket');
 const mongoose = require('mongoose');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { isSuperAdmin, isAnyAdmin } = require('../middleware/roleMiddleware');
@@ -613,6 +614,180 @@ router.get('/vendor-approval-stats', isAnyAdmin, asyncHandler(async (req, res) =
     res.status(500).json({
       success: false,
       message: 'Failed to fetch vendor approval statistics'
+    });
+  }
+}));
+
+// @desc    Generate reports
+// @route   POST /api/admin/reports/generate
+// @access  Private/Admin & SubAdmin
+router.post('/reports/generate', authenticateToken, isAnyAdmin, asyncHandler(async (req, res) => {
+  const { reportType, dateRange, city, metrics, formats, customName } = req.body;
+
+  if (!reportType) {
+    return res.status(400).json({
+      success: false,
+      message: 'Report type is required'
+    });
+  }
+
+  try {
+    // Build date filter
+    const dateFilter = {};
+    if (dateRange?.from && dateRange?.to) {
+      dateFilter.createdAt = {
+        $gte: new Date(dateRange.from),
+        $lte: new Date(dateRange.to)
+      };
+    }
+
+    // Build city filter
+    const cityFilter = city && city !== 'all' ? { city } : {};
+
+    // Gather data based on report type
+    let reportData = {};
+    
+    switch (reportType) {
+      case 'property_performance':
+        const [totalProperties, propertiesByType, avgViews, propertyApprovalRate] = await Promise.all([
+          Property.countDocuments({ ...dateFilter, ...cityFilter }),
+          Property.aggregate([
+            { $match: { ...dateFilter, ...cityFilter } },
+            { $group: { _id: '$type', count: { $sum: 1 } } }
+          ]),
+          Property.aggregate([
+            { $match: { ...dateFilter, ...cityFilter } },
+            { $group: { _id: null, avgViews: { $avg: '$views' } } }
+          ]),
+          Property.aggregate([
+            { $match: dateFilter },
+            { $group: {
+              _id: null,
+              total: { $sum: 1 },
+              approved: { $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] } }
+            }}
+          ])
+        ]);
+        
+        reportData = {
+          totalProperties,
+          propertiesByType,
+          averageViews: avgViews[0]?.avgViews || 0,
+          approvalRate: propertyApprovalRate[0] ? 
+            (propertyApprovalRate[0].approved / propertyApprovalRate[0].total * 100).toFixed(2) : 0
+        };
+        break;
+
+      case 'vendor_analytics':
+        const [activeVendors, vendorPerformance] = await Promise.all([
+          User.countDocuments({ role: 'vendor', status: 'active', ...dateFilter }),
+          Property.aggregate([
+            { $match: { ...dateFilter, ...cityFilter } },
+            { $group: {
+              _id: '$vendor',
+              propertyCount: { $sum: 1 },
+              avgViews: { $avg: '$views' }
+            }},
+            { $limit: 20 }
+          ])
+        ]);
+        
+        reportData = {
+          activeVendors,
+          vendorPerformance
+        };
+        break;
+
+      case 'user_engagement':
+        const [totalUsers, newUsers, userActivity] = await Promise.all([
+          User.countDocuments({ ...dateFilter }),
+          User.countDocuments({ ...dateFilter, createdAt: { 
+            $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) 
+          }}),
+          User.aggregate([
+            { $match: dateFilter },
+            { $group: {
+              _id: '$role',
+              count: { $sum: 1 }
+            }}
+          ])
+        ]);
+        
+        reportData = {
+          totalUsers,
+          newUsers,
+          userActivity
+        };
+        break;
+
+      case 'financial_summary':
+        const [totalRevenue, activeSubscriptions] = await Promise.all([
+          Subscription.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+          ]),
+          Subscription.countDocuments({ status: 'active', ...dateFilter })
+        ]);
+        
+        reportData = {
+          totalRevenue: totalRevenue[0]?.total || 0,
+          activeSubscriptions
+        };
+        break;
+
+      case 'city_regional':
+        const [propertiesByCity, usersByCity] = await Promise.all([
+          Property.aggregate([
+            { $match: { ...dateFilter, ...cityFilter } },
+            { $group: { _id: '$city', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 20 }
+          ]),
+          User.aggregate([
+            { $match: dateFilter },
+            { $group: { _id: '$profile.city', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 20 }
+          ])
+        ]);
+        
+        reportData = {
+          propertiesByCity,
+          usersByCity
+        };
+        break;
+
+      default:
+        reportData = { message: 'Report type not implemented' };
+    }
+
+    // Return report data (file generation can be implemented later)
+    res.json({
+      success: true,
+      message: 'Report generated successfully',
+      data: {
+        id: new Date().getTime(),
+        name: customName || `${reportType} - ${new Date().toLocaleDateString()}`,
+        type: reportType,
+        dateRange,
+        city,
+        metrics,
+        formats,
+        reportData,
+        createdAt: new Date(),
+        status: 'completed',
+        // Note: Actual file download URLs would be generated here
+        // For now, data is returned directly for frontend display
+        downloadUrl: null
+      }
+    });
+
+  } catch (error) {
+    console.error('Report generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate report',
+      error: error.message
     });
   }
 }));
@@ -2470,5 +2645,267 @@ function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
+
+// ============= SUBADMIN PROXY ROUTES =============
+// These routes proxy to subadmin functionality for backward compatibility
+
+// @desc    Get subadmin dashboard (proxy to subadmin route)
+// @route   GET /api/admin/subadmin/dashboard
+// @access  Private/SubAdmin
+router.get('/subadmin/dashboard', isAnyAdmin, asyncHandler(async (req, res) => {
+  const [
+    pendingPropertyReviews,
+    approvedProperties,
+    rejectedProperties,
+    pendingSupportTickets,
+    totalVendors,
+    newContentReports
+  ] = await Promise.all([
+    Property.countDocuments({ status: 'pending' }),
+    Property.countDocuments({ status: 'approved' }),
+    Property.countDocuments({ status: 'rejected' }),
+    Message.countDocuments({ type: 'support', status: 'open' }),
+    User.countDocuments({ role: 'agent' }),
+    0 // Placeholder for content reports
+  ]);
+
+  res.json({
+    success: true,
+    stats: {
+      pendingPropertyReviews,
+      approvedProperties,
+      rejectedProperties,
+      pendingSupportTickets,
+      pendingPromotions: 0,
+      totalVendors,
+      newContentReports
+    }
+  });
+}));
+
+// @desc    Get properties for review
+// @route   GET /api/admin/properties/review
+// @access  Private/Admin
+router.get('/properties/review', isAnyAdmin, asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, status = 'pending', search = '' } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  let query = {};
+  if (status && status !== 'all') {
+    query.status = status;
+  }
+  
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { 'address.city': { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  const [properties, total] = await Promise.all([
+    Property.find(query)
+      .populate('owner', 'email profile')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit)),
+    Property.countDocuments(query)
+  ]);
+
+  res.json({
+    success: true,
+    properties,
+    total,
+    totalPages: Math.ceil(total / parseInt(limit)),
+    currentPage: parseInt(page)
+  });
+}));
+
+// @desc    Get pending properties for approval
+// @route   GET /api/admin/properties/pending-approval
+// @access  Private/Admin
+router.get('/properties/pending-approval', isAnyAdmin, asyncHandler(async (req, res) => {
+  const properties = await Property.find({ status: 'pending' })
+    .populate('owner', 'email profile')
+    .sort({ createdAt: -1 });
+
+  res.json({
+    success: true,
+    properties
+  });
+}));
+
+// @desc    Get support tickets
+// @route   GET /api/admin/support/tickets
+// @access  Private/Admin
+router.get('/support/tickets', isAnyAdmin, asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, status = 'open', priority = '', search = '' } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  let query = {};
+  if (status && status !== 'all') {
+    query.status = status;
+  }
+  if (priority) {
+    query.priority = priority;
+  }
+  if (search) {
+    query.$or = [
+      { subject: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  const [tickets, total] = await Promise.all([
+    SupportTicket.find(query)
+      .populate('user', 'email profile')
+      .populate('assignedTo', 'email profile')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit)),
+    SupportTicket.countDocuments(query)
+  ]);
+
+  res.json({
+    success: true,
+    tickets,
+    total,
+    totalPages: Math.ceil(total / parseInt(limit)),
+    currentPage: parseInt(page)
+  });
+}));
+
+// @desc    Respond to support ticket
+// @route   POST /api/admin/support/tickets/:id/respond
+// @access  Private/Admin
+router.post('/support/tickets/:id/respond', isAnyAdmin, asyncHandler(async (req, res) => {
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({
+      success: false,
+      message: 'Response message is required'
+    });
+  }
+
+  const ticket = await SupportTicket.findById(req.params.id);
+  
+  if (!ticket) {
+    return res.status(404).json({
+      success: false,
+      message: 'Support ticket not found'
+    });
+  }
+
+  ticket.responses.push({
+    message,
+    author: req.user.profile?.firstName 
+      ? `${req.user.profile.firstName} ${req.user.profile.lastName || ''}`
+      : req.user.email,
+    isAdmin: true
+  });
+
+  ticket.assignedTo = req.user.id;
+  
+  if (ticket.status === 'open') {
+    ticket.status = 'in_progress';
+  }
+
+  await ticket.save();
+
+  res.json({
+    success: true,
+    message: 'Response sent successfully',
+    data: ticket
+  });
+}));
+
+// @desc    Update support ticket status
+// @route   PUT /api/admin/support/tickets/:id/status
+// @access  Private/Admin
+router.put('/support/tickets/:id/status', isAnyAdmin, asyncHandler(async (req, res) => {
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({
+      success: false,
+      message: 'Status is required'
+    });
+  }
+
+  const ticket = await SupportTicket.findById(req.params.id);
+  
+  if (!ticket) {
+    return res.status(404).json({
+      success: false,
+      message: 'Support ticket not found'
+    });
+  }
+
+  ticket.status = status;
+  
+  if (status === 'resolved') {
+    ticket.resolvedBy = req.user.id;
+    ticket.resolvedAt = new Date();
+  }
+
+  await ticket.save();
+
+  res.json({
+    success: true,
+    message: 'Ticket status updated successfully',
+    data: ticket
+  });
+}));
+
+// @desc    Get vendor performance
+// @route   GET /api/admin/vendors/performance
+// @access  Private/Admin
+router.get('/vendors/performance', isAnyAdmin, asyncHandler(async (req, res) => {
+  const { sortBy = 'totalProperties', status = 'all', timeRange = '30d' } = req.query;
+
+  const vendors = await User.aggregate([
+    { $match: { role: 'agent' } },
+    {
+      $lookup: {
+        from: 'properties',
+        localField: '_id',
+        foreignField: 'owner',
+        as: 'properties'
+      }
+    },
+    {
+      $project: {
+        email: 1,
+        'profile.firstName': 1,
+        'profile.lastName': 1,
+        'profile.phone': 1,
+        status: 1,
+        totalProperties: { $size: '$properties' },
+        activeProperties: {
+          $size: {
+            $filter: {
+              input: '$properties',
+              cond: { $eq: ['$$this.status', 'active'] }
+            }
+          }
+        },
+        pendingProperties: {
+          $size: {
+            $filter: {
+              input: '$properties',
+              cond: { $eq: ['$$this.status', 'pending'] }
+            }
+          }
+        }
+      }
+    },
+    { $sort: { [sortBy]: -1 } }
+  ]);
+
+  res.json({
+    success: true,
+    vendors
+  });
+}));
 
 module.exports = router;

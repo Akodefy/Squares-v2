@@ -12,7 +12,7 @@ router.use(authenticateToken);
 // @route   GET /api/roles/permissions
 // @access  Private/Admin
 router.get('/permissions', asyncHandler(async (req, res) => {
-  if (!['admin', 'superadmin'].includes(req.user.role)) {
+  if (!['superadmin', 'subadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin access required'
@@ -59,7 +59,7 @@ router.get('/permissions', asyncHandler(async (req, res) => {
 // @route   GET /api/roles
 // @access  Private/Admin
 router.get('/', asyncHandler(async (req, res) => {
-  if (!['admin', 'superadmin'].includes(req.user.role)) {
+  if (!['superadmin', 'subadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin access required'
@@ -131,7 +131,7 @@ router.get('/', asyncHandler(async (req, res) => {
 // @route   GET /api/roles/:id
 // @access  Private/Admin
 router.get('/:id', asyncHandler(async (req, res) => {
-  if (!['admin', 'superadmin'].includes(req.user.role)) {
+  if (!['superadmin', 'subadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin access required'
@@ -165,10 +165,10 @@ router.get('/:id', asyncHandler(async (req, res) => {
 // @route   POST /api/roles
 // @access  Private/Admin
 router.post('/', asyncHandler(async (req, res) => {
-  if (!['admin', 'superadmin'].includes(req.user.role)) {
+  if (!['superadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: 'Admin access required'
+      message: 'Super Admin access required'
     });
   }
 
@@ -184,10 +184,10 @@ router.post('/', asyncHandler(async (req, res) => {
 // @route   PUT /api/roles/:id
 // @access  Private/Admin
 router.put('/:id', asyncHandler(async (req, res) => {
-  if (!['admin', 'superadmin'].includes(req.user.role)) {
+  if (!['superadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: 'Admin access required'
+      message: 'Super Admin access required'
     });
   }
 
@@ -200,11 +200,11 @@ router.put('/:id', asyncHandler(async (req, res) => {
     });
   }
 
-  // Prevent modification of system roles
-  if (role.isSystemRole) {
+  // Only superadmin can modify system roles
+  if (role.isSystemRole && req.user.role !== 'superadmin') {
     return res.status(400).json({
       success: false,
-      message: 'Cannot modify system roles'
+      message: 'Only superadmin can modify system roles'
     });
   }
 
@@ -224,10 +224,10 @@ router.put('/:id', asyncHandler(async (req, res) => {
 // @route   PATCH /api/roles/:id/toggle-status
 // @access  Private/Admin
 router.patch('/:id/toggle-status', asyncHandler(async (req, res) => {
-  if (!['admin', 'superadmin'].includes(req.user.role)) {
+  if (!['superadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: 'Admin access required'
+      message: 'Super Admin access required'
     });
   }
 
@@ -240,11 +240,11 @@ router.patch('/:id/toggle-status', asyncHandler(async (req, res) => {
     });
   }
 
-  // Prevent deactivation of system roles
-  if (role.isSystemRole && role.isActive) {
+  // Only superadmin can deactivate system roles
+  if (role.isSystemRole && role.isActive && req.user.role !== 'superadmin') {
     return res.status(400).json({
       success: false,
-      message: 'Cannot deactivate system roles'
+      message: 'Only superadmin can deactivate system roles'
     });
   }
 
@@ -261,7 +261,7 @@ router.patch('/:id/toggle-status', asyncHandler(async (req, res) => {
 // @route   DELETE /api/roles/:id
 // @access  Private/Admin
 router.delete('/:id', asyncHandler(async (req, res) => {
-  if (!['admin', 'superadmin'].includes(req.user.role)) {
+  if (!['superadmin', 'subadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin access required'
@@ -277,11 +277,11 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     });
   }
 
-  // Prevent deletion of system roles
-  if (role.isSystemRole) {
+  // Only superadmin can delete system roles
+  if (role.isSystemRole && req.user.role !== 'superadmin') {
     return res.status(400).json({
       success: false,
-      message: 'Cannot delete system roles'
+      message: 'Only superadmin can delete system roles'
     });
   }
 

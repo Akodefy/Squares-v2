@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema({
     enum: ['pending', 'active', 'suspended', 'inactive'],
     default: 'pending'
   },
+  isGuest: {
+    type: Boolean,
+    default: false
+  },
   profile: {
     firstName: {
       type: String,

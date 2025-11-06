@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, Clock, Users, Building } from "lucide-react";
 import subAdminService from "@/services/subAdminService";
 import { useToast } from "@/hooks/use-toast";
+import { useRealtimeEvent } from "@/contexts/RealtimeContext";
 
 interface DashboardStats {
   pendingProperties: number;
@@ -35,6 +36,28 @@ const SubAdminDashboard = () => {
     }
   };
 
+  // Real-time updates for property changes
+  useRealtimeEvent('property_created', () => {
+    fetchDashboardStats();
+  });
+
+  useRealtimeEvent('property_approved', () => {
+    fetchDashboardStats();
+  });
+
+  useRealtimeEvent('property_rejected', () => {
+    fetchDashboardStats();
+  });
+
+  // Real-time updates for support tickets
+  useRealtimeEvent('support_ticket_created', () => {
+    fetchDashboardStats();
+  });
+
+  useRealtimeEvent('support_ticket_updated', () => {
+    fetchDashboardStats();
+  });
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -60,7 +83,7 @@ const SubAdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 mt-16">
       <div>
         <h1 className="text-3xl font-bold">Sub Admin Dashboard</h1>
         <p className="text-muted-foreground mt-1">

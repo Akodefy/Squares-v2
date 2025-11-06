@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const supportTicketSchema = new mongoose.Schema({
   ticketNumber: {
     type: String,
-    required: true,
-    unique: true
+    unique: true,
+    sparse: true
   },
   subject: {
     type: String,

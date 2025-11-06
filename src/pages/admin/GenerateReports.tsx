@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileText, Download, BarChart3, TrendingUp, Users, Building2, DollarSign, Calendar } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReportConfig {
   type: string;
@@ -29,6 +30,85 @@ const GenerateReports = () => {
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [customName, setCustomName] = useState('');
+  const [reportResult, setReportResult] = useState<any>(null);
+  const { toast } = useToast();
+
+  const handleDownloadReport = (format: 'json' | 'csv' | 'pdf' | 'excel') => {
+    if (!reportResult) return;
+
+    const fileName = `${reportResult.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().getTime()}`;
+
+    if (format === 'json') {
+      const dataStr = JSON.stringify(reportResult.reportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download Started",
+        description: "JSON report downloaded successfully",
+      });
+    } else if (format === 'csv') {
+      const csvContent = convertToCSV(reportResult.reportData);
+      const dataBlob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download Started",
+        description: "CSV report downloaded successfully",
+      });
+    } else {
+      toast({
+        title: "Coming Soon",
+        description: `${format.toUpperCase()} export will be available soon`,
+      });
+    }
+  };
+
+  const convertToCSV = (data: any): string => {
+    let csv = '';
+    
+    if (Array.isArray(data)) {
+      if (data.length === 0) return 'No data available';
+      
+      const headers = Object.keys(data[0]);
+      csv = headers.join(',') + '\n';
+      
+      data.forEach(row => {
+        const values = headers.map(header => {
+          const val = row[header];
+          return typeof val === 'string' ? `"${val}"` : val;
+        });
+        csv += values.join(',') + '\n';
+      });
+    } else if (typeof data === 'object') {
+      csv = 'Key,Value\n';
+      Object.entries(data).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          csv += `${key},"${JSON.stringify(value)}"\n`;
+        } else if (typeof value === 'object') {
+          csv += `${key},"${JSON.stringify(value)}"\n`;
+        } else {
+          csv += `${key},${value}\n`;
+        }
+      });
+    }
+    
+    return csv;
+  };
 
   const reportTypes: ReportConfig[] = [
     {
@@ -146,11 +226,17 @@ const GenerateReports = () => {
 
   const handleGenerateReport = async () => {
     if (!selectedReport || selectedMetrics.length === 0 || selectedFormats.length === 0) {
-      alert('Please select report type, metrics, and format');
+      toast({
+        title: "Validation Error",
+        description: "Please select report type, metrics, and format",
+        variant: "destructive"
+      });
       return;
     }
 
     setGenerating(true);
+    setReportResult(null);
+    
     try {
       const payload = {
         reportType: selectedReport,
@@ -173,27 +259,29 @@ const GenerateReports = () => {
         body: JSON.stringify(payload)
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setReportResult(data.data);
         
-        // If single file, download directly
-        if (data.downloadUrl) {
-          window.open(data.downloadUrl, '_blank');
-        } 
-        // If multiple files, show download links
-        else if (data.files) {
-          data.files.forEach((file: any) => {
-            window.open(file.downloadUrl, '_blank');
-          });
-        }
-        
-        alert('Report generated successfully!');
+        toast({
+          title: "Success",
+          description: "Report generated successfully! Click download button to save.",
+        });
       } else {
-        alert('Failed to generate report');
+        toast({
+          title: "Error",
+          description: data.message || "Failed to generate report",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Failed to generate report:', error);
-      alert('Failed to generate report');
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setGenerating(false);
     }
@@ -474,6 +562,88 @@ const GenerateReports = () => {
           </Card>
         </div>
       </div>
+
+      {/* Report Result Display */}
+      {reportResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Generated Report: {reportResult.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Report Type</p>
+                  <p className="font-semibold capitalize">{reportResult.type.replace(/_/g, ' ')}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <Badge variant="default">{reportResult.status}</Badge>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Generated At</p>
+                  <p className="font-semibold text-sm">
+                    {new Date(reportResult.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Report Data Display */}
+              {reportResult.reportData && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-3">Report Data</h3>
+                  <pre className="text-xs overflow-auto max-h-96 bg-white p-4 rounded border">
+                    {JSON.stringify(reportResult.reportData, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {/* Download Buttons */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {reportResult.formats?.includes('json') !== false && (
+                  <Button 
+                    onClick={() => handleDownloadReport('json')}
+                    variant="outline"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    JSON
+                  </Button>
+                )}
+                {reportResult.formats?.includes('csv') && (
+                  <Button 
+                    onClick={() => handleDownloadReport('csv')}
+                    variant="outline"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    CSV
+                  </Button>
+                )}
+                {reportResult.formats?.includes('pdf') && (
+                  <Button 
+                    onClick={() => handleDownloadReport('pdf')}
+                    variant="outline"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    PDF
+                  </Button>
+                )}
+                {reportResult.formats?.includes('excel') && (
+                  <Button 
+                    onClick={() => handleDownloadReport('excel')}
+                    variant="outline"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Excel
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Reports */}
       <Card>
