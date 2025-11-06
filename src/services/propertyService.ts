@@ -275,7 +275,24 @@ class PropertyService {
 
   async updateProperty(id: string, propertyData: Partial<Property>): Promise<SinglePropertyResponse> {
     try {
-      const response = await this.makeRequest<SinglePropertyResponse>(`/properties/${id}`, {
+      // Check user role to determine which endpoint to use
+      const userStr = localStorage.getItem("user");
+      let endpoint = `/properties/${id}`;
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          // Use vendor-specific endpoint for agents/vendors
+          if (user.role === 'agent') {
+            endpoint = `/vendors/properties/${id}`;
+          }
+        } catch (e) {
+          // If parsing fails, use default endpoint
+          console.warn("Failed to parse user data, using default endpoint");
+        }
+      }
+
+      const response = await this.makeRequest<SinglePropertyResponse>(endpoint, {
         method: "PUT",
         body: JSON.stringify(propertyData),
       });
