@@ -26,8 +26,13 @@ const PropertyContactDialog: React.FC<PropertyContactDialogProps> = ({
 }) => {
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [showPhoneNumber, setShowPhoneNumber] = useState(false);
 
   const contactInfo = getPropertyContactInfo(property);
+
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
 
   const copyToClipboard = (text: string, type: "phone" | "email") => {
     navigator.clipboard.writeText(text).then(() => {
@@ -47,7 +52,15 @@ const PropertyContactDialog: React.FC<PropertyContactDialogProps> = ({
 
   const handleCall = () => {
     if (contactInfo.phone && contactInfo.phone !== "Not available") {
-      window.location.href = `tel:${contactInfo.phone}`;
+      if (isMobile()) {
+        window.location.href = `tel:${contactInfo.phone}`;
+      } else {
+        setShowPhoneNumber(true);
+        toast({
+          title: "Phone Number",
+          description: contactInfo.phone,
+        });
+      }
     }
   };
 
@@ -169,6 +182,30 @@ const PropertyContactDialog: React.FC<PropertyContactDialogProps> = ({
               Send Email
             </Button>
           </div>
+
+          {/* Show Phone Number on Desktop */}
+          {showPhoneNumber && contactInfo.phone !== "Not available" && (
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
+              <p className="text-sm font-medium text-primary">Contact Number:</p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-bold text-primary">{contactInfo.phone}</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => copyToClipboard(contactInfo.phone, "phone")}
+                >
+                  {copiedPhone ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Click the number to copy or use the copy button
+              </p>
+            </div>
+          )}
 
           <p className="text-xs text-muted-foreground text-center">
             Contact during business hours for the best response
