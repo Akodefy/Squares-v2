@@ -23,6 +23,11 @@ export interface VendorProfile {
         newsUpdates: boolean;
         marketing: boolean;
       };
+      privacy?: {
+        showEmail: boolean;
+        showPhone: boolean;
+        allowMessages: boolean;
+      };
     };
     address: {
       street?: string;
@@ -43,6 +48,7 @@ export interface VendorProfile {
       gstNumber?: string;
       panNumber?: string;
       companyName?: string;
+      businessType?: string;
       experience: number;
       website?: string;
       specializations: string[];
@@ -93,10 +99,14 @@ export interface UpdateVendorData {
       notifications?: {
         email?: boolean;
         push?: boolean;
-
         newMessages?: boolean;
         newsUpdates?: boolean;
         marketing?: boolean;
+      };
+      privacy?: {
+        showEmail?: boolean;
+        showPhone?: boolean;
+        allowMessages?: boolean;
       };
     };
     address?: {

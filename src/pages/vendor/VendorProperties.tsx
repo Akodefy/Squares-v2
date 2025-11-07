@@ -27,12 +27,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { propertyService, type Property } from "@/services/propertyService";
 import { toast } from "@/hooks/use-toast";
 
 const VendorProperties = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +58,14 @@ const VendorProperties = () => {
     loadProperties();
     loadStats();
   }, []);
+
+  // Update search query from URL params
+  useEffect(() => {
+    const urlSearch = searchParams.get("search");
+    if (urlSearch) {
+      setSearchQuery(urlSearch);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadProperties();
@@ -108,8 +117,10 @@ const VendorProperties = () => {
     try {
       await propertyService.togglePropertyFeatured(propertyId, !currentFeatured);
       loadProperties(); // Refresh the list
-    } catch (error) {
+      loadStats(); // Refresh stats
+    } catch (error: any) {
       console.error('Failed to toggle featured status:', error);
+      // Error is already shown in toast by service
     }
   };
 

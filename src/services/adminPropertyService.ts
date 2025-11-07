@@ -151,13 +151,24 @@ class AdminPropertyService {
         title: "Success",
         description: `Property ${featured ? 'marked as featured' : 'removed from featured'}!`,
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to update property";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      const errorData = error.response?.data || error;
+      const errorMessage = errorData.message || error.message || "Failed to update property";
+      
+      // Show specific message for subscription-related errors  
+      if (errorData.upgradeRequired || errorData.limitReached) {
+        toast({
+          title: errorData.limitReached ? "Featured Limit Reached" : "Upgrade Required",
+          description: `${errorMessage} Visit the Subscription Plans page to upgrade.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
       throw error;
     }
   }

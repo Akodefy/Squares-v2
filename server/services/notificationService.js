@@ -22,14 +22,11 @@ class NotificationService extends EventEmitter {
     this.clients.get(userId).add(res);
     
     // Setup SSE headers with proper CORS
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Credentials': 'true',
-      'X-Accel-Buffering': 'no' // Disable nginx buffering
-    });
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
 
     // Send initial connection confirmation
     this.sendToClient(res, {

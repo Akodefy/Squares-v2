@@ -4,9 +4,132 @@ const User = require('../models/User');
 const Vendor = require('../models/Vendor');
 const Property = require('../models/Property');
 const Message = require('../models/Message');
+const PropertyView = require('../models/PropertyView');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 const router = express.Router();
+
+// @desc    Get search suggestions for vendors (public endpoint)
+// @route   GET /api/vendors/search/suggestions
+// @access  Public
+router.get('/search/suggestions', asyncHandler(async (req, res) => {
+  const { q } = req.query;
+  
+  if (!q || q.trim().length < 2) {
+    return res.json({
+      success: true,
+      data: { suggestions: [] }
+    });
+  }
+
+  const searchRegex = new RegExp(q, 'i');
+  
+  // Get vendor-specific data: properties, analytics terms, subscription info
+  const [propertySuggestions, locationSuggestions] = await Promise.all([
+    // Property suggestions (titles and types)
+    Property.aggregate([
+      { 
+        $match: { 
+          $or: [
+            { title: searchRegex },
+            { type: searchRegex },
+            { listingType: searchRegex }
+          ]
+        } 
+      },
+      {
+        $group: { 
+          _id: '$title',
+          propertyId: { $first: '$_id' },
+          type: { $first: '$type' },
+          listingType: { $first: '$listingType' }
+        }
+      },
+      { $limit: 5 }
+    ]),
+    // Location suggestions from properties
+    Property.aggregate([
+      {
+        $match: {
+          $or: [
+            { 'address.city': searchRegex },
+            { 'address.locationName': searchRegex },
+            { 'address.state': searchRegex },
+            { 'address.district': searchRegex }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: {
+            city: '$address.city',
+            locationName: '$address.locationName',
+            state: '$address.state'
+          }
+        }
+      },
+      { $limit: 5 }
+    ])
+  ]);
+
+  const suggestions = [];
+
+  // Add property suggestions
+  propertySuggestions.forEach(prop => {
+    suggestions.push({
+      type: 'property',
+      title: prop.title || prop._id,
+      subtitle: `${prop.type} - ${prop.listingType}`,
+      icon: 'Home',
+      query: prop._id,
+      propertyId: prop.propertyId
+    });
+  });
+
+  // Add location suggestions
+  locationSuggestions.forEach(loc => {
+    if (loc._id.city || loc._id.locationName) {
+      const location = [loc._id.locationName, loc._id.city].filter(Boolean).join(', ');
+      suggestions.push({
+        type: 'location',
+        title: location,
+        subtitle: loc._id.state,
+        icon: 'MapPin',
+        query: location
+      });
+    }
+  });
+
+  // Add common vendor portal search terms
+  const portalTerms = [
+    { term: 'dashboard', icon: 'BarChart3', subtitle: 'View analytics and overview' },
+    { term: 'properties', icon: 'Home', subtitle: 'Manage your properties' },
+    { term: 'analytics', icon: 'BarChart3', subtitle: 'View performance metrics' },
+    { term: 'subscription', icon: 'Crown', subtitle: 'Manage subscription' },
+    { term: 'billing', icon: 'CreditCard', subtitle: 'View billing and payments' },
+    { term: 'reviews', icon: 'Star', subtitle: 'Customer reviews' },
+    { term: 'messages', icon: 'MessageSquare', subtitle: 'View messages' },
+    { term: 'leads', icon: 'Users', subtitle: 'Manage leads' },
+    { term: 'profile', icon: 'Settings', subtitle: 'Edit profile settings' }
+  ];
+
+  portalTerms.forEach(item => {
+    if (item.term.toLowerCase().includes(q.toLowerCase())) {
+      suggestions.push({
+        type: 'portal',
+        title: item.term.charAt(0).toUpperCase() + item.term.slice(1),
+        subtitle: item.subtitle,
+        icon: item.icon,
+        query: item.term
+      });
+    }
+  });
+
+  res.json({
+    success: true,
+    data: { suggestions: suggestions.slice(0, 10) }
+  });
+}));
 
 // Apply auth middleware to all routes
 router.use(authenticateToken);
@@ -104,6 +227,26 @@ router.get('/profile', requireVendorRole, asyncHandler(async (req, res) => {
     });
   }
 
+  // Calculate real statistics
+  const [propertyCount, soldCount, messageCount, propertyValues] = await Promise.all([
+    Property.countDocuments({ owner: vendor.user }),
+    Property.countDocuments({ owner: vendor.user, status: 'sold' }),
+    Message.countDocuments({ recipient: vendor.user }),
+    Property.find({ owner: vendor.user, status: 'sold' }).select('price')
+  ]);
+
+  // Calculate total value from sold properties
+  const totalValue = propertyValues.reduce((sum, prop) => {
+    const price = parseFloat(prop.price.toString().replace(/[^0-9.]/g, ''));
+    return sum + (isNaN(price) ? 0 : price);
+  }, 0);
+
+  const formatValue = (value) => {
+    if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)} Cr`;
+    if (value >= 100000) return `₹${(value / 100000).toFixed(1)} L`;
+    return `₹${value.toLocaleString()}`;
+  };
+
   // Combine user and vendor data in the format expected by frontend
   const combinedProfile = {
     id: user._id,
@@ -119,16 +262,21 @@ router.get('/profile', requireVendorRole, asyncHandler(async (req, res) => {
       phone: user.profile.phone,
       avatar: user.profile.avatar,
       bio: user.profile.bio,
-      preferences: user.profile.preferences || {
-        language: 'en',
-        currency: 'INR',
+      preferences: {
+        language: user.profile.preferences?.language || 'en',
+        currency: user.profile.preferences?.currency || 'INR',
         notifications: {
-          email: true,
-          push: true,
-          newMessages: true,
-          newsUpdates: true,
-          marketing: true,
+          email: user.profile.preferences?.notifications?.email ?? true,
+          push: user.profile.preferences?.notifications?.push ?? true,
+          newMessages: user.profile.preferences?.notifications?.newMessages ?? true,
+          newsUpdates: user.profile.preferences?.notifications?.newsUpdates ?? true,
+          marketing: user.profile.preferences?.notifications?.marketing ?? true,
         },
+        privacy: {
+          showEmail: user.profile.preferences?.privacy?.showEmail ?? false,
+          showPhone: user.profile.preferences?.privacy?.showPhone ?? false,
+          allowMessages: user.profile.preferences?.privacy?.allowMessages ?? true,
+        }
       },
       address: {
         street: user.profile.address?.street || vendor.contactInfo?.officeAddress?.street,
@@ -149,6 +297,7 @@ router.get('/profile', requireVendorRole, asyncHandler(async (req, res) => {
         gstNumber: vendor.businessInfo?.gstNumber,
         panNumber: vendor.businessInfo?.panNumber,
         companyName: vendor.businessInfo?.companyName,
+        businessType: vendor.businessInfo?.businessType,
         experience: vendor.professionalInfo?.experience || 0,
         website: vendor.businessInfo?.website,
         specializations: vendor.professionalInfo?.specializations || [],
@@ -175,11 +324,11 @@ router.get('/profile', requireVendorRole, asyncHandler(async (req, res) => {
       }
     },
     statistics: {
-      totalProperties: vendor.performance?.statistics?.totalProperties || 0,
-      totalFavorites: 0, // Calculate from favorites collection if needed
-      totalMessages: vendor.performance?.statistics?.totalLeads || 0,
-      totalSales: vendor.performance?.statistics?.soldProperties || 0,
-      totalValue: '₹0', // Calculate from property values if needed
+      totalProperties: propertyCount,
+      totalFavorites: 0,
+      totalMessages: messageCount,
+      totalSales: soldCount,
+      totalValue: formatValue(totalValue),
     }
   };
 
@@ -214,7 +363,27 @@ router.put('/profile', requireVendorRole, asyncHandler(async (req, res) => {
     if (profile.lastName) user.profile.lastName = profile.lastName;
     if (profile.phone) user.profile.phone = profile.phone;
     if (profile.bio !== undefined) user.profile.bio = profile.bio;
-    if (profile.preferences) user.profile.preferences = { ...user.profile.preferences, ...profile.preferences };
+    
+    // Handle preferences update with proper defaults
+    if (profile.preferences) {
+      // Ensure privacy object exists with defaults
+      const defaultPrivacy = {
+        showEmail: false,
+        showPhone: false,
+        allowMessages: true
+      };
+      
+      // Merge preferences while ensuring privacy is never undefined
+      user.profile.preferences = {
+        ...user.profile.preferences,
+        ...profile.preferences,
+        privacy: {
+          ...defaultPrivacy,
+          ...(user.profile.preferences?.privacy || {}),
+          ...(profile.preferences.privacy || {})
+        }
+      };
+    }
     
     // Update user address
     if (profile.address) {
@@ -248,6 +417,7 @@ router.put('/profile', requireVendorRole, asyncHandler(async (req, res) => {
       // Update business info
       if (!vendor.businessInfo) vendor.businessInfo = {};
       if (vendorInfo.companyName !== undefined) vendor.businessInfo.companyName = vendorInfo.companyName;
+      if (vendorInfo.businessType !== undefined) vendor.businessInfo.businessType = vendorInfo.businessType;
       if (vendorInfo.licenseNumber !== undefined) vendor.businessInfo.licenseNumber = vendorInfo.licenseNumber;
       if (vendorInfo.gstNumber !== undefined) vendor.businessInfo.gstNumber = vendorInfo.gstNumber;
       if (vendorInfo.panNumber !== undefined) vendor.businessInfo.panNumber = vendorInfo.panNumber;
@@ -295,6 +465,25 @@ router.put('/profile', requireVendorRole, asyncHandler(async (req, res) => {
   // Save both user and vendor
   await Promise.all([user.save(), vendor.save()]);
 
+  // Calculate real statistics for the response
+  const [propertyCount, soldCount, messageCount, propertyValues] = await Promise.all([
+    Property.countDocuments({ owner: vendor.user }),
+    Property.countDocuments({ owner: vendor.user, status: 'sold' }),
+    Message.countDocuments({ recipient: vendor.user }),
+    Property.find({ owner: vendor.user, status: 'sold' }).select('price')
+  ]);
+
+  const totalValue = propertyValues.reduce((sum, prop) => {
+    const price = parseFloat(prop.price.toString().replace(/[^0-9.]/g, ''));
+    return sum + (isNaN(price) ? 0 : price);
+  }, 0);
+
+  const formatValue = (value) => {
+    if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)} Cr`;
+    if (value >= 100000) return `₹${(value / 100000).toFixed(1)} L`;
+    return `₹${value.toLocaleString()}`;
+  };
+
   // Return the combined profile in the same format as GET /profile
   const combinedProfile = {
     id: user._id,
@@ -310,7 +499,22 @@ router.put('/profile', requireVendorRole, asyncHandler(async (req, res) => {
       phone: user.profile.phone,
       avatar: user.profile.avatar,
       bio: user.profile.bio,
-      preferences: user.profile.preferences,
+      preferences: {
+        language: user.profile.preferences?.language || 'en',
+        currency: user.profile.preferences?.currency || 'INR',
+        notifications: {
+          email: user.profile.preferences?.notifications?.email ?? true,
+          push: user.profile.preferences?.notifications?.push ?? true,
+          newMessages: user.profile.preferences?.notifications?.newMessages ?? true,
+          newsUpdates: user.profile.preferences?.notifications?.newsUpdates ?? true,
+          marketing: user.profile.preferences?.notifications?.marketing ?? true,
+        },
+        privacy: {
+          showEmail: user.profile.preferences?.privacy?.showEmail ?? false,
+          showPhone: user.profile.preferences?.privacy?.showPhone ?? false,
+          allowMessages: user.profile.preferences?.privacy?.allowMessages ?? true,
+        }
+      },
       address: user.profile.address,
       vendorInfo: {
         licenseNumber: vendor.businessInfo?.licenseNumber,
@@ -343,11 +547,11 @@ router.put('/profile', requireVendorRole, asyncHandler(async (req, res) => {
       }
     },
     statistics: {
-      totalProperties: vendor.performance?.statistics?.totalProperties || 0,
+      totalProperties: propertyCount,
       totalFavorites: 0,
-      totalMessages: vendor.performance?.statistics?.totalLeads || 0,
-      totalSales: vendor.performance?.statistics?.soldProperties || 0,
-      totalValue: '₹0',
+      totalMessages: messageCount,
+      totalSales: soldCount,
+      totalValue: formatValue(totalValue),
     }
   };
 
@@ -370,10 +574,12 @@ router.get('/dashboard', requireVendorRole, asyncHandler(async (req, res) => {
     const now = new Date();
     const daysMap = { '7d': 7, '30d': 30, '90d': 90 };
     const days = daysMap[dateRange] || 7;
-    const dateFilter = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // Get vendor's properties count
-    const totalProperties = await Property.countDocuments({ owner: vendorId });
+    // Get vendor's properties
+    const vendorProperties = await Property.find({ owner: vendorId }).select('_id');
+    const propertyIds = vendorProperties.map(p => p._id);
+    const totalProperties = vendorProperties.length;
 
     // Get active leads (messages sent to this vendor)
     const activeLeads = await Message.countDocuments({
@@ -382,18 +588,40 @@ router.get('/dashboard', requireVendorRole, asyncHandler(async (req, res) => {
       status: { $in: ['unread', 'new'] }
     });
 
-    // Calculate total views across all properties
-    const viewsAggregation = await Property.aggregate([
-      { $match: { owner: new mongoose.Types.ObjectId(vendorId) } },
-      { $group: { _id: null, totalViews: { $sum: '$views' } } }
-    ]);
-    const propertyViews = viewsAggregation[0]?.totalViews || 0;
+    // Calculate total views from PropertyView collection (more accurate)
+    const totalViewsResult = await PropertyView.countDocuments({
+      property: { $in: propertyIds }
+    });
+    
+    // Fallback: If no PropertyView records exist, sum up views from Property model
+    let propertyViews = totalViewsResult;
+    if (totalViewsResult === 0 && vendorProperties.length > 0) {
+      const propertiesWithViews = await Property.find({ 
+        owner: vendorId 
+      }).select('views');
+      propertyViews = propertiesWithViews.reduce((sum, prop) => sum + (prop.views || 0), 0);
+    }
+    
+    // Get views for the selected date range
+    const dateRangeViews = await PropertyView.countDocuments({
+      property: { $in: propertyIds },
+      viewedAt: { $gte: startDate }
+    });
+    
+    // Calculate unique viewers
+    const uniqueViewers = await PropertyView.distinct('viewer', {
+      property: { $in: propertyIds },
+      viewedAt: { $gte: startDate },
+      viewer: { $ne: null }
+    });
+    
+    const dateRangeUniqueViews = uniqueViewers.length;
 
     // Get message stats
     const totalMessages = await Message.countDocuments({ recipient: vendorId });
     const unreadMessages = await Message.countDocuments({ 
       recipient: vendorId, 
-      status: 'unread' 
+      read: false
     });
 
     // Calculate total revenue from sold properties
@@ -457,34 +685,162 @@ router.get('/dashboard', requireVendorRole, asyncHandler(async (req, res) => {
       updatedAt: lead.updatedAt
     }));
 
-    // Real-time performance data - return empty array for now
+    // Generate performance data based on real property view tracking
     const performanceData = [];
+    
+    // Aggregate views by date using PropertyView collection
+    const viewsAggregation = await PropertyView.aggregate([
+      {
+        $match: {
+          property: { $in: propertyIds },
+          viewedAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$viewedAt" }
+          },
+          count: { $sum: 1 },
+          uniqueViewers: { $addToSet: "$viewer" },
+          interactions: {
+            $sum: {
+              $add: [
+                { $cond: ["$interactions.clickedPhone", 1, 0] },
+                { $cond: ["$interactions.clickedEmail", 1, 0] },
+                { $cond: ["$interactions.clickedWhatsApp", 1, 0] },
+                { $cond: ["$interactions.viewedGallery", 1, 0] }
+              ]
+            }
+          }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
 
-    // Build dashboard data with real values only
+    // Create a map for quick lookup
+    const viewsMap = new Map();
+    viewsAggregation.forEach(item => {
+      viewsMap.set(item._id, {
+        count: item.count,
+        uniqueViewers: item.uniqueViewers.filter(v => v !== null).length,
+        interactions: item.interactions
+      });
+    });
+    
+    // Aggregate leads by date
+    const leadsAggregation = await Message.aggregate([
+      {
+        $match: {
+          recipient: vendorId,
+          type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
+          createdAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
+
+    const leadsMap = new Map();
+    leadsAggregation.forEach(item => {
+      leadsMap.set(item._id, item.count);
+    });
+    
+    // Build performance data for each day
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateKey = date.toISOString().split('T')[0];
+      
+      // Format date for display
+      const dateStr = days === 7 
+        ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()]
+        : `${date.toLocaleString('en-US', { month: 'short' })} ${date.getDate()}`;
+      
+      const viewsData = viewsMap.get(dateKey) || { count: 0, uniqueViewers: 0, interactions: 0 };
+      const dailyLeads = leadsMap.get(dateKey) || 0;
+      
+      performanceData.push({
+        date: dateStr,
+        views: viewsData.count,
+        uniqueViews: viewsData.uniqueViewers,
+        interactions: viewsData.interactions,
+        leads: dailyLeads,
+        conversions: 0,
+        revenue: 0
+      });
+    }
+
+    // Calculate previous period data for trends
+    const previousPeriodStart = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
+    const previousPeriodEnd = startDate;
+    
+    const previousViews = await PropertyView.countDocuments({
+      property: { $in: propertyIds },
+      viewedAt: { $gte: previousPeriodStart, $lt: previousPeriodEnd }
+    });
+    
+    const previousLeads = await Message.countDocuments({
+      recipient: vendorId,
+      type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
+      createdAt: { $gte: previousPeriodStart, $lt: previousPeriodEnd }
+    });
+    
+    const previousProperties = await Property.countDocuments({
+      owner: vendorId,
+      createdAt: { $lt: previousPeriodEnd }
+    });
+    
+    // Calculate percentage changes
+    const viewsChange = previousViews > 0 
+      ? Math.round(((dateRangeViews - previousViews) / previousViews) * 100) 
+      : (dateRangeViews > 0 ? 100 : 0);
+    
+    const leadsChange = previousLeads > 0
+      ? Math.round(((activeLeads - previousLeads) / previousLeads) * 100)
+      : (activeLeads > 0 ? 100 : 0);
+    
+    const propertiesChange = previousProperties > 0
+      ? Math.round(((totalProperties - previousProperties) / previousProperties) * 100)
+      : (totalProperties > 0 ? 100 : 0);
+
+    // Build dashboard data with real values and trends
     const dashboardData = {
       stats: {
         totalProperties,
-        totalPropertiesChange: "0", // Real change calculation needed
+        totalPropertiesChange: `${propertiesChange >= 0 ? '+' : ''}${propertiesChange}%`,
         activeLeads,
-        activeLeadsChange: "0", // Real change calculation needed  
+        activeLeadsChange: `${leadsChange >= 0 ? '+' : ''}${leadsChange}%`,  
         propertyViews,
-        propertyViewsChange: "0%", // Real change calculation needed
+        propertyViewsChange: `${viewsChange >= 0 ? '+' : ''}${viewsChange}%`,
+        dateRangeViews,
+        uniqueViewers: dateRangeUniqueViews,
         unreadMessages,
         totalMessages,
         messagesChange: `${unreadMessages} unread`,
         totalRevenue,
-        revenueChange: "0%", // Real change calculation needed
+        revenueChange: "0%",
         conversionRate: Math.round(conversionRate * 10) / 10,
-        conversionChange: "0%" // Real change calculation needed
+        conversionChange: "0%"
       },
       recentProperties: formattedProperties,
       recentLeads: formattedLeads,
       performanceData,
       analytics: {
         monthlyPerformance: [],
-        leadsBySource: [], // Real lead source data needed
+        leadsBySource: [],
         propertyPerformance: [],
-        topPerformingAreas: [] // Real area performance data needed
+        topPerformingAreas: []
       },
       notifications: []
     };
@@ -527,7 +883,8 @@ router.get('/stats', requireVendorRole, asyncHandler(async (req, res) => {
     const totalMessages = await Message.countDocuments({ recipient: vendorId });
     const unreadMessages = await Message.countDocuments({ 
       recipient: vendorId, 
-      status: 'unread' 
+      status: 'unread',
+      read: false
     });
 
     const stats = {
@@ -698,43 +1055,92 @@ router.get('/performance', requireVendorRole, asyncHandler(async (req, res) => {
     const totalLeads = leadMessages;
     const totalConversions = conversions;
 
-    // Generate daily performance data
+    // Generate daily performance data using real view tracking
     const performanceData = [];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
+    // Get all vendor properties
+    const vendorProperties = await Property.find({ owner: vendorId }).select('_id');
+    const propertyIds = vendorProperties.map(p => p._id);
+    
     if (days === 7) {
-      // For 7-day view, show each day
+      // For 7-day view, show each day with real data
       for (let i = 6; i >= 0; i--) {
         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
         const dayName = dayNames[date.getDay()];
         
-        // Distribute data across days (simplified approach)
-        const dailyViews = Math.floor(totalViews / 7) + Math.floor(Math.random() * 50);
-        const dailyLeads = Math.floor(totalLeads / 7) + Math.floor(Math.random() * 3);
-        const dailyConversions = Math.floor(totalConversions / 7);
+        // Try PropertyView collection first, fallback to distributed views
+        let dailyViews = await PropertyView.countDocuments({
+          property: { $in: propertyIds },
+          viewedAt: { $gte: date, $lt: nextDate }
+        });
+        
+        // If PropertyView is empty, distribute total views evenly
+        if (dailyViews === 0 && totalViews > 0) {
+          dailyViews = Math.floor(totalViews / 7);
+        }
+        
+        // Get real leads count for this day
+        const dailyLeads = await Message.countDocuments({
+          recipient: vendorId,
+          type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
+          createdAt: { $gte: date, $lt: nextDate }
+        });
+        
+        // Get conversions (call requests, meeting requests)
+        const dailyConversions = await Message.countDocuments({
+          recipient: vendorId,
+          type: { $in: ['call_request', 'meeting_request'] },
+          createdAt: { $gte: date, $lt: nextDate }
+        });
         
         performanceData.push({
           date: dayName,
           leads: dailyLeads,
           views: dailyViews,
           conversions: dailyConversions,
-          revenue: 0 // Will be calculated when payment system is implemented
+          revenue: 0
         });
       }
     } else {
-      // For longer periods, group by weeks
+      // For longer periods, group by weeks with real data
       const weeksToShow = Math.min(8, Math.ceil(days / 7));
-      for (let i = 0; i < weeksToShow; i++) {
-        const weekViews = Math.floor(totalViews / weeksToShow);
-        const weekLeads = Math.floor(totalLeads / weeksToShow);
-        const weekConversions = Math.floor(totalConversions / weeksToShow);
+      for (let i = weeksToShow - 1; i >= 0; i--) {
+        const weekStart = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+        const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+        
+        // Try PropertyView collection first, fallback to distributed views
+        let weekViews = await PropertyView.countDocuments({
+          property: { $in: propertyIds },
+          viewedAt: { $gte: weekStart, $lt: weekEnd }
+        });
+        
+        // If PropertyView is empty, distribute total views evenly
+        if (weekViews === 0 && totalViews > 0) {
+          weekViews = Math.floor(totalViews / weeksToShow);
+        }
+        
+        // Get real weekly leads
+        const weekLeads = await Message.countDocuments({
+          recipient: vendorId,
+          type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
+          createdAt: { $gte: weekStart, $lt: weekEnd }
+        });
+        
+        // Get weekly conversions
+        const weekConversions = await Message.countDocuments({
+          recipient: vendorId,
+          type: { $in: ['call_request', 'meeting_request'] },
+          createdAt: { $gte: weekStart, $lt: weekEnd }
+        });
         
         performanceData.push({
-          date: `Week ${i + 1}`,
+          date: `Week ${weeksToShow - i}`,
           leads: weekLeads,
           views: weekViews,
           conversions: weekConversions,
-          revenue: 0 // Will be calculated when payment system is implemented
+          revenue: 0
         });
       }
     }
@@ -990,6 +1396,163 @@ router.patch('/leads/:id/status', requireVendorRole, asyncHandler(async (req, re
     res.status(500).json({
       success: false,
       message: 'Failed to update lead status'
+    });
+  }
+}));
+
+// @desc    Get vendor settings
+// @route   GET /api/vendors/settings
+// @access  Private/Agent
+router.get('/settings', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendor = req.vendor; // From requireVendorRole middleware
+
+  try {
+    // Get vendor settings
+    const settings = {
+      notifications: {
+        emailNotifications: vendor.settings?.notifications?.emailNotifications ?? true,
+        smsNotifications: vendor.settings?.notifications?.smsNotifications ?? true,
+        leadAlerts: vendor.settings?.notifications?.leadAlerts ?? true,
+        marketingEmails: vendor.settings?.notifications?.marketingEmails ?? false,
+        weeklyReports: vendor.settings?.notifications?.weeklyReports ?? true,
+      },
+      autoResponder: {
+        enabled: vendor.settings?.autoResponder?.enabled ?? false,
+        message: vendor.settings?.autoResponder?.message || 'Thank you for your interest! I will get back to you soon.',
+      },
+      preferences: {
+        language: 'en',
+        timezone: 'Asia/Kolkata',
+        currency: 'INR',
+      },
+      privacy: {
+        showEmail: vendor.settings?.privacy?.showEmail ?? false,
+        showPhone: vendor.settings?.privacy?.showPhone ?? true,
+        allowMessages: vendor.settings?.privacy?.allowMessages ?? true,
+      },
+      meta: {
+        lastUpdated: vendor.updatedAt?.toISOString(),
+        version: '2.0',
+        source: 'vendor-settings-api',
+      }
+    };
+
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error('Get vendor settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch vendor settings'
+    });
+  }
+}));
+
+// @desc    Update vendor settings
+// @route   PUT /api/vendors/settings
+// @access  Private/Agent
+router.put('/settings', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendor = req.vendor; // From requireVendorRole middleware
+  const { notifications, autoResponder, preferences, privacy, meta } = req.body;
+
+  try {
+    // Initialize settings if not exists
+    if (!vendor.settings) vendor.settings = {};
+    
+    // Update notifications settings
+    if (notifications) {
+      if (!vendor.settings.notifications) vendor.settings.notifications = {};
+      vendor.settings.notifications = {
+        ...vendor.settings.notifications,
+        ...notifications
+      };
+    }
+
+    // Update auto-responder settings
+    if (autoResponder) {
+      if (!vendor.settings.autoResponder) vendor.settings.autoResponder = {};
+      vendor.settings.autoResponder = {
+        ...vendor.settings.autoResponder,
+        ...autoResponder
+      };
+    }
+
+    // Update privacy settings
+    if (privacy) {
+      if (!vendor.settings.privacy) vendor.settings.privacy = {};
+      vendor.settings.privacy = {
+        ...vendor.settings.privacy,
+        ...privacy
+      };
+    }
+
+    // Update preferences (stored in settings for consistency)
+    if (preferences) {
+      if (!vendor.settings.preferences) vendor.settings.preferences = {};
+      vendor.settings.preferences = {
+        ...vendor.settings.preferences,
+        ...preferences
+      };
+    }
+
+    // Save vendor settings
+    await vendor.save();
+
+    // Return updated settings
+    const updatedSettings = {
+      notifications: vendor.settings.notifications,
+      autoResponder: vendor.settings.autoResponder,
+      preferences: vendor.settings.preferences || { language: 'en', timezone: 'Asia/Kolkata', currency: 'INR' },
+      privacy: vendor.settings.privacy,
+      meta: {
+        lastUpdated: new Date().toISOString(),
+        version: '2.0',
+        source: 'vendor-settings-api',
+      }
+    };
+
+    res.json({
+      success: true,
+      message: 'Vendor settings updated successfully',
+      data: updatedSettings
+    });
+  } catch (error) {
+    console.error('Update vendor settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update vendor settings'
+    });
+  }
+}));
+
+// @desc    Send vendor settings notification email
+// @route   POST /api/vendors/settings/email
+// @access  Private/Agent
+router.post('/settings/email', requireVendorRole, asyncHandler(async (req, res) => {
+  const { settingsType, message, supportEmail, timestamp, vendorInfo, source } = req.body;
+  
+  try {
+    // In a real implementation, you would send email using a service like SendGrid, Hostinger mail, etc.
+    // For now, we'll log the email details
+    console.log('Vendor Settings Email Notification:');
+    console.log('Type:', settingsType);
+    console.log('Message:', message);
+    console.log('Support Email:', supportEmail);
+    console.log('Timestamp:', timestamp);
+    console.log('Vendor Info:', vendorInfo);
+    console.log('Source:', source);
+
+    res.json({
+      success: true,
+      message: 'Email notification logged successfully'
+    });
+  } catch (error) {
+    console.error('Send settings email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send email notification'
     });
   }
 }));
@@ -1703,25 +2266,13 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
     // Get real analytics data from database
     const [
       totalProperties,
-      totalViews,
-      totalLeads,
       totalCalls,
       totalMessages,
-      previousViews,
       previousLeads,
       previousProperties
     ] = await Promise.all([
       // Current period data
       Property.countDocuments({ owner: vendorObjectId }),
-      Property.aggregate([
-        { $match: { owner: vendorObjectId } },
-        { $group: { _id: null, total: { $sum: '$views' } } }
-      ]),
-      Message.countDocuments({
-        recipient: vendorObjectId,
-        type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
-        createdAt: { $gte: currentStartDate, $lte: currentEndDate }
-      }),
       Message.countDocuments({
         recipient: vendorObjectId,
         type: 'call_request',
@@ -1732,15 +2283,6 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
         createdAt: { $gte: currentStartDate, $lte: currentEndDate }
       }),
       // Previous period data for trends
-      Property.aggregate([
-        { 
-          $match: { 
-            owner: vendorObjectId,
-            createdAt: { $gte: previousStartDate, $lte: previousEndDate }
-          } 
-        },
-        { $group: { _id: null, total: { $sum: '$views' } } }
-      ]),
       Message.countDocuments({
         recipient: vendorObjectId,
         type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
@@ -1752,12 +2294,31 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
       })
     ]);
 
-    const currentViews = totalViews[0]?.total || 0;
-    const currentLeads = totalLeads;
+    // Get property IDs for view tracking
+    const vendorProperties = await Property.find({ owner: vendorObjectId }).select('_id');
+    const propertyIds = vendorProperties.map(p => p._id);
+
+    // Get real views from PropertyView collection
+    const [currentViews, previousViews, currentLeads] = await Promise.all([
+      PropertyView.countDocuments({
+        property: { $in: propertyIds },
+        viewedAt: { $gte: currentStartDate, $lte: currentEndDate }
+      }),
+      PropertyView.countDocuments({
+        property: { $in: propertyIds },
+        viewedAt: { $gte: previousStartDate, $lte: previousEndDate }
+      }),
+      Message.countDocuments({
+        recipient: vendorObjectId,
+        type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
+        createdAt: { $gte: currentStartDate, $lte: currentEndDate }
+      })
+    ]);
+    
     const currentMessages = totalMessages;
     const currentCalls = totalCalls;
     
-    const prevViews = previousViews[0]?.total || 0;
+    const prevViews = previousViews;
     const prevLeads = previousLeads;
     const prevProperties = previousProperties;
 
@@ -1944,42 +2505,52 @@ router.get('/analytics/performance', requireVendorRole, asyncHandler(async (req,
           { name: 'Direct', value: 0 }
         ];
 
-    // Generate time series data
+    // Generate time series data from real tracking
     const viewsData = [];
     const leadsData = [];
     const conversionData = [];
     const revenueData = [];
 
-    // Generate daily data points
+    // Get property IDs for view tracking
+    const propertyIds = properties.map(p => p._id);
+
+    // Generate daily data points from real tracking
     for (let i = daysInPeriod - 1; i >= 0; i--) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split('T')[0];
       
-      // For simplicity, distribute data evenly (in production, you'd get daily metrics)
-      const totalViews = propertyPerformance.reduce((sum, prop) => sum + prop.views, 0);
-      const totalLeads = propertyPerformance.reduce((sum, prop) => sum + prop.leads, 0);
+      // Get real daily views from PropertyView collection
+      const dailyViews = await PropertyView.countDocuments({
+        property: { $in: propertyIds },
+        viewedAt: { $gte: date, $lt: nextDate }
+      });
+      
+      // Get real daily leads
+      const dailyLeads = await Message.countDocuments({
+        recipient: vendorObjectId,
+        type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
+        createdAt: { $gte: date, $lt: nextDate }
+      });
       
       viewsData.push({
         name: dateStr,
-        value: Math.floor(totalViews / daysInPeriod) + Math.floor(Math.random() * 20)
+        value: dailyViews
       });
       
       leadsData.push({
         name: dateStr,
-        value: Math.floor(totalLeads / daysInPeriod) + Math.floor(Math.random() * 3)
+        value: dailyLeads
       });
-      
-      const dayViews = viewsData[viewsData.length - 1].value;
-      const dayLeads = leadsData[leadsData.length - 1].value;
       
       conversionData.push({
         name: dateStr,
-        value: dayViews > 0 ? Math.round((dayLeads / dayViews) * 100 * 100) / 100 : 0
+        value: dailyViews > 0 ? Math.round((dailyLeads / dailyViews) * 100 * 100) / 100 : 0
       });
       
       revenueData.push({
         name: dateStr,
-        value: 0 // Will be calculated when payment system is implemented
+        value: 0
       });
     }
 

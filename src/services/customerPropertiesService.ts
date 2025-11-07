@@ -305,7 +305,18 @@ class CustomerPropertiesService {
         body: JSON.stringify({ featured }),
       });
       return response;
-    } catch (error) {
+    } catch (error: any) {
+      const errorData = error.response?.data || error;
+      
+      // Show specific message for subscription-related errors
+      if (errorData.upgradeRequired || errorData.limitReached) {
+        toast({
+          title: errorData.limitReached ? "Featured Limit Reached" : "Upgrade Required",
+          description: `${errorData.message || 'Failed to toggle property featured status'} Visit the Subscription Plans page to upgrade.`,
+          variant: "destructive",
+        });
+      }
+      
       console.error('Failed to toggle property featured status:', error);
       throw error;
     }
@@ -466,3 +477,7 @@ class CustomerPropertiesService {
 
 export const customerPropertiesService = new CustomerPropertiesService();
 export default customerPropertiesService;
+
+function toast(arg0: { title: string; description: string; variant: string; }) {
+  throw new Error('Function not implemented.');
+}

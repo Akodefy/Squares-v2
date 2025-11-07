@@ -56,7 +56,7 @@ const verifyVendorProfiles = async () => {
           user: user._id,
           businessInfo: {
             companyName: `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim() || user.email.split('@')[0],
-            businessType: 'individual'
+            businessType: 'real_estate_agent'
           },
           professionalInfo: {
             experience: 0,

@@ -24,6 +24,7 @@ export const useRealTimeNotifications = () => {
   const [notifications, setNotifications] = useState<RealTimeNotification[]>([]);
   const [stats, setStats] = useState<NotificationStats | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const notificationIdsRef = useRef<Set<string>>(new Set());
   const { user } = useAuth();
 
   // Connect to notification stream
@@ -33,16 +34,16 @@ export const useRealTimeNotifications = () => {
       return;
     }
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-    // EventSource doesn't support custom headers, so pass token as query param
-    const url = `${baseUrl}/api/notifications/stream?token=${encodeURIComponent(token)}`;
+    // Use VITE_API_URL which includes /api
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    const url = `${apiUrl}/notifications/stream?token=${encodeURIComponent(token)}`;
 
-    const eventSource = new EventSource(url, {
-      withCredentials: true,
-    });
+    console.log('Connecting to notification stream:', url);
+
+    const eventSource = new EventSource(url);
 
     eventSource.onopen = () => {
-      console.log('Connected to real-time notifications');
+      console.log('✅ Connected to real-time notifications');
       setIsConnected(true);
     };
 
@@ -50,11 +51,39 @@ export const useRealTimeNotifications = () => {
       try {
         const notification: RealTimeNotification = JSON.parse(event.data);
         
-        // Handle different notification types
+        // Create unique ID for deduplication
+        const notificationId = `${notification.type}-${notification.timestamp}-${notification.userId}`;
+        
+        // Skip if already processed
+        if (notificationIdsRef.current.has(notificationId)) {
+          console.log('⏭️ Skipping duplicate notification:', notificationId);
+          return;
+        }
+        
+        // Skip connection messages
+        if (notification.type === 'connection') {
+          console.log('Connected to notification stream');
+          return;
+        }
+        
+        console.log('📬 Received notification:', notification);
+        
+        // Add to processed set
+        notificationIdsRef.current.add(notificationId);
+        
+        // Limit set size to prevent memory leaks
+        if (notificationIdsRef.current.size > 100) {
+          const firstId = Array.from(notificationIdsRef.current)[0];
+          notificationIdsRef.current.delete(firstId);
+        }
+        
         handleNotification(notification);
         
-        // Add to notifications list
-        setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Keep last 50
+        // Keep only last 20 notifications
+        setNotifications(prev => {
+          const updated = [notification, ...prev];
+          return updated.slice(0, 20);
+        });
         
       } catch (error) {
         console.error('Error parsing notification:', error);
@@ -62,20 +91,18 @@ export const useRealTimeNotifications = () => {
     };
 
     eventSource.onerror = (error) => {
-      console.error('Notification stream error:', error);
+      console.error('❌ Notification stream error:', error);
       setIsConnected(false);
       
-      // Close the current connection
       if (eventSourceRef.current === eventSource) {
         eventSource.close();
         eventSourceRef.current = null;
       }
       
-      // Attempt to reconnect after delay (only if user is still authenticated)
       setTimeout(() => {
         const currentToken = authService.getToken();
         if (user && currentToken && !eventSourceRef.current) {
-          console.log('Attempting to reconnect to notification stream...');
+          console.log('🔄 Attempting to reconnect to notification stream...');
           connect();
         }
       }, 5000);
@@ -95,11 +122,6 @@ export const useRealTimeNotifications = () => {
 
   // Handle different types of notifications
   const handleNotification = (notification: RealTimeNotification) => {
-    // Skip connection messages
-    if (notification.type === 'connection') {
-      return;
-    }
-
     // Show toast notification based on type
     const notificationConfig = getNotificationConfig(notification);
     
@@ -247,7 +269,8 @@ export const useRealTimeNotifications = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/notifications/test`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${apiUrl}/notifications/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -283,7 +306,8 @@ export const useRealTimeNotifications = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/notifications/stats`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${apiUrl}/notifications/stats`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -308,6 +332,7 @@ export const useRealTimeNotifications = () => {
   // Clear all notifications
   const clearNotifications = () => {
     setNotifications([]);
+    notificationIdsRef.current.clear();
   };
 
   // Mark notification as read (if you want to implement read status)

@@ -106,7 +106,7 @@ async function testVendorLocationIntegration() {
     const testVendorData = {
       businessInfo: {
         companyName: 'Test Location Vendor',
-        businessType: 'individual',
+        businessType: 'real_estate_agent',
         licenseNumber: 'TEST123'
       },
       contactInfo: {

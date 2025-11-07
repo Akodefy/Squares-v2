@@ -249,11 +249,11 @@ const VendorDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Performance Chart */}
+        {/* Performance Chart - Stock Market Style */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Leads & Views Performance
+              Views Performance
               <div className="flex gap-2">
                 {["7d", "30d", "90d"].map((range) => (
                   <Button
@@ -271,32 +271,75 @@ const VendorDashboard = () => {
           <CardContent>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
+                <LineChart 
+                  data={chartData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <defs>
+                    <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    stroke="hsl(var(--border))" 
+                    opacity={0.3}
+                    vertical={false}
+                  />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}`}
+                  />
                   <Tooltip 
                     contentStyle={{
-                      backgroundColor: 'hsl(var(--background))',
+                      backgroundColor: 'hsl(var(--popover))',
                       border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                      color: 'hsl(var(--foreground))'
+                      borderRadius: '8px',
+                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                      color: 'hsl(var(--popover-foreground))',
+                      fontSize: '13px'
                     }}
                     labelStyle={{
-                      color: 'hsl(var(--foreground))'
+                      color: 'hsl(var(--popover-foreground))',
+                      fontWeight: 600,
+                      marginBottom: '4px'
                     }}
+                    cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
                   />
-                  <Bar dataKey="views" fill="#8884d8" name="Views" />
-                  <Bar dataKey="leads" fill="#82ca9d" name="Leads" />
-                </BarChart>
+                  <Line 
+                    type="monotone" 
+                    dataKey="views" 
+                    stroke="#10b981" 
+                    strokeWidth={2.5}
+                    dot={false}
+                    activeDot={{ 
+                      r: 5, 
+                      fill: '#10b981',
+                      stroke: '#fff',
+                      strokeWidth: 2
+                    }}
+                    name="Views"
+                    fill="url(#colorViews)"
+                  />
+                </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex flex-col items-center justify-center h-[300px] text-center">
                 <Activity className="w-16 h-16 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold text-muted-foreground mb-2">No Performance Data</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Performance metrics will appear here once your properties start receiving views and generating leads.
+                  Performance metrics will appear here once your properties start receiving views.
                 </p>
               </div>
             )}

@@ -73,7 +73,9 @@ export const useVendorDashboard = (
 
   const refreshStats = useCallback(async () => {
     try {
-      const stats = await vendorDashboardService.getVendorStats();
+      const stats = await vendorDashboardService.getVendorStats(
+        filtersRef.current.dateRange || '7d'
+      );
       updateState({ stats });
     } catch (error) {
       console.error("Failed to refresh vendor stats:", error);
@@ -103,7 +105,9 @@ export const useVendorDashboard = (
 
   const refreshPerformance = useCallback(async () => {
     try {
-      const performanceData = await vendorDashboardService.getPerformanceData();
+      const performanceData = await vendorDashboardService.getPerformanceData(
+        filtersRef.current.dateRange || '7d'
+      );
       updateState({ performanceData });
     } catch (error) {
       console.error("Failed to refresh performance data:", error);
@@ -145,6 +149,7 @@ export const useVendorDashboard = (
 
   const updateFilters = useCallback((filters: VendorFilters) => {
     filtersRef.current = { ...filtersRef.current, ...filters };
+    // Refresh entire dashboard with new filters
     refreshData();
   }, [refreshData]);
 

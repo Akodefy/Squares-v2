@@ -1,5 +1,6 @@
 const express = require('express');
 const Property = require('../models/Property');
+const PropertyView = require('../models/PropertyView');
 const { asyncHandler, validateRequest } = require('../middleware/errorMiddleware');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
@@ -165,7 +166,22 @@ router.get('/:id', asyncHandler(async (req, res) => {
       } : null
     });
 
-    // Increment view count (need to update without lean())
+    // Track property view using PropertyView model
+    const sessionId = req.sessionID || req.ip + '-' + Date.now();
+    const viewData = {
+      property: property._id,
+      viewer: req.user?.id || null,
+      sessionId,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('user-agent'),
+      referrer: req.get('referer'),
+      viewedAt: new Date()
+    };
+    
+    // Create view record
+    await PropertyView.create(viewData);
+    
+    // Increment view count in property
     await Property.findByIdAndUpdate(id, { $inc: { views: 1 } });
 
     res.json({
@@ -443,6 +459,56 @@ router.patch('/:id/featured', authenticateToken, asyncHandler(async (req, res) =
         success: false,
         message: 'Not authorized to update this property'
       });
+    }
+
+    // For non-admin users, check subscription limits when featuring a property
+    if (!isAdmin && featured === true && !property.featured) {
+      const Subscription = require('../models/Subscription');
+      
+      // Check if user has active subscription with featured listing limits
+      const activeSubscription = await Subscription.findOne({
+        user: property.owner,
+        status: 'active',
+        endDate: { $gt: new Date() }
+      }).populate('plan');
+
+      if (!activeSubscription || !activeSubscription.plan) {
+        return res.status(403).json({
+          success: false,
+          message: 'No active subscription found. Please subscribe to a plan to feature properties.'
+        });
+      }
+
+      const plan = activeSubscription.plan;
+      const featuredLimit = plan.limits?.featuredListings || 0;
+
+      // Check if plan allows featured listings
+      if (featuredLimit === 0 && plan.identifier !== 'enterprise' && plan.identifier !== 'premium') {
+        return res.status(403).json({
+          success: false,
+          message: `Your current plan (${plan.name}) does not include featured listings. Please upgrade to feature properties.`,
+          upgradeRequired: true
+        });
+      }
+
+      // For plans with limited featured listings, check current count
+      if (featuredLimit > 0) {
+        const currentFeaturedCount = await Property.countDocuments({
+          owner: property.owner,
+          featured: true,
+          _id: { $ne: id } // Exclude current property
+        });
+
+        if (currentFeaturedCount >= featuredLimit) {
+          return res.status(403).json({
+            success: false,
+            message: `Featured listing limit reached (${featuredLimit}). Please upgrade your plan or unfeature other properties.`,
+            limitReached: true,
+            currentCount: currentFeaturedCount,
+            maxLimit: featuredLimit
+          });
+        }
+      }
     }
 
     // Update property featured status

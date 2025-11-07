@@ -486,6 +486,10 @@ class PropertyService {
       const response = await this.makeRequest<{
         success: boolean;
         message: string;
+        upgradeRequired?: boolean;
+        limitReached?: boolean;
+        currentCount?: number;
+        maxLimit?: number;
       }>(`/properties/${propertyId}/featured`, {
         method: "PATCH",
         body: JSON.stringify({ featured }),
@@ -497,15 +501,26 @@ class PropertyService {
           description: `Property ${featured ? 'featured' : 'unfeatured'} successfully!`,
         });
       } else {
-        throw new Error("Failed to update property featured status");
+        throw new Error(response.message || "Failed to update property featured status");
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to update property featured status";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      const errorData = error.response?.data || error;
+      const errorMessage = errorData.message || error.message || "Failed to update property featured status";
+      
+      // Show specific message for subscription-related errors
+      if (errorData.upgradeRequired || errorData.limitReached) {
+        toast({
+          title: errorData.limitReached ? "Featured Limit Reached" : "Upgrade Required",
+          description: `${errorMessage} Visit the Subscription Plans page to upgrade.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
       throw error;
     }
   }

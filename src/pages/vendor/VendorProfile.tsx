@@ -286,16 +286,21 @@ const VendorProfilePage: React.FC = () => {
         ...profile,
         profile: {
           ...profile.profile,
-          preferences: profile.profile.preferences || {
-            language: 'en',
-            currency: 'INR',
+          preferences: {
+            language: profile.profile.preferences?.language || 'en',
+            currency: profile.profile.preferences?.currency || 'INR',
             notifications: {
-              email: true,
-              push: true,
-              newMessages: true,
-              newsUpdates: true,
-              marketing: true,
+              email: profile.profile.preferences?.notifications?.email ?? true,
+              push: profile.profile.preferences?.notifications?.push ?? true,
+              newMessages: profile.profile.preferences?.notifications?.newMessages ?? true,
+              newsUpdates: profile.profile.preferences?.notifications?.newsUpdates ?? true,
+              marketing: profile.profile.preferences?.notifications?.marketing ?? true,
             },
+            privacy: {
+              showEmail: profile.profile.preferences?.privacy?.showEmail ?? false,
+              showPhone: profile.profile.preferences?.privacy?.showPhone ?? false,
+              allowMessages: profile.profile.preferences?.privacy?.allowMessages ?? true,
+            }
           },
         },
       };
@@ -672,10 +677,24 @@ const VendorProfilePage: React.FC = () => {
           lastName: formData.profile.lastName,
           phone: formData.profile.phone,
           bio: formData.profile.bio,
-          preferences: formData.profile.preferences,
+          preferences: {
+            language: formData.profile.preferences?.language || 'en',
+            currency: formData.profile.preferences?.currency || 'INR',
+            notifications: {
+              email: formData.profile.preferences?.notifications?.email ?? true,
+              push: formData.profile.preferences?.notifications?.push ?? true,
+              newMessages: formData.profile.preferences?.notifications?.newMessages ?? true,
+              newsUpdates: formData.profile.preferences?.notifications?.newsUpdates ?? true,
+              marketing: formData.profile.preferences?.notifications?.marketing ?? true,
+            },
+            privacy: {
+              showEmail: formData.profile.preferences?.privacy?.showEmail ?? false,
+              showPhone: formData.profile.preferences?.privacy?.showPhone ?? false,
+              allowMessages: formData.profile.preferences?.privacy?.allowMessages ?? true,
+            }
+          },
           address: {
             ...formData.profile.address,
-            // Ensure all address fields are properly included
             street: formData.profile.address?.street || "",
             state: formData.profile.address?.state || "",
             district: formData.profile.address?.district || "",
@@ -1263,6 +1282,42 @@ const VendorProfilePage: React.FC = () => {
                   ) : (
                     <p className="text-sm">
                       {formData.profile.vendorInfo?.companyName || "Not provided"}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="businessType">Business Type</Label>
+                  {isEditing ? (
+                    <Select
+                      value={formData.profile.vendorInfo?.businessType || ""}
+                      onValueChange={(value) =>
+                        updateFormField("profile.vendorInfo.businessType", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select business type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="real_estate_agent">Real Estate Agent</SelectItem>
+                        <SelectItem value="property_developer">Property Developer</SelectItem>
+                        <SelectItem value="construction_company">Construction Company</SelectItem>
+                        <SelectItem value="interior_designer">Interior Designer</SelectItem>
+                        <SelectItem value="legal_services">Legal Services</SelectItem>
+                        <SelectItem value="home_loan_provider">Home Loan Provider</SelectItem>
+                        <SelectItem value="packers_movers">Packers & Movers</SelectItem>
+                        <SelectItem value="property_management">Property Management</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm">
+                      {formData.profile.vendorInfo?.businessType 
+                        ? formData.profile.vendorInfo.businessType
+                            .split('_')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ')
+                        : "Not provided"}
                     </p>
                   )}
                 </div>

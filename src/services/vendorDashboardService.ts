@@ -9,6 +9,8 @@ export interface VendorStats {
   activeLeadsChange: string;
   propertyViews: number;
   propertyViewsChange: string;
+  dateRangeViews?: number;
+  uniqueViewers?: number;
   unreadMessages: number;
   totalMessages: number;
   messagesChange: string;
@@ -51,8 +53,10 @@ export interface Lead {
 
 export interface PerformanceData {
   date: string;
-  leads: number;
   views: number;
+  uniqueViews?: number;
+  interactions?: number;
+  leads: number;
   conversions: number;
   revenue: number;
 }

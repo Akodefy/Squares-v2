@@ -23,21 +23,21 @@ router.get('/search/suggestions', asyncHandler(async (req, res) => {
     Property.aggregate([
       {
         $match: {
-          status: 'approved',
+          status: { $in: ['available', 'active'] },
           $or: [
-            { 'location.city': searchRegex },
-            { 'location.state': searchRegex },
-            { 'location.locality': searchRegex },
-            { 'location.pincode': searchRegex }
+            { 'address.city': searchRegex },
+            { 'address.state': searchRegex },
+            { 'address.locality': searchRegex },
+            { 'address.pincode': searchRegex }
           ]
         }
       },
       {
         $group: {
           _id: {
-            city: '$location.city',
-            state: '$location.state',
-            locality: '$location.locality'
+            city: '$address.city',
+            state: '$address.state',
+            locality: '$address.locality'
           },
           count: { $sum: 1 }
         }
@@ -45,13 +45,13 @@ router.get('/search/suggestions', asyncHandler(async (req, res) => {
       { $limit: 5 }
     ]),
     Property.find({
-      status: 'approved',
+      status: { $in: ['available', 'active'] },
       $or: [
         { title: searchRegex },
         { description: searchRegex }
       ]
     })
-    .select('title location type')
+    .select('title address type')
     .limit(5)
     .lean()
   ]);
@@ -76,7 +76,7 @@ router.get('/search/suggestions', asyncHandler(async (req, res) => {
 
   // Add property suggestions
   propertyMatches.forEach(prop => {
-    const locationStr = [prop.location?.locality, prop.location?.city]
+    const locationStr = [prop.address?.locality, prop.address?.city]
       .filter(Boolean)
       .join(', ');
     

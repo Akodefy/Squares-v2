@@ -47,7 +47,7 @@ const migrateVendorData = async () => {
           // Business Information
           businessInfo: {
             companyName: vendorInfo.companyName || `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim() || 'Unknown Business',
-            businessType: 'individual', // Default value
+            businessType: 'real_estate_agent', // Default value
             licenseNumber: vendorInfo.licenseNumber || undefined,
             gstNumber: vendorInfo.gstNumber || undefined,
             panNumber: vendorInfo.panNumber || undefined,
