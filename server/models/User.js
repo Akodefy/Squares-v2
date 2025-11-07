@@ -24,6 +24,14 @@ const userSchema = new mongoose.Schema({
     enum: ['pending', 'active', 'suspended', 'inactive'],
     default: 'pending'
   },
+  isOnline: {
+    type: Boolean,
+    default: false
+  },
+  lastSeen: {
+    type: Date,
+    default: null
+  },
   isGuest: {
     type: Boolean,
     default: false
@@ -74,7 +82,10 @@ const userSchema = new mongoose.Schema({
       notifications: {
         email: { type: Boolean, default: true },
         sms: { type: Boolean, default: false },
-        push: { type: Boolean, default: true }
+        push: { type: Boolean, default: true },
+        desktop: { type: Boolean, default: true },
+        sound: { type: Boolean, default: true },
+        typing: { type: Boolean, default: true }
       },
       privacy: {
         showEmail: { type: Boolean, default: false },

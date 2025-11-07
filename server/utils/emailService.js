@@ -125,7 +125,7 @@ const emailTemplates = {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #2563eb; margin: 0;">Ninety Nine Acres</h1>
+          <h1 style="color: #2563eb; margin: 0;">BuildHomeMartSquares</h1>
           <p style="color: #666; margin: 5px 0 0 0;">Property Inquiry Notification</p>
         </div>
         
@@ -152,7 +152,7 @@ const emailTemplates = {
         </div>
         
         <div style="text-align: center; color: #94a3b8; font-size: 12px;">
-          <p>&copy; 2024 Ninety Nine Acres. All rights reserved.</p>
+          <p>&copy; 2024 BuildHomeMartSquares. All rights reserved.</p>
         </div>
       </div>
     `

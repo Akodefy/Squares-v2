@@ -36,7 +36,7 @@ const GenerateReports = () => {
   const handleDownloadReport = (format: 'json' | 'csv' | 'pdf' | 'excel') => {
     if (!reportResult) return;
 
-    const fileName = `${reportResult.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().getTime()}`;
+    const fileName = `buildhomemartsquares_${reportResult.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().getTime()}`;
 
     if (format === 'json') {
       const dataStr = JSON.stringify(reportResult.reportData, null, 2);

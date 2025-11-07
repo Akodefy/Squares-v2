@@ -685,7 +685,7 @@ router.post('/forgot-password', validateRequest(forgotPasswordSchema), asyncHand
   try {
     await sendEmail({
       to: email,
-      subject: 'Password Reset - Ninety Nine Acres',
+      subject: 'Password Reset - BuildHomeMartSquares',
       template: 'password-reset',
       data: {
         firstName: user.profile.firstName || 'User',

@@ -4,55 +4,56 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api"
 
 export interface Message {
   _id: string;
-  conversationId: string;
   sender: {
     _id: string;
     email: string;
     profile: {
       firstName: string;
       lastName: string;
-      phone?: string;
-      avatar?: string;
     };
   };
-  recipient: {
+  receiver: {
     _id: string;
     email: string;
     profile: {
       firstName: string;
       lastName: string;
-      phone?: string;
-      avatar?: string;
     };
   };
-  subject?: string;
-  message: string;
-  type?: 'inquiry' | 'lead' | 'property_inquiry' | 'contact' | 'general' | 'auto_response';
-  status?: 'unread' | 'read' | 'responded';
-  priority?: 'low' | 'medium' | 'high';
-  read: boolean;
+  content: string;
+  message?: string;
+  type?: 'auto_response' | 'inquiry' | 'lead' | 'property_inquiry' | 'general';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  status?: 'unread' | 'read' | 'responded' | 'archived';
   property?: {
     _id: string;
     title: string;
-    price: number;
-    listingType?: 'sale' | 'rent';
-    address: {
-      locality: string;
-      city: string;
-      state: string;
-    };
   };
+  timestamp: string;
+  createdAt?: string;
+  read: boolean;
+  isRead?: boolean; // Alias for read
   attachments?: Array<{
     type: 'image' | 'document';
     url: string;
     name: string;
+    size?: number;
   }>;
-  createdAt: string;
-  updatedAt: string;
-  readAt?: string;
 }
 
-export interface Conversation {
+export interface UserStatus {
+  userId: string;
+  isOnline: boolean;
+  lastSeen: string;
+  isTyping?: boolean;
+}
+
+export interface TypingStatus {
+  conversationId: string;
+  userId: string;
+  isTyping: boolean;
+  timestamp: string;
+}export interface Conversation {
   id: string; // This is the conversationId
   _id?: string; // Alias for id
   property?: {
@@ -435,11 +436,140 @@ class MessageService {
     }
   }
 
+    async updateTypingStatus(conversationId: string, isTyping: boolean): Promise<void> {
+    try {
+      if (!conversationId) {
+        console.warn('Cannot update typing status: conversationId is missing');
+        return;
+      }
+
+      await this.makeRequest<{
+        success: boolean;
+        data: { userId: string; conversationId: string; isTyping: boolean };
+      }>(`/messages/typing-status`, {
+        method: "POST",
+        body: JSON.stringify({ conversationId, isTyping }),
+      });
+    } catch (error) {
+      console.error("Failed to update typing status:", error);
+    }
+  }
+
+  async getTypingStatus(conversationId: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: { isTyping: boolean; userId: string };
+      }>(`/messages/typing-status/${conversationId}`);
+
+      return response.data.isTyping;
+    } catch (error) {
+      console.error("Failed to get typing status:", error);
+      return false;
+    }
+  }
+
+  async updateOnlineStatus(status: 'online' | 'offline'): Promise<void> {
+    try {
+      await this.makeRequest<{
+        success: boolean;
+        data: { userId: string; isOnline: boolean; lastSeen: string };
+      }>(`/messages/online-status`, {
+        method: "POST",
+        body: JSON.stringify({ status }),
+      });
+    } catch (error) {
+      console.error("Failed to update online status:", error);
+    }
+  }
+
+  async getUserOnlineStatus(userId: string): Promise<{ isOnline: boolean; lastSeen: Date | null }> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: { userId: string; isOnline: boolean; lastSeen: string | null };
+      }>(`/messages/online-status/${userId}`);
+
+      return {
+        isOnline: response.data.isOnline,
+        lastSeen: response.data.lastSeen ? new Date(response.data.lastSeen) : null
+      };
+    } catch (error) {
+      console.error("Failed to get online status:", error);
+      return { isOnline: false, lastSeen: null };
+    }
+  }
+
+  async getNotificationPreferences(): Promise<{
+    email: boolean;
+    sms: boolean;
+    push: boolean;
+    desktop: boolean;
+    sound: boolean;
+    typing: boolean;
+  }> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: {
+          notifications: {
+            email: boolean;
+            sms: boolean;
+            push: boolean;
+            desktop: boolean;
+            sound: boolean;
+            typing: boolean;
+          };
+        };
+      }>(`/messages/notification-preferences`);
+
+      return response.data.notifications;
+    } catch (error) {
+      console.error("Failed to get notification preferences:", error);
+      return { email: true, sms: false, push: true, desktop: true, sound: true, typing: true };
+    }
+  }
+
+  async updateNotificationPreferences(preferences: {
+    email?: boolean;
+    sms?: boolean;
+    push?: boolean;
+    desktop?: boolean;
+    sound?: boolean;
+    typing?: boolean;
+  }): Promise<void> {
+    try {
+      await this.makeRequest<{
+        success: boolean;
+        data: { notifications: any };
+      }>(`/messages/notification-preferences`, {
+        method: "PUT",
+        body: JSON.stringify(preferences),
+      });
+    } catch (error) {
+      console.error("Failed to update notification preferences:", error);
+    }
+  }
+
+  async getUnreadCount(): Promise<number> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: { unreadCount: number };
+      }>(`/messages/unread-count`);
+
+      return response.data.unreadCount;
+    } catch (error) {
+      console.error("Failed to get unread count:", error);
+      return 0;
+    }
+  }
+
   async updateActiveStatus(conversationId: string, status: 'typing' | 'online' | 'offline'): Promise<void> {
     try {
       // Skip active status updates if conversationId is missing or empty
       if (!conversationId) {
-        console.log("Skipping active status update: No conversation ID provided");
+        console.warn('Cannot update active status: conversationId is missing');
         return;
       }
 
@@ -458,18 +588,15 @@ class MessageService {
       });
 
       if (!response.success) {
-        throw new Error("Failed to update active status");
+        console.error("Failed to update active status:", response.message);
       }
     } catch (error) {
       // Check if the error is about admin conversations (different architecture)
-      if (error.message?.includes('Conversation ID and status are required') || 
-          error.message?.includes('not part of this conversation')) {
-        console.log("Skipping active status update for admin conversation");
-        return;
+      if (error instanceof Error && error.message.includes('admin')) {
+        console.warn('Active status not available for admin conversations');
+      } else {
+        console.error("Failed to update active status:", error);
       }
-      
-      console.error("Failed to update active status:", error);
-      // Don't show toast for this - it should be silent
     }
   }
 
@@ -553,21 +680,106 @@ class MessageService {
     return `${user.profile.firstName} ${user.profile.lastName}`;
   }
 
+  async markAsRead(conversationId: string, messageIds?: string[]): Promise<void> {
+    try {
+      await this.markConversationAsRead(conversationId);
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+    }
+  }
+
+  async getUserStatus(userId: string): Promise<UserStatus> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: {
+          userId: string;
+          isOnline: boolean;
+          lastSeen: string | Date;
+        };
+      }>(`/messages/online-status/${userId}`);
+
+      if (response.success && response.data) {
+        return {
+          userId: response.data.userId,
+          isOnline: response.data.isOnline || false,
+          lastSeen: response.data.lastSeen ? new Date(response.data.lastSeen).toISOString() : new Date().toISOString(),
+          isTyping: false
+        };
+      }
+
+      return {
+        userId,
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
+        isTyping: false
+      };
+    } catch (error) {
+      console.error("Failed to get user status:", error);
+      return {
+        userId,
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
+        isTyping: false
+      };
+    }
+  }
+
+  async setTypingStatus(conversationId: string, isTyping: boolean): Promise<void> {
+    try {
+      await this.updateTypingStatus(conversationId, isTyping);
+    } catch (error) {
+      console.error("Failed to set typing status:", error);
+    }
+  }
+
+  async updateUserActivity(status: 'online' | 'offline' | 'idle' = 'online'): Promise<void> {
+    try {
+      const apiStatus = status === 'online' ? 'online' : 'offline';
+      await this.updateOnlineStatus(apiStatus);
+    } catch (error) {
+      console.error("Failed to update user activity:", error);
+    }
+  }
+
   formatTime(dateString: string): string {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    if (!dateString) return 'recently';
     
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hr ago`;
-    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} day ago`;
-    
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-    });
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'recently';
+      }
+      
+      const now = new Date();
+      const diffInMs = now.getTime() - date.getTime();
+      
+      // Handle future dates (clock skew)
+      if (diffInMs < 0) return 'Just now';
+      
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      
+      if (diffInMinutes < 1) return 'Just now';
+      if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+      
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      if (diffInHours < 24) return `${diffInHours} hr ago`;
+      
+      const diffInDays = Math.floor(diffInHours / 24);
+      if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+      
+      // Format as date for older timestamps
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    } catch (error) {
+      console.error('Error formatting time:', error, dateString);
+      return 'recently';
+    }
   }
 
   formatPrice(price: number, listingType: 'sale' | 'rent'): string {
@@ -584,21 +796,30 @@ class MessageService {
     }
   }
 
-  getPriorityColor(priority: Message['priority']): string {
+  getPriorityColor(priority?: 'low' | 'medium' | 'high' | 'urgent'): string {
     switch (priority) {
-      case "high": return "bg-red-500";
-      case "medium": return "bg-yellow-500";
-      case "low": return "bg-green-500";
-      default: return "bg-gray-500";
+      case "high":
+      case "urgent":
+        return "bg-red-500";
+      case "medium":
+        return "bg-yellow-500";
+      case "low":
+        return "bg-green-500";
+      default:
+        return "bg-gray-500";
     }
   }
 
-  getStatusColor(status: Message['status']): string {
+  getStatusColor(status?: 'unread' | 'read' | 'responded' | 'archived'): string {
     switch (status) {
-      case "unread": return "bg-red-500";
-      case "read": return "bg-yellow-500";
-      case "responded": return "bg-green-500";
-      default: return "bg-gray-500";
+      case "unread":
+        return "bg-red-500";
+      case "read":
+        return "bg-yellow-500";
+      case "responded":
+        return "bg-green-500";
+      default:
+        return "bg-gray-500";
     }
   }
 
@@ -636,11 +857,11 @@ class MessageService {
   // Check if a message is an auto-response
   isAutoResponse(message: Message): boolean {
     return message.type === 'auto_response' || 
-           (message.message && 
-            (message.message.startsWith('🤖') ||
-             message.message.toLowerCase().includes('auto-response') ||
-             message.message.toLowerCase().includes('automatic response') ||
-             message.message.toLowerCase().includes('i\'ll get back to you')));
+           ((message.message || message.content) && 
+            ((message.message || message.content).startsWith('🤖') ||
+             (message.message || message.content).toLowerCase().includes('auto-response') ||
+             (message.message || message.content).toLowerCase().includes('automatic response') ||
+             (message.message || message.content).toLowerCase().includes('i\'ll get back to you')));
   }
 
   // Get auto-response indicator

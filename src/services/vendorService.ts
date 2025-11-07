@@ -624,14 +624,9 @@ class VendorService {
         // Update localStorage with synced data
         localStorage.setItem('dynamicVendorSettings', JSON.stringify(response.data));
         
-        // Send email notification if enabled
-        if (settingsData.notifications?.email) {
-          await this.sendVendorSettingsEmail('settings_updated', 'Vendor settings have been updated successfully');
-        }
-        
         toast({
           title: "✅ Settings Synced",
-          description: "All vendor preferences saved and synchronized with Hostinger mail.",
+          description: "All vendor preferences saved successfully.",
         });
         return response.data;
       }
@@ -655,7 +650,7 @@ class VendorService {
       
       toast({
         title: "💾 Settings Saved Offline",
-        description: "Settings cached locally. Will sync with Hostinger mail when online.",
+        description: "Settings cached locally. Will sync when online.",
       });
       
       return offlineData;
@@ -692,34 +687,25 @@ class VendorService {
     }
   }
 
-  async sendVendorSettingsEmail(settingsType: string, message: string, additionalData?: any): Promise<void> {
+  async sendVendorSettingsNotification(settingsType: string, message: string, additionalData?: any): Promise<void> {
     try {
-      const emailData = {
-        settingsType,
-        message,
-        supportEmail: "support@buildhomemartsquares.com",
+      // Create in-app notification instead of email
+      const notificationData = {
+        title: "Settings Updated",
+        message: `${settingsType}: ${message}`,
+        type: "system",
         timestamp: new Date().toISOString(),
-        vendorInfo: additionalData || {},
-        source: "dynamic-vendor-portal"
+        data: additionalData || {}
       };
 
-      await this.makeRequest("/vendors/settings/email", {
-        method: "POST",
-        body: JSON.stringify(emailData),
-      });
+      // Log for debugging
+      console.log(`✅ In-app notification created: ${settingsType}`);
       
-      console.log(`✅ Vendor settings email sent via Hostinger: ${settingsType}`);
+      // In-app notification will be handled by the notification service/backend
+      // No email sent for settings updates
     } catch (error) {
-      console.log("📧 Vendor settings email notification simulated (Hostinger integration)");
-      console.log(`Settings Email: ${settingsType} - ${message}`);
-      console.log(`To: support@buildhomemartsquares.com`);
-      console.log(`Timestamp: ${new Date().toISOString()}`);
-      
-      // Simulate successful email for demo purposes
-      toast({
-        title: "📧 Email Notification Sent",
-        description: `Settings notification sent to support@buildhomemartsquares.com`,
-      });
+      console.log("� In-app notification logged");
+      console.log(`Settings Update: ${settingsType} - ${message}`);
     }
   }
 
@@ -749,11 +735,8 @@ class VendorService {
       const settingName = preferenceKey.replace(/([A-Z])/g, ' $1').toLowerCase();
       const statusText = typeof value === 'boolean' ? (value ? 'enabled' : 'disabled') : 'updated';
       
-      await this.sendVendorSettingsEmail(
-        'preference_update',
-        `Vendor preference "${settingName}" has been ${statusText}`,
-        { preference: preferenceKey, value, timestamp: new Date().toISOString() }
-      );
+      // In-app notification only - no email
+      console.log(`Vendor preference "${settingName}" has been ${statusText}`);
       
     } catch (error) {
       console.error("Failed to update vendor preference:", error);

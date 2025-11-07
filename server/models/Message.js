@@ -76,7 +76,18 @@ const messageSchema = new mongoose.Schema({
   },
   repliedAt: {
     type: Date
-  }
+  },
+  // Typing indicator tracking
+  typingUsers: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, {
   timestamps: true
 });

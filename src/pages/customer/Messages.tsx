@@ -10,10 +10,10 @@ import {
   MessageSquare, 
   Send, 
   Phone, 
-  Video,
   MapPin,
   Clock,
   CheckCheck,
+  Check,
   Search,
   Filter,
   MoreVertical,
@@ -24,19 +24,23 @@ import {
   X,
   Trash2,
   Star,
-  Archive
+  Archive,
+  Circle
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRealtime, useMessagingRealtime } from "@/contexts/RealtimeContext";
-import { messageService, type Conversation, type Message } from "@/services/messageService";
+import { messageService, type Conversation, type Message, type UserStatus, type TypingStatus } from "@/services/messageService";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Messages = () => {
   const { isConnected } = useRealtime();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,8 +53,13 @@ const Messages = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
+  const [typingStatuses, setTypingStatuses] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activityIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Realtime messaging events
   useMessagingRealtime({
@@ -565,13 +574,44 @@ const Messages = () => {
                   </div>
                   
                   <div className="flex gap-2">
-                    {getOtherParticipant(activeConversation).phone && (
-                      <Button size="sm" variant="outline" asChild>
-                        <a href={`tel:${getOtherParticipant(activeConversation).phone}`}>
-                          <Phone className="w-4 h-4" />
-                        </a>
-                      </Button>
-                    )}
+                    {getOtherParticipant(activeConversation).phone ? (
+                      isMobile ? (
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={`tel:${getOtherParticipant(activeConversation).phone}`}>
+                            <Phone className="w-4 h-4" />
+                          </a>
+                        </Button>
+                      ) : (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button size="sm" variant="outline" title="View phone number">
+                              <Phone className="w-4 h-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-3">
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Phone Number</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-lg font-semibold">{getOtherParticipant(activeConversation).phone}</p>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(getOtherParticipant(activeConversation).phone || '');
+                                    toast({
+                                      title: "Copied!",
+                                      description: "Phone number copied to clipboard",
+                                    });
+                                  }}
+                                >
+                                  Copy
+                                </Button>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )
+                    ) : null}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="outline">

@@ -208,7 +208,8 @@ app.get('/health', (req, res) => {
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    message: 'Ninety Nine Acres API Server',
+    success: true,
+    message: 'BuildHomeMartSquares API Server',
     version: '1.0.0',
     status: 'Running',
     environment: process.env.NODE_ENV || 'development',

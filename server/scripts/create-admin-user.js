@@ -77,7 +77,7 @@ const createAdminUser = async () => {
         lastName: 'Admin',
         phone: '+1234567890',
         emailVerified: true,
-        bio: 'System Administrator for Ninety Nine Acres Platform',
+        bio: 'System Administrator for BuildHomeMartSquares Platform',
         address: {
           street: '123 Admin Street',
           city: 'Admin City',

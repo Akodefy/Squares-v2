@@ -348,7 +348,7 @@ const SendNotifications = () => {
                           <div className="p-3 border rounded-lg bg-gray-50 max-w-sm">
                             <div className="flex items-center gap-2 mb-1">
                               <Bell className="w-4 h-4 text-blue-600" />
-                              <span className="font-medium text-sm">NinetyNine Acres</span>
+                              <span className="font-medium text-sm">BuildHomeMartSquares</span>
                             </div>
                             <div className="font-medium text-sm mb-1">{subject || 'Subject'}</div>
                             <div className="text-xs text-muted-foreground">

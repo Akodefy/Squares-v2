@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +52,9 @@ import {
   Star,
   StarOff,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Circle,
+  Check
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { 
@@ -61,8 +63,11 @@ import {
   type MessageStats, 
   type MessageFilters 
 } from "@/services/adminMessageService";
+import { useRealtime, useMessagingRealtime } from "@/contexts/RealtimeContext";
+import { messageService, type UserStatus } from "@/services/messageService";
 
 const AdminMessages = () => {
+  const { isConnected } = useRealtime();
   const [messages, setMessages] = useState<AdminMessage[]>([]);
   const [filteredMessages, setFilteredMessages] = useState<AdminMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<AdminMessage | null>(null);
@@ -75,6 +80,11 @@ const AdminMessages = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [replyText, setReplyText] = useState("");
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -84,10 +94,86 @@ const AdminMessages = () => {
     limit: 20
   });
 
+  // Realtime messaging events
+  useMessagingRealtime({
+    refreshConversations: () => {
+      loadMessages();
+    },
+    onNewMessage: (newMsg) => {
+      loadMessages();
+      loadStats();
+    },
+    onMessageRead: () => {
+      loadMessages();
+      loadStats();
+    }
+  });
+
   // Load messages and stats
   useEffect(() => {
     loadMessages();
     loadStats();
+  }, []);
+
+  // Load user statuses
+  useEffect(() => {
+    if (messages.length > 0) {
+      loadUserStatuses();
+      const interval = setInterval(loadUserStatuses, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [messages]);
+
+  // Load user statuses for all message senders
+  const loadUserStatuses = async () => {
+    const statuses: Record<string, UserStatus> = {};
+    const uniqueUserIds = new Set(messages.map(msg => msg.sender._id));
+    
+    for (const userId of uniqueUserIds) {
+      try {
+        const status = await messageService.getUserStatus(userId);
+        statuses[userId] = status;
+      } catch (error) {
+        console.error(`Failed to load status for user ${userId}:`, error);
+      }
+    }
+    
+    setUserStatuses(statuses);
+  };
+
+  // Scroll to bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Handle typing with debounce
+  const handleTypingChange = (value: string) => {
+    setReplyText(value);
+    
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    if (value.trim() && selectedMessage) {
+      if (!isTyping) {
+        setIsTyping(true);
+      }
+      
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+      }, 3000);
+    } else {
+      setIsTyping(false);
+    }
+  };
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Load messages with current filters
@@ -213,10 +299,16 @@ const AdminMessages = () => {
     if (!selectedMessage || !replyText.trim()) return;
 
     try {
+      // Stop typing indicator
+      if (isTyping) {
+        setIsTyping(false);
+      }
+      
       await adminMessageService.sendReply(selectedMessage._id, replyText.trim());
       setReplyText("");
       loadMessages();
       loadStats();
+      setTimeout(() => scrollToBottom(), 100);
     } catch (error) {
       console.error("Failed to send reply:", error);
     }
@@ -235,6 +327,22 @@ const AdminMessages = () => {
 
   return (
     <div className="space-y-6 relative top-[60px]">
+      {/* Realtime Status */}
+      <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-sm text-muted-foreground">
+            {isConnected ? 'Real-time messaging active' : 'Offline mode'}
+          </span>
+        </div>
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Loading messages...
+          </div>
+        )}
+      </div>
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -402,8 +510,17 @@ const AdminMessages = () => {
                           {getSenderName(message).charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
+                      {userStatuses[message.sender._id]?.isOnline ? (
+                        <div title="Online">
+                          <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-green-500 text-green-500 border-2 border-background rounded-full" />
+                        </div>
+                      ) : (
+                        <div title={`Last seen ${userStatuses[message.sender._id]?.lastSeen ? messageService.formatTime(userStatuses[message.sender._id].lastSeen) : 'recently'}`}>
+                          <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-gray-400 text-gray-400 border-2 border-background rounded-full" />
+                        </div>
+                      )}
                       {message.status === 'unread' && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500" />
+                        <div className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-red-500" />
                       )}
                     </div>
                     
@@ -477,18 +594,32 @@ const AdminMessages = () => {
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={selectedMessage.sender.profile?.avatar} />
-                      <AvatarFallback>
-                        {getSenderName(selectedMessage).charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={selectedMessage.sender.profile?.avatar} />
+                        <AvatarFallback>
+                          {getSenderName(selectedMessage).charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {userStatuses[selectedMessage.sender._id]?.isOnline ? (
+                        <div title="Online">
+                          <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-green-500 text-green-500 border-2 border-background rounded-full" />
+                        </div>
+                      ) : (
+                        <div title={`Last seen ${userStatuses[selectedMessage.sender._id]?.lastSeen ? messageService.formatTime(userStatuses[selectedMessage.sender._id].lastSeen) : 'recently'}`}>
+                          <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-gray-400 text-gray-400 border-2 border-background rounded-full" />
+                        </div>
+                      )}
+                    </div>
                     <div>
                       <h3 className="font-semibold">
                         {getSenderName(selectedMessage)}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {selectedMessage.sender.email}
+                        {userStatuses[selectedMessage.sender._id]?.isOnline 
+                          ? 'Online' 
+                          : `Last seen ${userStatuses[selectedMessage.sender._id]?.lastSeen ? messageService.formatTime(userStatuses[selectedMessage.sender._id].lastSeen) : 'recently'}`
+                        }
                       </p>
                     </div>
                   </div>
@@ -535,6 +666,26 @@ const AdminMessages = () => {
                   
                   {/* Admin replies would go here */}
                   {/* TODO: Load and display conversation replies */}
+                  
+                  {/* Typing Indicator */}
+                  {otherUserTyping && (
+                    <div className="flex justify-start animate-fadeIn">
+                      <div className="bg-muted/80 px-4 py-2 rounded-lg border border-border/50">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          </div>
+                          <span className="text-xs text-muted-foreground italic">
+                            {getSenderName(selectedMessage)} is typing...
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
 
@@ -544,7 +695,7 @@ const AdminMessages = () => {
                   <Textarea
                     placeholder="Type your reply..."
                     value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
+                    onChange={(e) => handleTypingChange(e.target.value)}
                     rows={3}
                     className="resize-none"
                   />

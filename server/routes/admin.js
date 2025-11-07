@@ -1513,12 +1513,12 @@ router.patch('/properties/:id/status', asyncHandler(async (req, res) => {
     
     if (status === 'active') {
       emailSubject = 'Property Approved';
-      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been approved and is now live on our platform.\n\nBest regards,\nNinety Nine Acres Team`;
+      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been approved and is now live on our platform.\n\nBest regards,\nBuildHomeMartSquares Team`;
     } else if (status === 'rejected') {
       emailSubject = 'Property Rejected';
-      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been rejected.\n\nReason: ${reason || 'Property does not meet our guidelines'}\n\nPlease update your property and resubmit for approval.\n\nBest regards,\nNinety Nine Acres Team`;
+      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been rejected.\n\nReason: ${reason || 'Property does not meet our guidelines'}\n\nPlease update your property and resubmit for approval.\n\nBest regards,\nBuildHomeMartSquares Team`;
     } else {
-      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" status has been updated to: ${status}\n\nBest regards,\nNinety Nine Acres Team`;
+      emailBody = `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" status has been updated to: ${status}\n\nBest regards,\nBuildHomeMartSquares Team`;
     }
     
     sendEmail(owner.email, emailSubject, emailBody).catch(err => console.error('Email send error:', err));
@@ -1568,7 +1568,7 @@ router.post('/properties/:id/approve', asyncHandler(async (req, res) => {
     sendEmail(
       owner.email,
       'Property Approved',
-      `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been approved and is now live on our platform.\n\nBest regards,\nNinety Nine Acres Team`
+      `Dear ${owner.profile?.firstName || 'User'},\n\nYour property "${property.title}" has been approved and is now live on our platform.\n\nBest regards,\nBuildHomeMartSquares Team`
     ).catch(err => console.error('Email send error:', err));
   }
 

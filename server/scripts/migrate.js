@@ -337,7 +337,7 @@ const insertDefaultData = async () => {
     const defaultSettings = [
       {
         key: 'site_name',
-        value: 'Ninety Nine Acres',
+        value: 'BuildHomeMartSquares',
         category: 'general',
         description: 'Website name',
         data_type: 'string'

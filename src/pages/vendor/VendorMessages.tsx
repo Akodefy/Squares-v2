@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,6 @@ import {
   Search,
   Send,
   Phone,
-  Video,
   MoreVertical,
   Paperclip,
   Image,
@@ -19,17 +18,21 @@ import {
   CheckCheck,
   Star,
   Archive,
-  Trash
+  Trash,
+  Circle
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { messageService, type Message, type Conversation } from "@/services/messageService";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { messageService, type Message, type Conversation, type UserStatus } from "@/services/messageService";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const VendorMessages = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,9 +42,14 @@ const VendorMessages = () => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const imageInputRef = React.useRef<HTMLInputElement>(null);
+  const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activityIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadConversations();
@@ -50,6 +58,17 @@ const VendorMessages = () => {
   useEffect(() => {
     loadConversations();
   }, [searchQuery]);
+
+  // Load user statuses when conversations change
+  useEffect(() => {
+    if (conversations.length > 0) {
+      loadUserStatuses();
+      
+      // Refresh statuses every 10 seconds
+      const statusInterval = setInterval(loadUserStatuses, 10000);
+      return () => clearInterval(statusInterval);
+    }
+  }, [conversations]);
 
   useEffect(() => {
     if (selectedChat) {
@@ -110,6 +129,22 @@ const VendorMessages = () => {
     } finally {
       setIsLoadingMessages(false);
     }
+  };
+
+  // Load user statuses for all conversations
+  const loadUserStatuses = async () => {
+    const statuses: Record<string, UserStatus> = {};
+    
+    for (const conv of conversations) {
+      try {
+        const status = await messageService.getUserStatus(conv.otherUser._id);
+        statuses[conv.otherUser._id] = status;
+      } catch (error) {
+        console.error(`Failed to load status for user ${conv.otherUser._id}:`, error);
+      }
+    }
+    
+    setUserStatuses(statuses);
   };
 
   const handleSendMessage = async () => {
@@ -369,23 +404,23 @@ const VendorMessages = () => {
   });
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex">
+    <div className="h-[calc(100vh-4rem)] flex flex-col md:flex-row gap-0 relative top-[60px]">
       {/* Conversations List */}
-      <div className="w-1/3 border-r border-border">
-        <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-semibold mb-3">Messages</h2>
+      <div className="w-full md:w-1/3 border-r border-border flex flex-col">
+        <div className="p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <h2 className="text-lg font-semibold mb-3 text-foreground">Messages</h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-9"
             />
           </div>
         </div>
 
-        <ScrollArea className="h-[calc(100%-8rem)]">
+        <ScrollArea className="flex-1">
           <div className="p-2">
             {filteredConversations.map((conversation) => {
               const otherParticipant = getOtherParticipant(conversation);
@@ -395,43 +430,73 @@ const VendorMessages = () => {
               return (
               <div
                 key={conversationId}
-                className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted ${
-                  selectedChat === conversationId ? 'bg-muted' : ''
+                className={`p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-accent/50 ${
+                  selectedChat === conversationId ? 'bg-accent border-l-4 border-primary' : ''
                 }`}
                 onClick={() => setSelectedChat(conversationId)}
               >
                 <div className="flex items-start space-x-3">
-                  <div className="relative">
-                    <Avatar className="h-10 w-10">
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
                       <AvatarImage src={undefined} />
-                      <AvatarFallback>{participantName.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                        {participantName.charAt(0).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
+                    {/* Online status indicator */}
+                    {userStatuses[otherParticipant._id]?.isOnline ? (
+                      <div title="Online" className="absolute -bottom-0.5 -right-0.5">
+                        <Circle className="w-3.5 h-3.5 fill-green-500 text-green-500 border-2 border-background rounded-full" />
+                      </div>
+                    ) : (
+                      <div title={`Last seen ${userStatuses[otherParticipant._id]?.lastSeen ? messageService.formatTime(userStatuses[otherParticipant._id].lastSeen) : 'recently'}`} className="absolute -bottom-0.5 -right-0.5">
+                        <Circle className="w-3.5 h-3.5 fill-gray-400 text-gray-400 border-2 border-background rounded-full" />
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="text-sm font-semibold truncate">{participantName}</h4>
-                      <div className="flex items-center space-x-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold truncate">{participantName}</h4>
+                        {/* Online status text */}
+                        {userStatuses[otherParticipant._id]?.isOnline && (
+                          <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">● Online</span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(conversation.lastMessage?.createdAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                         {conversation.unreadCount > 0 && (
-                          <Badge className="bg-primary text-primary-foreground text-xs px-2">
+                          <Badge className="bg-primary text-primary-foreground text-xs h-5 min-w-[20px] flex items-center justify-center px-1.5">
                             {conversation.unreadCount}
                           </Badge>
                         )}
                       </div>
                     </div>
                     
-                    <p className="text-xs text-muted-foreground mb-1 truncate">
-                      {conversation.property?.title || 'General inquiry'}
-                    </p>
-                    
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground truncate flex-1">
-                        {conversation.lastMessage?.message}
+                    {/* Show last seen if offline */}
+                    {userStatuses[otherParticipant._id] && !userStatuses[otherParticipant._id]?.isOnline && (
+                      <p className="text-[10px] text-muted-foreground mb-1.5">
+                        Last seen {userStatuses[otherParticipant._id]?.lastSeen 
+                          ? messageService.formatTime(userStatuses[otherParticipant._id].lastSeen)
+                          : 'recently'}
                       </p>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {new Date(conversation.lastMessage?.createdAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
+                    )}
+                    
+                    {conversation.property && (
+                      <p className="text-xs text-muted-foreground mb-1.5 truncate font-medium">
+                        📍 {conversation.property?.title || 'General inquiry'}
+                      </p>
+                    )}
+                    
+                    <p className="text-sm text-muted-foreground truncate line-clamp-1">
+                      {conversation.lastMessage?.isFromMe && (
+                        <span className="text-primary font-medium mr-1">You:</span>
+                      )}
+                      {conversation.lastMessage?.message}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -442,37 +507,107 @@ const VendorMessages = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-background">
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-border">
+            <div className="p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <Avatar className="h-10 w-10">
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
                       <AvatarImage src={undefined} />
-                      <AvatarFallback>{otherParticipant?.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                        {otherParticipant?.name?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
                     </Avatar>
+                    {/* Online status indicator */}
+                    {userStatuses[otherParticipant?._id]?.isOnline ? (
+                      <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 fill-green-500 text-green-500 border-2 border-background rounded-full" />
+                    ) : (
+                      <Circle className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 fill-gray-400 text-gray-400 border-2 border-background rounded-full" />
+                    )}
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{otherParticipant?.name || 'Unknown User'}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Interested in property
-                    </p>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-base truncate">{otherParticipant?.name || 'Unknown User'}</h3>
+                    {/* Online status text */}
+                    {userStatuses[otherParticipant?._id] && (
+                      <p className="text-xs text-muted-foreground">
+                        {userStatuses[otherParticipant._id]?.isOnline ? (
+                          <span className="text-green-600 font-medium">● Active now</span>
+                        ) : (
+                          <span>
+                            Last seen {userStatuses[otherParticipant._id]?.lastSeen 
+                              ? messageService.formatTime(userStatuses[otherParticipant._id].lastSeen)
+                              : 'recently'}
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Button size="sm" variant="outline">
-                    <Phone className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    <Video className="w-4 h-4" />
-                  </Button>
+                  {otherParticipant?.phone ? (
+                    isMobile ? (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-9 w-9 p-0" 
+                        title="Call"
+                        onClick={() => window.location.href = `tel:${otherParticipant.phone}`}
+                      >
+                        <Phone className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-9 w-9 p-0" 
+                            title="View phone number"
+                          >
+                            <Phone className="w-4 h-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-3">
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Phone Number</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-lg font-semibold">{otherParticipant.phone}</p>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(otherParticipant.phone || '');
+                                  toast({
+                                    title: "Copied!",
+                                    description: "Phone number copied to clipboard",
+                                  });
+                                }}
+                              >
+                                Copy
+                              </Button>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )
+                  ) : (
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-9 w-9 p-0" 
+                      title="No phone number available"
+                      disabled
+                    >
+                      <Phone className="w-4 h-4 opacity-50" />
+                    </Button>
+                  )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="ghost" className="h-9 w-9 p-0">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -485,7 +620,7 @@ const VendorMessages = () => {
                         <Archive className="w-4 h-4 mr-2" />
                         Archive
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteConversation(selectedConversation.id || selectedConversation._id || '')}>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteConversation(selectedConversation.id || selectedConversation._id || '')}>
                         <Trash className="w-4 h-4 mr-2" />
                         Delete Conversation
                       </DropdownMenuItem>
@@ -496,15 +631,20 @@ const VendorMessages = () => {
               
               {/* Property Info */}
               {selectedConversation.property && (
-                <div className="mt-3 p-3 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">{selectedConversation.property.title}</p>
-                  <p className="text-xs text-muted-foreground">₹{selectedConversation.property.price.toLocaleString()}</p>
+                <div className="mt-3 p-3 bg-accent/50 rounded-lg border border-border">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-8 bg-primary rounded-full"></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{selectedConversation.property.title}</p>
+                      <p className="text-xs text-muted-foreground">₹{selectedConversation.property.price.toLocaleString()}</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4 bg-muted/20">
               {isLoadingMessages ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
@@ -522,20 +662,20 @@ const VendorMessages = () => {
                     return (
                       <div
                         key={message._id}
-                        className={`group flex ${isOwnMessage ? 'justify-end' : 'justify-start'} hover:bg-muted/30 rounded-lg p-1 transition-colors`}
+                        className={`group flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4`}
                       >
                         <div
-                          className={`max-w-[70%] rounded-lg p-3 ${
+                          className={`max-w-[75%] md:max-w-[60%] rounded-2xl px-4 py-2.5 shadow-sm ${
                             isOwnMessage
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
+                              ? 'bg-primary text-primary-foreground rounded-br-sm'
+                              : 'bg-background border border-border rounded-bl-sm'
                           }`}
                         >
-                        <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{message.message}</p>
                         
                         {/* Attachments */}
                         {message.attachments && message.attachments.length > 0 && (
-                          <div className="mt-2 space-y-2">
+                          <div className="mt-2.5 space-y-2">
                             {message.attachments.map((attachment, idx) => (
                               <div key={idx}>
                                 {attachment.type === 'image' ? (
@@ -543,8 +683,8 @@ const VendorMessages = () => {
                                     <img 
                                       src={attachment.url} 
                                       alt={attachment.name}
-                                      className="max-w-full rounded border border-border cursor-pointer hover:opacity-90"
-                                      style={{ maxHeight: '200px' }}
+                                      className="max-w-full rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
+                                      style={{ maxHeight: '250px' }}
                                     />
                                   </a>
                                 ) : (
@@ -552,13 +692,13 @@ const VendorMessages = () => {
                                     href={attachment.url} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className={`flex items-center gap-2 p-2 rounded border ${
+                                    className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${
                                       isOwnMessage
                                         ? 'border-primary-foreground/20 hover:bg-primary-foreground/10'
-                                        : 'border-border bg-background hover:bg-muted'
+                                        : 'border-border bg-muted/50 hover:bg-muted'
                                     }`}
                                   >
-                                    <Paperclip className="w-4 h-4" />
+                                    <Paperclip className="w-4 h-4 flex-shrink-0" />
                                     <span className="text-sm truncate">{attachment.name}</span>
                                   </a>
                                 )}
@@ -567,16 +707,13 @@ const VendorMessages = () => {
                           </div>
                         )}
                         
-                        <div className={`flex items-center justify-between mt-1 ${
+                        <div className={`flex items-center justify-between mt-1.5 gap-2 ${
                           isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
                         }`}>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            {isOwnMessage && (
-                              <Badge variant="outline" className="text-xs px-1 py-0">You</Badge>
-                            )}
+                            <span className="text-[11px]">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             {isOwnMessage && getStatusIcon(message.status)}
                             {isOwnMessage && (
                               <DropdownMenu>
@@ -584,15 +721,15 @@ const VendorMessages = () => {
                                   <Button 
                                     variant="ghost" 
                                     size="sm" 
-                                    className="h-5 w-5 p-0 opacity-50 group-hover:opacity-100 transition-opacity hover:bg-destructive/10"
+                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10"
                                     title="Message options"
                                   >
-                                    <MoreVertical className="w-3 h-3" />
+                                    <MoreVertical className="w-3.5 h-3.5" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem 
-                                    className="text-red-600 focus:text-red-600"
+                                    className="text-destructive focus:text-destructive"
                                     onClick={() => handleDeleteMessage(message._id)}
                                   >
                                     <Trash className="w-4 h-4 mr-2" />
@@ -610,13 +747,13 @@ const VendorMessages = () => {
                   
                   {/* Typing Indicator */}
                   {otherUserTyping && (
-                    <div className="flex justify-start mt-4">
-                      <div className="bg-muted p-3 rounded-lg">
-                        <div className="flex items-center gap-2">
+                    <div className="flex justify-start mb-4">
+                      <div className="bg-background border border-border px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm">
+                        <div className="flex items-center gap-2.5">
                           <div className="flex gap-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                           </div>
                           <span className="text-xs text-muted-foreground">
                             {otherParticipant?.name} is typing...
@@ -625,22 +762,23 @@ const VendorMessages = () => {
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-border">
+            <div className="p-4 border-t border-border bg-background">
               {/* Selected Files Preview */}
               {selectedFiles.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-2">
+                <div className="mb-3 flex flex-wrap gap-2">
                   {selectedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-muted px-3 py-1 rounded-lg">
+                    <div key={index} className="flex items-center gap-2 bg-accent px-3 py-2 rounded-lg border border-border">
                       <span className="text-sm truncate max-w-[200px]">{file.name}</span>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-5 w-5 p-0"
+                        className="h-5 w-5 p-0 hover:bg-destructive/10"
                         onClick={() => removeFile(index)}
                       >
                         ×
@@ -650,8 +788,8 @@ const VendorMessages = () => {
                 </div>
               )}
               
-              <div className="flex items-end space-x-2">
-                <div className="flex space-x-1">
+              <div className="flex items-end gap-2">
+                <div className="flex gap-1">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -670,19 +808,23 @@ const VendorMessages = () => {
                   />
                   <Button 
                     size="sm" 
-                    variant="outline"
+                    variant="ghost"
+                    className="h-10 w-10 p-0"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
+                    title="Attach document"
                   >
-                    <Paperclip className="w-4 h-4" />
+                    <Paperclip className="w-5 h-5" />
                   </Button>
                   <Button 
                     size="sm" 
-                    variant="outline"
+                    variant="ghost"
+                    className="h-10 w-10 p-0"
                     onClick={() => imageInputRef.current?.click()}
                     disabled={isUploading}
+                    title="Attach image"
                   >
-                    <Image className="w-4 h-4" />
+                    <Image className="w-5 h-5" />
                   </Button>
                 </div>
                 
@@ -691,7 +833,7 @@ const VendorMessages = () => {
                     placeholder="Type your message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="min-h-[60px] resize-none"
+                    className="min-h-[56px] max-h-[120px] resize-none rounded-xl"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -705,18 +847,24 @@ const VendorMessages = () => {
                 <Button 
                   onClick={handleSendMessage}
                   disabled={(!newMessage.trim() && selectedFiles.length === 0) || isUploading}
+                  className="h-10 w-10 p-0 rounded-full"
+                  title="Send message"
                 >
-                  {isUploading ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {isUploading ? <Clock className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </Button>
               </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Select a conversation</h3>
-              <p className="text-muted-foreground">Choose a conversation from the list to start messaging</p>
+          <div className="flex-1 flex items-center justify-center bg-muted/20">
+            <div className="text-center px-4">
+              <div className="mb-4 inline-flex p-4 bg-primary/10 rounded-full">
+                <MessageSquare className="w-12 h-12 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Select a conversation</h3>
+              <p className="text-muted-foreground max-w-sm">
+                Choose a conversation from the list to start messaging with your clients
+              </p>
             </div>
           </div>
         )}

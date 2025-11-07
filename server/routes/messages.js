@@ -649,6 +649,240 @@ router.get('/active-status/:conversationId', asyncHandler(async (req, res) => {
   });
 }));
 
+// @desc    Update typing status for conversation
+// @route   POST /api/messages/typing-status
+// @access  Private
+router.post('/typing-status', asyncHandler(async (req, res) => {
+  const { conversationId, isTyping } = req.body;
+
+  if (!conversationId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Conversation ID is required'
+    });
+  }
+
+  // Verify user is part of this conversation
+  const userIds = conversationId.split('_');
+  if (userIds.length !== 2 || !userIds.includes(req.user.id.toString())) {
+    return res.status(403).json({
+      success: false,
+      message: 'Not authorized to update typing status for this conversation'
+    });
+  }
+
+  // Store typing status in memory (in production, use Redis)
+  if (!global.typingStatuses) {
+    global.typingStatuses = new Map();
+  }
+  
+  const statusKey = `${conversationId}:${req.user.id}`;
+  
+  if (isTyping) {
+    global.typingStatuses.set(statusKey, {
+      userId: req.user.id,
+      conversationId,
+      timestamp: new Date()
+    });
+  } else {
+    global.typingStatuses.delete(statusKey);
+  }
+
+  // Clean up old typing statuses (older than 10 seconds)
+  const tenSecondsAgo = new Date(Date.now() - 10 * 1000);
+  for (const [key, statusData] of global.typingStatuses.entries()) {
+    if (statusData.timestamp < tenSecondsAgo) {
+      global.typingStatuses.delete(key);
+    }
+  }
+
+  res.json({
+    success: true,
+    message: 'Typing status updated',
+    data: {
+      userId: req.user.id,
+      conversationId,
+      isTyping
+    }
+  });
+}));
+
+// @desc    Get typing status for conversation
+// @route   GET /api/messages/typing-status/:conversationId
+// @access  Private
+router.get('/typing-status/:conversationId', asyncHandler(async (req, res) => {
+  const { conversationId } = req.params;
+
+  // Verify user is part of this conversation
+  const userIds = conversationId.split('_');
+  if (userIds.length !== 2 || !userIds.includes(req.user.id.toString())) {
+    return res.status(403).json({
+      success: false,
+      message: 'Not authorized to access this conversation'
+    });
+  }
+
+  const otherUserId = userIds.find(id => id !== req.user.id.toString());
+  const statusKey = `${conversationId}:${otherUserId}`;
+
+  let isTyping = false;
+  if (global.typingStatuses && global.typingStatuses.has(statusKey)) {
+    const statusData = global.typingStatuses.get(statusKey);
+    // Only show typing if within last 5 seconds
+    const fiveSecondsAgo = new Date(Date.now() - 5 * 1000);
+    if (statusData.timestamp > fiveSecondsAgo) {
+      isTyping = true;
+    } else {
+      global.typingStatuses.delete(statusKey);
+    }
+  }
+
+  res.json({
+    success: true,
+    data: {
+      isTyping,
+      userId: otherUserId
+    }
+  });
+}));
+
+// @desc    Update user online status
+// @route   POST /api/messages/online-status
+// @access  Private
+router.post('/online-status', asyncHandler(async (req, res) => {
+  const { status } = req.body; // 'online' or 'offline'
+
+  if (!status || !['online', 'offline'].includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Valid status required (online or offline)'
+    });
+  }
+
+  const User = require('../models/User');
+  
+  const now = new Date();
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user.id, 
+    {
+      isOnline: status === 'online',
+      lastSeen: now
+    },
+    { new: true }
+  ).select('isOnline lastSeen');
+
+  res.json({
+    success: true,
+    message: 'Online status updated',
+    data: {
+      userId: req.user.id,
+      isOnline: status === 'online',
+      lastSeen: now.toISOString()
+    }
+  });
+}));
+
+// @desc    Get user online status
+// @route   GET /api/messages/online-status/:userId
+// @access  Private
+router.get('/online-status/:userId', asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const User = require('../models/User');
+
+  const user = await User.findById(userId).select('isOnline lastSeen');
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Consider user online if lastSeen within 2 minutes
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+  const actualLastSeen = user.lastSeen || user.createdAt || new Date();
+  const isOnline = user.isOnline && actualLastSeen > twoMinutesAgo;
+
+  res.json({
+    success: true,
+    data: {
+      userId: user._id,
+      isOnline,
+      lastSeen: actualLastSeen.toISOString()
+    }
+  });
+}));
+
+// @desc    Get notification preferences
+// @route   GET /api/messages/notification-preferences
+// @access  Private
+router.get('/notification-preferences', asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  
+  const user = await User.findById(req.user.id).select('profile.preferences.notifications');
+
+  res.json({
+    success: true,
+    data: {
+      notifications: user?.profile?.preferences?.notifications || {
+        email: true,
+        sms: false,
+        push: true,
+        desktop: true,
+        sound: true,
+        typing: true
+      }
+    }
+  });
+}));
+
+// @desc    Update notification preferences
+// @route   PUT /api/messages/notification-preferences
+// @access  Private
+router.put('/notification-preferences', asyncHandler(async (req, res) => {
+  const { email, sms, push, desktop, sound, typing } = req.body;
+  const User = require('../models/User');
+
+  const updateData = {};
+  if (typeof email === 'boolean') updateData['profile.preferences.notifications.email'] = email;
+  if (typeof sms === 'boolean') updateData['profile.preferences.notifications.sms'] = sms;
+  if (typeof push === 'boolean') updateData['profile.preferences.notifications.push'] = push;
+  if (typeof desktop === 'boolean') updateData['profile.preferences.notifications.desktop'] = desktop;
+  if (typeof sound === 'boolean') updateData['profile.preferences.notifications.sound'] = sound;
+  if (typeof typing === 'boolean') updateData['profile.preferences.notifications.typing'] = typing;
+
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { $set: updateData },
+    { new: true }
+  ).select('profile.preferences.notifications');
+
+  res.json({
+    success: true,
+    message: 'Notification preferences updated',
+    data: {
+      notifications: user.profile.preferences.notifications
+    }
+  });
+}));
+
+// @desc    Get unread message count
+// @route   GET /api/messages/unread-count
+// @access  Private
+router.get('/unread-count', asyncHandler(async (req, res) => {
+  const unreadCount = await Message.countDocuments({
+    recipient: req.user.id,
+    read: false
+  });
+
+  res.json({
+    success: true,
+    data: {
+      unreadCount
+    }
+  });
+}));
+
 // @desc    Delete a message
 // @route   DELETE /api/messages/:messageId
 // @access  Private
@@ -725,6 +959,36 @@ router.delete('/conversations/:conversationId', asyncHandler(async (req, res) =>
   res.json({
     success: true,
     message: 'Conversation deleted successfully'
+  });
+}));
+
+// @desc    Get user status (alias for online-status for backward compatibility)
+// @route   GET /api/messages/user-status/:userId
+// @access  Private
+router.get('/user-status/:userId', asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const User = require('../models/User');
+
+  const user = await User.findById(userId).select('isOnline lastSeen');
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Consider user online if lastSeen within 2 minutes
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+  const isOnline = user.isOnline && user.lastSeen && user.lastSeen > twoMinutesAgo;
+
+  res.json({
+    success: true,
+    data: {
+      userId: user._id,
+      isOnline,
+      lastSeen: user.lastSeen || new Date()
+    }
   });
 }));
 

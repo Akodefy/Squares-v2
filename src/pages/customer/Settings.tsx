@@ -119,7 +119,7 @@ const CustomerSettings = () => {
     }));
     
     // Save immediately for critical settings
-    if (category === 'security' || (category === 'privacy' && ['allowMessages', 'dataCollection'].includes(key))) {
+    if (category === 'security' || (category === 'privacy' && ['dataCollection'].includes(key))) {
       syncSettingRealtime(category, key, value);
     }
   }, []);
@@ -225,47 +225,72 @@ const CustomerSettings = () => {
         });
       }
       
-      // Prepare settings data
-      const settingsData = {
-        ...settings,
-        preferences: {
-          ...settings.preferences,
-          theme
-        },
-        meta: {
-          lastUpdated: new Date().toISOString(),
-          version: "1.0"
+      // Get current user data to preserve existing fields
+      let existingAddress = null;
+      try {
+        const currentUser = await userService.getCurrentUser();
+        existingAddress = currentUser.data.user.profile?.address || null;
+      } catch (err) {
+        console.warn("Could not fetch current user, proceeding without address preservation");
+      }
+      
+      // Prepare settings data in correct format for backend
+      const settingsData: any = {
+        profile: {
+          preferences: {
+            language: settings.preferences.language,
+            currency: settings.preferences.currency,
+            theme: theme,
+            notifications: {
+              email: settings.notifications.email,
+              push: settings.notifications.push,
+              propertyAlerts: settings.notifications.propertyAlerts,
+              priceDrops: settings.notifications.priceDrops,
+              newMessages: settings.notifications.newMessages,
+              newsUpdates: settings.notifications.newsUpdates
+            },
+            privacy: {
+              showActivity: settings.privacy.showActivity,
+              dataCollection: settings.privacy.dataCollection,
+              marketingConsent: settings.privacy.marketingConsent,
+              thirdPartySharing: settings.privacy.thirdPartySharing
+            },
+            autoSave: settings.preferences.autoSave,
+            emailDigest: settings.preferences.emailDigest,
+            timezone: settings.preferences.timezone
+          }
         }
       };
 
+      // Preserve existing address if available
+      if (existingAddress) {
+        settingsData.profile.address = existingAddress;
+      }
+
       // Save to server
       try {
-        const response = await userService.updateUserPreferences({ preferences: settingsData });
+        const response = await userService.updateUserPreferences(settingsData);
         
         if (response.success) {
-          localStorage.setItem('userSettings', JSON.stringify(settingsData));
+          // Save local copy for offline access
+          localStorage.setItem('userSettings', JSON.stringify(settings));
           setLastSyncTime(new Date().toISOString());
           
           toast({
-            title: "Settings Saved",
-            description: "All preferences have been saved successfully.",
+            title: "✅ Settings Saved",
+            description: "Your preferences have been updated successfully."
           });
         } else {
           throw new Error("Failed to save settings");
         }
       } catch (apiError) {
         // Save locally when offline
-        localStorage.setItem('userSettings', JSON.stringify(settingsData));
+        localStorage.setItem('userSettings', JSON.stringify(settings));
         toast({
           title: "Saved Locally",
           description: "Settings saved on your device. Will update when you're back online.",
           variant: "default"
         });
-      }
-      
-      // Send email confirmation if notifications enabled
-      if (settings.notifications.email) {
-        sendSettingsUpdateEmail();
       }
     } catch (error: any) {
       toast({
@@ -300,20 +325,16 @@ const CustomerSettings = () => {
     return { isValid: true, message: "" };
   };
 
-  // Email notification helper
-  const sendSettingsUpdateEmail = async () => {
-    try {
-      console.log("Settings update email sent to support@buildhomemartsquares.com");
-      // Email service integration handled by backend
-    } catch (error) {
-      console.log("Email notification simulated");
-    }
-  };
-
   // Update individual settings
   const syncSettingRealtime = async (category: keyof SettingsConfig, key: string, value: any) => {
     try {
-      const updateData = { preferences: { [category]: { ...settings[category], [key]: value } } };
+      const updateData = { 
+        profile: { 
+          preferences: { 
+            [category]: { ...settings[category], [key]: value } 
+          } 
+        } 
+      };
       const response = await userService.updateUserPreferences(updateData);
       
       if (response.success) {
@@ -346,7 +367,7 @@ const CustomerSettings = () => {
 
       toast({
         title: "✅ Export Ready",
-        description: "Download link sent to support@buildhomemartsquares.com",
+        description: "Download will begin shortly",
       });
 
       console.log("Data export requested:", new Date().toISOString());
@@ -369,9 +390,12 @@ const CustomerSettings = () => {
 
       await new Promise(resolve => setTimeout(resolve, 1500));
 
+      const user = await userService.getCurrentUser();
+      const userEmail = user?.data?.user?.email || 'your email';
+      
       toast({
         title: "📧 Confirmation Required",
-        description: "Final confirmation sent to support@buildhomemartsquares.com",
+        description: `Confirmation link sent to ${userEmail}`,
         variant: "destructive"
       });
 
@@ -551,12 +575,6 @@ const CustomerSettings = () => {
               {/* Privacy Controls */}
               {[
                 {
-                  key: 'allowMessages',
-                  title: 'Direct Messages',
-                  description: 'Allow other users to send you messages',
-                  value: settings.privacy.allowMessages
-                },
-                {
                   key: 'showActivity',
                   title: 'Activity Status',
                   description: 'Show when you were last active',
@@ -592,7 +610,7 @@ const CustomerSettings = () => {
                       onCheckedChange={(checked) => updateSettings('privacy', item.key, checked)}
                     />
                   </div>
-                  {index < 4 && <Separator className="my-3" />}
+                  {index < 3 && <Separator className="my-3" />}
                 </div>
               ))}
 

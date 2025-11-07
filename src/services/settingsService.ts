@@ -371,7 +371,7 @@ class SettingsService {
       general: {
         siteName: "BuildHomeMart Squares",
         siteDescription: "Premium Real Estate Platform",
-        contactEmail: "support@buildhomemartsquares.com",
+        contactEmail: "contact@buildhomemartsquares.com",
         supportEmail: "support@buildhomemartsquares.com",
         maintenanceMode: false,
         registrationEnabled: true,

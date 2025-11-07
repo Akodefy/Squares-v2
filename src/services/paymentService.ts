@@ -158,7 +158,7 @@ class PaymentService {
         key: order.keyId,
         amount: order.amount,
         currency: order.currency,
-        name: "Ninety Nine Acres",
+        name: "BuildHomeMartSquares",
         description: `Subscription to ${order.planName}`,
         order_id: order.orderId,
         prefill: {
@@ -257,7 +257,7 @@ class PaymentService {
           key: order.keyId,
           amount: order.amount,
           currency: order.currency,
-          name: "Ninety Nine Acres",
+          name: "BuildHomeMartSquares",
           description: `Subscription to ${order.planName}${paymentData.addons.length > 0 ? ` with ${paymentData.addons.length} addon(s)` : ''}`,
           order_id: order.orderId,
           prefill: {
@@ -409,7 +409,7 @@ class PaymentService {
           key: order.keyId,
           amount: order.amount,
           currency: order.currency,
-          name: "Ninety Nine Acres",
+          name: "BuildHomeMartSquares",
           description: `Addon purchase - ${paymentData.addons.length} addon(s)`,
           order_id: order.orderId,
           prefill: {
