@@ -1,6 +1,6 @@
-import { Menu, X, User } from "lucide-react";
+import { Menu, X, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import newBadge from "@/assets/new-badge.gif";
 import logoLight from "@/assets/logo-light.png";
 import logoDark from "@/assets/logo-dark.png";
@@ -9,15 +9,63 @@ import { useTheme } from "next-themes";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import CustomerProfileDropdown from "@/components/customer/CustomerProfileDropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   // Debug logging
   console.log('Navbar: isAuthenticated:', isAuthenticated);
   console.log('Navbar: user:', user);
+
+  // Property categories for dropdown
+  const residentialProperties = [
+    { label: "Flat / Apartment", value: "flat_apartment" },
+    { label: "Residential House", value: "residential_house" },
+    { label: "Villa", value: "villa" },
+    { label: "Builder Floor Apartment", value: "builder_floor_apartment" },
+    { label: "Residential Land / Plot", value: "residential_land_plot" },
+    { label: "Penthouse", value: "penthouse" },
+    { label: "Studio Apartment", value: "studio_apartment" },
+    { label: "PG (Paying Guest)", value: "pg" },
+  ];
+
+  const commercialProperties = [
+    { label: "Commercial Office Space", value: "commercial_office_space" },
+    { label: "Office in IT Park / SEZ", value: "office_in_it_park_sez" },
+    { label: "Commercial Shop", value: "commercial_shop" },
+    { label: "Commercial Showroom", value: "commercial_showroom" },
+    { label: "Commercial Land", value: "commercial_land" },
+    { label: "Warehouse / Godown", value: "warehouse_godown" },
+    { label: "Industrial Land", value: "industrial_land" },
+    { label: "Industrial Building", value: "industrial_building" },
+    { label: "Industrial Shed", value: "industrial_shed" },
+  ];
+
+  const agriculturalProperties = [
+    { label: "Agricultural Land", value: "agricultural_land" },
+    { label: "Farm House", value: "farm_house" },
+  ];
+
+  const handlePropertyTypeClick = (listingType: string, propertyType?: string) => {
+    const searchParams = new URLSearchParams();
+    searchParams.set('listingType', listingType);
+    if (propertyType) {
+      searchParams.set('propertyType', propertyType);
+    }
+    navigate(`/customer/search?${searchParams.toString()}`);
+  };
 
   return (
     <>
@@ -39,12 +87,115 @@ const Navbar = () => {
             {/* Desktop Navigation */}
             <div className="flex items-center gap-4 md:gap-8 flex-1">
               <div className="hidden md:flex items-center gap-4 lg:gap-6 ml-[180px] lg:ml-[220px]">
-                <Link
-                  to="/products"
-                  className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
-                >
-                  All Properties
-                </Link>
+                {/* Buy Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap flex items-center gap-1 outline-none">
+                    Buy <ChevronDown className="h-3 w-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuItem onClick={() => handlePropertyTypeClick('sale')}>
+                      All Properties for Sale
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Residential</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-56">
+                        {residentialProperties.map((prop) => (
+                          <DropdownMenuItem 
+                            key={prop.value}
+                            onClick={() => handlePropertyTypeClick('sale', prop.value)}
+                          >
+                            {prop.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Agricultural</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-56">
+                        {agriculturalProperties.map((prop) => (
+                          <DropdownMenuItem 
+                            key={prop.value}
+                            onClick={() => handlePropertyTypeClick('sale', prop.value)}
+                          >
+                            {prop.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Rent Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap flex items-center gap-1 outline-none">
+                    Rent <ChevronDown className="h-3 w-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuItem onClick={() => handlePropertyTypeClick('rent')}>
+                      All Properties for Rent
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Residential</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-56">
+                        {residentialProperties.map((prop) => (
+                          <DropdownMenuItem 
+                            key={prop.value}
+                            onClick={() => handlePropertyTypeClick('rent', prop.value)}
+                          >
+                            {prop.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Sell Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap flex items-center gap-1 outline-none">
+                    Sell <ChevronDown className="h-3 w-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuItem onClick={() => navigate('/vendor/login')}>
+                      Post Property for Free
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/contact?service=valuation')}>
+                      Property Valuation
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/vendor/properties')}>
+                      My Listed Properties
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Commercial Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap flex items-center gap-1 outline-none">
+                    Commercial <ChevronDown className="h-3 w-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuItem onClick={() => handlePropertyTypeClick('sale', 'all_commercial')}>
+                      Buy Commercial Property
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handlePropertyTypeClick('rent', 'all_commercial')}>
+                      Rent Commercial Property
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Commercial Types</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-56">
+                        {commercialProperties.map((prop) => (
+                          <DropdownMenuItem 
+                            key={prop.value}
+                            onClick={() => handlePropertyTypeClick('sale', prop.value)}
+                          >
+                            {prop.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <Link
                   to="/contact"
                   className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
@@ -100,13 +251,87 @@ const Navbar = () => {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-border bg-background">
             <div className="px-4 py-3 sm:py-4 space-y-2 sm:space-y-3">
-              <Link
-                to="/products"
-                className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                All Properties
-              </Link>
+              {/* Buy Section */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Buy</p>
+                <button
+                  onClick={() => {
+                    handlePropertyTypeClick('sale');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
+                >
+                  All Properties for Sale
+                </button>
+                <button
+                  onClick={() => {
+                    handlePropertyTypeClick('sale', 'flat_apartment');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left py-2 pl-4 text-sm hover:text-primary transition-colors"
+                >
+                  Residential Properties
+                </button>
+              </div>
+
+              {/* Rent Section */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Rent</p>
+                <button
+                  onClick={() => {
+                    handlePropertyTypeClick('rent');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
+                >
+                  All Properties for Rent
+                </button>
+                <button
+                  onClick={() => {
+                    handlePropertyTypeClick('rent', 'flat_apartment');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left py-2 pl-4 text-sm hover:text-primary transition-colors"
+                >
+                  Residential Properties
+                </button>
+              </div>
+
+              {/* Sell Section */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Sell</p>
+                <Link
+                  to="/vendor/login"
+                  className="block py-2 text-sm font-medium hover:text-primary transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Post Property for Free
+                </Link>
+              </div>
+
+              {/* Commercial Section */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Commercial</p>
+                <button
+                  onClick={() => {
+                    handlePropertyTypeClick('sale', 'all_commercial');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
+                >
+                  Buy Commercial
+                </button>
+                <button
+                  onClick={() => {
+                    handlePropertyTypeClick('rent', 'all_commercial');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
+                >
+                  Rent Commercial
+                </button>
+              </div>
+
               <Link
                 to="/contact"
                 className="block py-2 text-sm font-medium hover:text-primary transition-colors"
@@ -114,18 +339,7 @@ const Navbar = () => {
               >
                 Support
               </Link>
-              <Link
-                to="/vendor/login"
-                className="block"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Post Your Property
-                </Button>
-              </Link>
+
               {!isAuthenticated && (
                 <Link
                   to="/login"
