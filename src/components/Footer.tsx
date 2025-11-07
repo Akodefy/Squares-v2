@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Facebook, Twitter, Instagram, Linkedin, Headphones } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SupportDialog } from "@/components/support/SupportDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +8,16 @@ import { useToast } from "@/hooks/use-toast";
 const Footer = () => {
   const [supportDialogOpen, setSupportDialogOpen] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handlePropertySearch = (listingType: string, propertyType?: string) => {
+    const searchParams = new URLSearchParams();
+    searchParams.set('listingType', listingType);
+    if (propertyType) {
+      searchParams.set('propertyType', propertyType);
+    }
+    navigate(`/customer/search?${searchParams.toString()}`);
+  };
 
   return (
     <footer className="bg-muted mt-20">
@@ -45,35 +55,90 @@ const Footer = () => {
           </div>
           
           <div>
-            <h4 className="font-semibold mb-4">Quick Links</h4>
+            <h4 className="font-semibold mb-4">Buy Property</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">About Us</a></li>
-              <li><Link to="/contact" className="hover:text-primary transition-colors">Support</Link></li>
+              <li>
+                <button 
+                  onClick={() => handlePropertySearch('sale')}
+                  className="hover:text-primary transition-colors text-left"
+                >
+                  All Properties for Sale
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handlePropertySearch('sale', 'flat_apartment')}
+                  className="hover:text-primary transition-colors text-left"
+                >
+                  Residential Properties
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handlePropertySearch('sale', 'all_commercial')}
+                  className="hover:text-primary transition-colors text-left"
+                >
+                  Commercial Properties
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handlePropertySearch('sale', 'agricultural_land')}
+                  className="hover:text-primary transition-colors text-left"
+                >
+                  Agricultural Land
+                </button>
+              </li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold mb-4">Rent Property</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <button 
+                  onClick={() => handlePropertySearch('rent')}
+                  className="hover:text-primary transition-colors text-left"
+                >
+                  All Properties for Rent
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handlePropertySearch('rent', 'flat_apartment')}
+                  className="hover:text-primary transition-colors text-left"
+                >
+                  Residential for Rent
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handlePropertySearch('rent', 'all_commercial')}
+                  className="hover:text-primary transition-colors text-left"
+                >
+                  Commercial for Rent
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handlePropertySearch('rent', 'pg')}
+                  className="hover:text-primary transition-colors text-left"
+                >
+                  PG / Hostels
+                </button>
+              </li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold mb-4">Company</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><Link to="/vendor/login" className="hover:text-primary transition-colors">Post Property</Link></li>
+              <li><Link to="/contact?service=valuation" className="hover:text-primary transition-colors">Property Valuation</Link></li>
+              <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Support</Link></li>
               <li><Link to="/track-support" className="hover:text-primary transition-colors">Track Support</Link></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Blog</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Careers</a></li>
               <li><Link to="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              <li><Link to="/refund-policy" className="hover:text-primary transition-colors">Refund & Cancellation Policy</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-4">Services</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Buy Property</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Rent Property</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Sell Property</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Property Valuation</a></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-4">Popular Locations</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Mumbai</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Delhi NCR</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Bangalore</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Pune</a></li>
+              <li><Link to="/refund-policy" className="hover:text-primary transition-colors">Refund Policy</Link></li>
             </ul>
           </div>
         </div>

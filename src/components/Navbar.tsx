@@ -64,7 +64,7 @@ const Navbar = () => {
     if (propertyType) {
       searchParams.set('propertyType', propertyType);
     }
-    navigate(`/customer/search?${searchParams.toString()}`);
+    navigate(`/products?${searchParams.toString()}`);
   };
 
   return (

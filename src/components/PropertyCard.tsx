@@ -55,10 +55,15 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   }, [property.vendor?._id, property.owner?._id]);
 
   const handleViewDetails = () => {
+    // Allow viewing without login - will be a public route
     navigate(`/property/${property._id}`);
   };
 
   const handleMessageClick = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/property/${property._id}`, action: 'message' } });
+      return;
+    }
     if (isEnterpriseProperty) {
       setShowEnterpriseDialog(true);
     } else {
@@ -67,11 +72,23 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   };
 
   const handleContactClick = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/property/${property._id}`, action: 'contact' } });
+      return;
+    }
     if (isEnterpriseProperty) {
       setShowEnterpriseDialog(true);
     } else {
       setShowContactDialog(true);
     }
+  };
+
+  const handleFavoriteClick = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/property/${property._id}`, action: 'favorite' } });
+      return;
+    }
+    // TODO: Add favorite functionality
   };
 
   return (
@@ -109,6 +126,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           size="icon" 
           variant="ghost" 
           className="absolute top-3 right-3 bg-background/80 backdrop-blur hover:bg-background"
+          onClick={handleFavoriteClick}
         >
           <Heart className="h-5 w-5" />
         </Button>

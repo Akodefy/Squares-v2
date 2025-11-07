@@ -63,12 +63,25 @@ const PropertySearch = () => {
     "Fire Safety"
   ];
 
-  // Initialize search query from URL params
+  // Initialize search query and filters from URL params
   useEffect(() => {
     const queryParam = searchParams.get('q');
+    const listingTypeParam = searchParams.get('listingType');
+    const propertyTypeParam = searchParams.get('propertyType');
+    
     if (queryParam) {
       setSearchQuery(queryParam);
     }
+    
+    if (listingTypeParam && listingTypeParam !== 'all') {
+      setListingType(listingTypeParam);
+    }
+    
+    if (propertyTypeParam && propertyTypeParam !== 'all') {
+      setPropertyType(propertyTypeParam);
+    }
+    
+    setCurrentPage(1);
   }, [searchParams]);
 
   // Load properties

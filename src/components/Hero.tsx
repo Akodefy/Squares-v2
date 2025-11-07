@@ -317,16 +317,7 @@ const Hero = () => {
 
     // Handle property click
     const handlePropertyClick = (propertyId: string) => {
-      if (!isAuthenticated) {
-        // Redirect to login page for guest users
-        navigate('/login', { 
-          state: { 
-            from: `/property/${propertyId}`,
-            message: 'Please login to view property details' 
-          }
-        });
-        return;
-      }
+      // Allow viewing property details without login
       navigate(`/property/${propertyId}`);
     };
 
@@ -334,14 +325,14 @@ const Hero = () => {
     const handleViewAllResults = () => {
       const searchParams = new URLSearchParams({
         search: searchQuery,
-        type: listingTypeMap[activeTab]
+        listingType: listingTypeMap[activeTab]
       });
       
       if (activeTab === 'commercial') {
         searchParams.set('propertyType', 'commercial');
       }
       
-      navigate(`/customer/search?${searchParams.toString()}`);
+      navigate(`/products?${searchParams.toString()}`);
     };
 
     // Click outside to close results and suggestions

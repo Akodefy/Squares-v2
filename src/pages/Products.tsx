@@ -15,10 +15,12 @@ import {
 } from "@/components/ui/pagination";
 import { propertyService, Property, PropertyFilters as PropertyFilterType } from "@/services/propertyService";
 import { toast } from "@/hooks/use-toast";
+import { useSearchParams } from "react-router-dom";
 
 const ITEMS_PER_PAGE = 12;
 
 const Products = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [properties, setProperties] = useState<Property[]>([]);
@@ -26,6 +28,30 @@ const Products = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalProperties, setTotalProperties] = useState(0);
   const [filters, setFilters] = useState<PropertyFilterType>({});
+
+  // Initialize filters from URL params - re-run when searchParams change
+  useEffect(() => {
+    const listingTypeParam = searchParams.get('listingType');
+    const propertyTypeParam = searchParams.get('propertyType');
+    const searchParam = searchParams.get('search');
+    
+    const initialFilters: PropertyFilterType = {};
+    
+    if (listingTypeParam && listingTypeParam !== 'all') {
+      initialFilters.listingType = listingTypeParam as 'sale' | 'rent' | 'lease';
+    }
+    
+    if (propertyTypeParam && propertyTypeParam !== 'all') {
+      initialFilters.propertyType = propertyTypeParam;
+    }
+    
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+    
+    setFilters(initialFilters);
+    setCurrentPage(1); // Reset to first page when URL params change
+  }, [searchParams]);
 
   // Fetch properties when filters, search, or page changes
   useEffect(() => {
