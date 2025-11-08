@@ -1,9 +1,15 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { HomePage, UsersPage, AddUserPage, VendorApprovalsPage, MessagesPage, ProfilePage, SettingsPage, RoleListPage,RoleEditPage,AddRolePage,ClientListPage,PlanListPage,PropertyListPage,PropertyEditPage,AddPropertyPage,PlanEditPage,PlanCreatePage,ClientEditPage,AddonManagementPage } from "@/routes/AdminLazyImports";
 import DashboardLayout from "@/components/adminpanel/DashboardLayout";
 import AdminProtectedRoute from "@/components/auth/AdminProtectedRoute";
 import { PageLoader } from "@/components/ui/loader/PageLoader";
+import PolicyEditor from "@/pages/admin/PolicyEditor";
+
+const RevenueDetails = lazy(() => import("@/pages/admin/RevenueDetails"));
+const UsersDetails = lazy(() => import("@/pages/admin/UsersDetails"));
+const PropertiesDetails = lazy(() => import("@/pages/admin/PropertiesDetails"));
+const EngagementDetails = lazy(() => import("@/pages/admin/EngagementDetails"));
 
 
 const AdminRoutes = () => {
@@ -16,6 +22,10 @@ const AdminRoutes = () => {
           <Routes>
             <Route path="/" element={<Navigate to="/admin/dashboard" />} />
             <Route path="/dashboard" element={<HomePage />} />
+            <Route path="/revenue-details" element={<RevenueDetails />} />
+            <Route path="/users-details" element={<UsersDetails />} />
+            <Route path="/properties-details" element={<PropertiesDetails />} />
+            <Route path="/engagement-details" element={<EngagementDetails />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/users/add" element={<AddUserPage />} />
             <Route path="/vendor-approvals" element={<VendorApprovalsPage />} />
@@ -34,6 +44,7 @@ const AdminRoutes = () => {
             <Route path="/properties/add" element={<AddPropertyPage/>} />
             <Route path="/properties/edit/:id" element={<PropertyEditPage/>} />
             <Route path="/addons" element={<AddonManagementPage/>} />
+            <Route path="/policy-editor/:policyType" element={<PolicyEditor />} />
           </Routes>
         </Suspense>
       </DashboardLayout>

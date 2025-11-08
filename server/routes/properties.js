@@ -2,14 +2,14 @@ const express = require('express');
 const Property = require('../models/Property');
 const PropertyView = require('../models/PropertyView');
 const { asyncHandler, validateRequest } = require('../middleware/errorMiddleware');
-const { authenticateToken } = require('../middleware/authMiddleware');
+const { authenticateToken, optionalAuth } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
 const router = express.Router();
 
 // @desc    Get all properties
 // @route   GET /api/properties
-// @access  Public
-router.get('/', asyncHandler(async (req, res) => {
+// @access  Public (with optional auth for admin users)
+router.get('/', optionalAuth, asyncHandler(async (req, res) => {
   try {
     const {
       page = 1,
@@ -24,12 +24,24 @@ router.get('/', asyncHandler(async (req, res) => {
     } = req.query;
 
     const skip = (page - 1) * limit;
-    // Show properties that are available or active (both are valid for customer viewing)
-    // Exclude pending, rejected, sold, and rented properties
-    let queryFilter = { 
-      status: { $in: ['available', 'active'] },
-      verified: true  // Only show verified properties to customers
-    };
+    
+    // Debug: Log user info
+    console.log('Properties API - User:', req.user ? { id: req.user.id, role: req.user.role } : 'Not authenticated');
+    
+    // Admin users can see all properties, customers only see available/active verified properties
+    let queryFilter = {};
+    
+    if (!req.user || !['admin', 'superadmin', 'subadmin'].includes(req.user.role)) {
+      // For customers: show only available or active verified properties
+      queryFilter = { 
+        status: { $in: ['available', 'active'] },
+        verified: true  // Only show verified properties to customers
+      };
+      console.log('Applying customer filter - showing only available/active verified properties');
+    } else {
+      console.log('Admin user detected - showing all properties');
+    }
+    // Admin users: show all properties (no status filter)
 
     // Apply search filter (searches in title, description, city, state, locality)
     if (search) {

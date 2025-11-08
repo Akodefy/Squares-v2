@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useTheme } from "next-themes";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
-import CustomerProfileDropdown from "@/components/customer/CustomerProfileDropdown";
+import UnifiedProfileDropdown from "@/components/shared/UnifiedProfileDropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -217,7 +217,7 @@ const Navbar = () => {
               </Link>
               
               {isAuthenticated ? (
-                <CustomerProfileDropdown />
+                <UnifiedProfileDropdown />
               ) : (
                 <Link to="/login" className="hidden xs:block">
                   <Button variant="ghost" className="hover:bg-accent/10 text-xs sm:text-sm px-2 sm:px-4">

@@ -15,6 +15,26 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeEvent } from "@/contexts/RealtimeContext";
+import { DEFAULT_PROPERTY_IMAGE } from "@/utils/imageUtils";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+
+const getImageUrl = (image: string | { url?: string } | undefined): string => {
+  if (!image) return DEFAULT_PROPERTY_IMAGE;
+  
+  // Handle object format {url: "...", caption: "...", isPrimary: false}
+  const imagePath = typeof image === 'object' ? image.url : image;
+  
+  if (!imagePath || typeof imagePath !== 'string') return DEFAULT_PROPERTY_IMAGE;
+  
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  // Remove /api prefix if present and construct full URL
+  const cleanPath = imagePath.startsWith('/api') ? imagePath.substring(4) : imagePath;
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  return `${baseUrl}${cleanPath}`;
+};
 
 interface Property {
   _id: string;
@@ -32,7 +52,7 @@ interface Property {
   bedrooms: number;
   bathrooms: number;
   status: 'pending' | 'active' | 'rejected';
-  images: string[];
+  images: Array<{ url?: string; caption?: string; isPrimary?: boolean } | string>;
   owner: {
     _id: string;
     name: string;
@@ -230,7 +250,7 @@ const PropertyReviews = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 mt-16">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Property Reviews</h1>
         <p className="text-muted-foreground mt-1">
@@ -265,8 +285,22 @@ const PropertyReviews = () => {
           properties.map((property) => (
             <Card key={property._id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
+                <div className="flex items-start justify-between gap-4">
+                  {/* Property Thumbnail */}
+                  {property.images && property.images.length > 0 && (
+                    <div className="flex-shrink-0">
+                      <img
+                        src={getImageUrl(property.images[0])}
+                        alt={property.title}
+                        className="w-24 h-24 object-cover rounded"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_PROPERTY_IMAGE;
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="flex-1 space-y-2">
                     <CardTitle className="text-xl">{property.title}</CardTitle>
                     <CardDescription className="space-y-1">
                       <div className="flex items-center gap-4 text-sm">
@@ -285,7 +319,8 @@ const PropertyReviews = () => {
                       </div>
                     </CardDescription>
                   </div>
-                  <div className="text-right">
+                  
+                  <div className="text-right flex-shrink-0">
                     <div className="text-2xl font-bold text-primary">
                       {formatPrice(property.price)}
                     </div>
@@ -451,9 +486,12 @@ const PropertyReviews = () => {
                     {selectedProperty.images.map((image, index) => (
                       <img
                         key={index}
-                        src={image}
+                        src={getImageUrl(image)}
                         alt={`Property ${index + 1}`}
                         className="w-full h-32 object-cover rounded"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_PROPERTY_IMAGE;
+                        }}
                       />
                     ))}
                   </div>

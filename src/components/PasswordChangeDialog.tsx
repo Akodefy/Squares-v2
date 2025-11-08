@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Eye, EyeOff, Key, Shield, Check, X, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
@@ -11,40 +12,47 @@ import { userService } from "@/services/userService";
 interface PasswordChangeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialogProps) => {
+type Step = 'currentPassword' | 'otp' | 'newPassword';
+
+export const PasswordChangeDialog = ({ open, onOpenChange, onSuccess }: PasswordChangeDialogProps) => {
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
     otp: ""
   });
+  
+  const [step, setStep] = useState<Step>('currentPassword');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpExpiry, setOtpExpiry] = useState(5);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
     confirm: false
   });
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [step, setStep] = useState<'password' | 'otp'>('password');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpExpiry, setOtpExpiry] = useState<number | null>(null);
 
-  // Password validation
   const validatePassword = (password: string): string[] => {
     const errors: string[] = [];
     if (password.length < 8) errors.push("At least 8 characters");
-    if (!/[a-z]/.test(password)) errors.push("One lowercase letter");
     if (!/[A-Z]/.test(password)) errors.push("One uppercase letter");
-    if (!/[0-9]/.test(password)) errors.push("One number");
+    if (!/[a-z]/.test(password)) errors.push("One lowercase letter");
+    if (!/\d/.test(password)) errors.push("One number");
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push("One special character");
     return errors;
   };
 
-  const passwordStrength = (password: string): { score: number; label: string; color: string } => {
-    const errors = validatePassword(password);
-    const score = Math.max(0, 5 - errors.length);
+  const passwordStrength = (password: string) => {
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/\d/.test(password)) score++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
     
     if (score === 5) return { score, label: "Very Strong", color: "text-green-600" };
     if (score >= 4) return { score, label: "Strong", color: "text-green-500" };
@@ -53,9 +61,12 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
     return { score, label: "Very Weak", color: "text-red-500" };
   };
 
-  const canSubmit = () => {
+  const canSubmitCurrentPassword = () => {
+    return formData.currentPassword.length > 0;
+  };
+
+  const canSubmitNewPassword = () => {
     return (
-      formData.currentPassword.length > 0 &&
       formData.newPassword.length >= 8 &&
       formData.newPassword === formData.confirmPassword &&
       validatePassword(formData.newPassword).length === 0 &&
@@ -64,20 +75,24 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
   };
 
   const handleSubmit = async () => {
-    if (step === 'password') {
-      if (!canSubmit()) return;
+    if (step === 'currentPassword') {
+      if (!canSubmitCurrentPassword()) return;
 
       try {
         setLoading(true);
         setErrors([]);
 
-        // First, request OTP
+        // First, request OTP with current password verification
         const response = await userService.requestPasswordChangeOTP(formData.currentPassword);
         
         if (response.success) {
           setStep('otp');
           setOtpSent(true);
           setOtpExpiry(response.expiryMinutes || 5);
+          toast({
+            title: "OTP Sent",
+            description: "Verification code sent to your email",
+          });
         }
       } catch (error: any) {
         console.error('Failed to send OTP:', error);
@@ -91,11 +106,21 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
         return;
       }
 
+      // Just verify OTP and move to password step
+      setStep('newPassword');
+      setErrors([]);
+      toast({
+        title: "OTP Verified",
+        description: "Now set your new password",
+      });
+    } else if (step === 'newPassword') {
+      if (!canSubmitNewPassword()) return;
+
       try {
         setLoading(true);
         setErrors([]);
 
-        // Verify OTP and change password
+        // Change password with OTP
         const response = await userService.changePasswordWithOTP(
           formData.otp,
           formData.newPassword
@@ -114,11 +139,12 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
             confirmPassword: "",
             otp: ""
           });
-          setStep('password');
+          setStep('currentPassword');
           setOtpSent(false);
 
           // Close dialog
           onOpenChange(false);
+          onSuccess?.();
 
           // Optional: Send confirmation email
           toast({
@@ -161,7 +187,7 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
       otp: ""
     });
     setErrors([]);
-    setStep('password');
+    setStep('currentPassword');
     setOtpSent(false);
     onOpenChange(false);
   };
@@ -196,12 +222,15 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="w-5 h-5" />
-            {step === 'password' ? 'Change Password' : 'Verify Email'}
+            {step === 'currentPassword' ? 'Change Password' : 
+             step === 'otp' ? 'Verify Email' : 'Set New Password'}
           </DialogTitle>
           <DialogDescription>
-            {step === 'password' 
-              ? 'Enter your current password and choose a new secure password.'
-              : `We've sent a verification code to your registered email. Please enter the code below.`
+            {step === 'currentPassword' 
+              ? 'Enter your current password to proceed.'
+              : step === 'otp'
+              ? `We've sent a verification code to your registered email. Please enter the code below.`
+              : 'Choose a new secure password for your account.'
             }
           </DialogDescription>
         </DialogHeader>
@@ -221,20 +250,63 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
             </Alert>
           )}
 
+          {step === 'currentPassword' && (
+            <>
+              {/* Current Password */}
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <div className="relative">
+                  <Input
+                    id="currentPassword"
+                    type={showPasswords.current ? "text" : "password"}
+                    value={formData.currentPassword}
+                    onChange={(e) => setFormData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    placeholder="Enter your current password"
+                    className="pr-10"
+                    disabled={loading}
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                    disabled={loading}
+                  >
+                    {showPasswords.current ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
           {step === 'otp' && (
             <>
               {/* OTP Input */}
               <div className="space-y-2">
                 <Label htmlFor="otp">Verification Code</Label>
-                <Input
-                  id="otp"
-                  type="text"
-                  value={formData.otp}
-                  onChange={(e) => setFormData(prev => ({ ...prev, otp: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                  placeholder="Enter 6-digit code"
-                  className="text-center text-lg tracking-widest"
-                  maxLength={6}
-                />
+                <div className="flex justify-center">
+                  <InputOTP
+                    value={formData.otp}
+                    onChange={(value) => setFormData(prev => ({ ...prev, otp: value }))}
+                    maxLength={6}
+                    className="gap-2"
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} className="w-12 h-12 text-lg" />
+                      <InputOTPSlot index={1} className="w-12 h-12 text-lg" />
+                      <InputOTPSlot index={2} className="w-12 h-12 text-lg" />
+                      <InputOTPSlot index={3} className="w-12 h-12 text-lg" />
+                      <InputOTPSlot index={4} className="w-12 h-12 text-lg" />
+                      <InputOTPSlot index={5} className="w-12 h-12 text-lg" />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span>Code expires in {otpExpiry} minutes</span>
                   <Button 
@@ -261,152 +333,117 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
             </>
           )}
 
-          {step === 'password' && (
+          {step === 'newPassword' && (
             <>
-              {/* Current Password */}
-          <div className="space-y-2">
-            <Label htmlFor="currentPassword">Current Password</Label>
-            <div className="relative">
-              <Input
-                id="currentPassword"
-                type={showPasswords.current ? "text" : "password"}
-                value={formData.currentPassword}
-                onChange={(e) => setFormData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                placeholder="Enter your current password"
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
-              >
-                {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-
-          {/* New Password */}
-          <div className="space-y-2">
-            <Label htmlFor="newPassword">New Password</Label>
-            <div className="relative">
-              <Input
-                id="newPassword"
-                type={showPasswords.new ? "text" : "password"}
-                value={formData.newPassword}
-                onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
-                placeholder="Enter your new password"
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-              >
-                {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-            
-            {/* Password Strength Indicator */}
-            {formData.newPassword && (
+              {/* New Password */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-muted rounded-full h-2">
-                    <div 
-                      className={`h-full rounded-full transition-all ${
-                        strength.score >= 4 ? 'bg-green-500' :
-                        strength.score >= 3 ? 'bg-yellow-500' :
-                        strength.score >= 2 ? 'bg-orange-500' : 'bg-red-500'
+                <Label htmlFor="newPassword">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showPasswords.new ? "text" : "password"}
+                    value={formData.newPassword}
+                    onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
+                    placeholder="Enter your new password"
+                    className="pr-10"
+                    disabled={loading}
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                    disabled={loading}
+                  >
+                    {showPasswords.new ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Password Strength Indicator */}
+              {formData.newPassword && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Password Strength:</span>
+                    <span className={`font-medium ${strength.color}`}>
+                      {strength.label}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        strength.score === 5 ? "bg-green-600" :
+                        strength.score >= 4 ? "bg-green-500" :
+                        strength.score >= 3 ? "bg-yellow-500" :
+                        strength.score >= 2 ? "bg-orange-500" : "bg-red-500"
                       }`}
                       style={{ width: `${(strength.score / 5) * 100}%` }}
                     />
                   </div>
-                  <span className={`text-xs font-medium ${strength.color}`}>
-                    {strength.label}
-                  </span>
                 </div>
-                
-                {/* Password Requirements */}
-                {validationErrors.length > 0 && (
-                  <div className="text-xs space-y-1">
-                    <p className="font-medium text-muted-foreground">Requirements:</p>
-                    {validationErrors.map((error, index) => (
-                      <div key={index} className="flex items-center gap-2 text-red-600">
-                        <X className="w-3 h-3" />
-                        <span>{error}</span>
-                      </div>
-                    ))}
-                    {validatePassword(formData.newPassword).length === 0 && (
-                      <div className="flex items-center gap-2 text-green-600">
-                        <Check className="w-3 h-3" />
-                        <span>Password meets all requirements</span>
-                      </div>
+              )}
+
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showPasswords.confirm ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    placeholder="Confirm your new password"
+                    className="pr-10"
+                    disabled={loading}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                    disabled={loading}
+                  >
+                    {showPasswords.confirm ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
                     )}
-                  </div>
-                )}
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Confirm Password */}
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
-            <div className="relative">
-              <Input
-                id="confirmPassword"
-                type={showPasswords.confirm ? "text" : "password"}
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                placeholder="Confirm your new password"
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-              >
-                {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-            
-            {/* Password Match Indicator */}
-            {formData.confirmPassword && (
-              <div className="text-xs">
-                {formData.newPassword === formData.confirmPassword ? (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <Check className="w-3 h-3" />
-                    <span>Passwords match</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-red-600">
-                    <X className="w-3 h-3" />
-                    <span>Passwords don't match</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              {/* Password Requirements */}
+              {formData.newPassword && validationErrors.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-red-600">
+                    Password Requirements:
+                  </Label>
+                  <ul className="text-sm text-red-600 space-y-1">
+                    {validationErrors.map((error, index) => (
+                      <li key={index} className="flex items-center gap-2">
+                        <div className="w-1 h-1 bg-red-600 rounded-full" />
+                        {error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-          {/* Security Tips */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start gap-2">
-              <Shield className="w-4 h-4 text-blue-600 mt-0.5" />
-              <div className="text-xs text-blue-700 space-y-1">
-                <p className="font-medium">Security Tips:</p>
-                <ul className="list-disc list-inside space-y-0.5">
-                  <li>Use a unique password you haven't used elsewhere</li>
-                  <li>Consider using a password manager</li>
-                  <li>Don't share your password with anyone</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          </>
+              {/* Password Match Validation */}
+              {formData.confirmPassword && formData.newPassword !== formData.confirmPassword && (
+                <div className="text-sm text-red-600 flex items-center gap-2">
+                  <div className="w-1 h-1 bg-red-600 rounded-full" />
+                  Passwords do not match
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -414,10 +451,10 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
           <Button variant="outline" onClick={handleCancel} disabled={loading}>
             Cancel
           </Button>
-          {step === 'password' && (
+          {step === 'currentPassword' && (
             <Button 
               onClick={handleSubmit} 
-              disabled={!canSubmit() || loading}
+              disabled={!canSubmitCurrentPassword() || loading}
               className="min-w-[120px]"
             >
               {loading ? (
@@ -439,6 +476,22 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
               {loading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Verifying...
+                </div>
+              ) : (
+                'Verify Code'
+              )}
+            </Button>
+          )}
+          {step === 'newPassword' && (
+            <Button 
+              onClick={handleSubmit} 
+              disabled={!canSubmitNewPassword() || loading}
+              className="min-w-[120px]"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   Changing...
                 </div>
               ) : (
@@ -454,3 +507,5 @@ export const PasswordChangeDialog = ({ open, onOpenChange }: PasswordChangeDialo
     </Dialog>
   );
 };
+
+export default PasswordChangeDialog;

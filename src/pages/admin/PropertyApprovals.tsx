@@ -199,8 +199,8 @@ const PropertyApprovals = () => {
   }
 
   return (
-    <div className="space-y-6 relative top-[60px]">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Property Approvals</h1>
           <p className="text-muted-foreground mt-2">

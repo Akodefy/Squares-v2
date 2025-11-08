@@ -134,8 +134,8 @@ const Plans = () => {
   }
 
   return (
-      <div className="space-y-6 relative top-[60px]">
-        <div className="flex items-center justify-between">
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Plan Management</h1>
             <p className="text-muted-foreground mt-2">

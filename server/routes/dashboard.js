@@ -286,6 +286,8 @@ router.get('/', asyncHandler(async (req, res) => {
     totalMessages,
     totalFavorites,
     activeProperties,
+    pendingProperties,
+    soldProperties,
     newUsersThisMonth,
     newPropertiesThisMonth,
     newUsersLastMonth,
@@ -295,18 +297,27 @@ router.get('/', asyncHandler(async (req, res) => {
     revenueThisMonth,
     revenueLastMonth
   ] = await Promise.all([
-    User.countDocuments(),
+    // Exclude admin users from total count
+    User.countDocuments({ role: { $nin: ['admin', 'superadmin', 'subadmin'] } }),
     Property.countDocuments(),
     Message.countDocuments(),
     Favorite.countDocuments(),
     Property.countDocuments({ status: 'available' }),
-    User.countDocuments({ createdAt: { $gte: firstDayOfMonth } }),
+    Property.countDocuments({ status: 'pending' }),
+    Property.countDocuments({ status: { $in: ['sold', 'rented', 'leased'] } }),
+    // Exclude admin users from this month count
+    User.countDocuments({ 
+      createdAt: { $gte: firstDayOfMonth },
+      role: { $nin: ['admin', 'superadmin', 'subadmin'] }
+    }),
     Property.countDocuments({ createdAt: { $gte: firstDayOfMonth } }),
+    // Exclude admin users from last month count
     User.countDocuments({ 
       createdAt: { 
         $gte: firstDayOfLastMonth, 
         $lte: lastDayOfLastMonth 
-      } 
+      },
+      role: { $nin: ['admin', 'superadmin', 'subadmin'] }
     }),
     Property.countDocuments({ 
       createdAt: { 
@@ -461,6 +472,8 @@ router.get('/', asyncHandler(async (req, res) => {
     totalProperties,
     totalRevenue: totalRevenue || 0,
     activeListings: activeProperties,
+    pendingProperties,
+    soldProperties,
     newUsersThisMonth,
     newPropertiesThisMonth,
     revenueThisMonth: revenueThisMonth || 0,

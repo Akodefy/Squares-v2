@@ -100,6 +100,39 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// @desc    Get all subscriptions (no pagination)
+// @route   GET /api/subscriptions/all
+// @access  Private (Admin only)
+router.get('/all', authenticateToken, async (req, res) => {
+  try {
+    if (!['admin', 'superadmin'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required'
+      });
+    }
+
+    const subscriptions = await Subscription.find()
+      .populate('user', 'email profile.firstName profile.lastName')
+      .populate('plan', 'name price')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: {
+        subscriptions
+      }
+    });
+  } catch (error) {
+    console.error('Get all subscriptions error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch subscriptions',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // @desc    Get subscription statistics
 // @route   GET /api/subscriptions/stats
 // @access  Private (Admin only)

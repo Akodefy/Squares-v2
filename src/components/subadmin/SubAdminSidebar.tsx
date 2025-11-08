@@ -9,7 +9,8 @@ import {
   Bell, 
   BarChart3,
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
@@ -31,6 +32,18 @@ const subAdminNavItems = [
   { icon: Package, label: "Addon Services", path: "/subadmin/addon-services" },
   { icon: Bell, label: "Notifications", path: "/subadmin/notifications" },
   { icon: BarChart3, label: "Reports", path: "/subadmin/reports" },
+  { 
+    icon: FileText, 
+    label: "Privacy Policy", 
+    path: "/subadmin/policy-editor/privacy-policy",
+    subLabel: "Policy"
+  },
+  { 
+    icon: FileText, 
+    label: "Refund Policy", 
+    path: "/subadmin/policy-editor/refund-policy",
+    subLabel: "Policy"
+  },
 ];
 
 const SubAdminSidebar = ({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: SubAdminSidebarProps) => {
@@ -49,8 +62,8 @@ const SubAdminSidebar = ({ isCollapsed, onToggle, isMobileOpen, onMobileClose }:
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-16 bottom-0 bg-background border-r border-border z-40 transition-all duration-300 overflow-y-auto",
-          "lg:relative lg:top-16",
+          "fixed left-0 top-0 bottom-0 bg-background border-r border-border z-40 transition-all duration-300 overflow-y-auto",
+          "lg:relative lg:top-0",
           isCollapsed ? "w-16" : "w-64",
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}

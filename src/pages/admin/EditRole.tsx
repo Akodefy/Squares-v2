@@ -135,7 +135,7 @@ const EditRole = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12 relative top-[60px]">
+      <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 animate-spin" />
         <span className="ml-2 text-lg">Loading role...</span>
       </div>
@@ -144,7 +144,7 @@ const EditRole = () => {
 
   if (!role) {
     return (
-      <div className="space-y-6 relative top-[60px]">
+      <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/admin/roles")}>
             <ArrowLeft className="w-4 h-4" />

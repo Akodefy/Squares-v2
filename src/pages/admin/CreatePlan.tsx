@@ -89,7 +89,7 @@ const CreatePlan = () => {
   };
 
   return (
-    <div className="space-y-6 relative top-[60px]">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin/plans")}>
           <ArrowLeft className="w-4 h-4" />

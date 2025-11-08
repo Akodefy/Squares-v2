@@ -1,4 +1,4 @@
-import { Home, Users, ChevronLeft, ChevronRight, PaintRoller, LandPlot, SquareChartGantt, NotebookPen, Package, MessageSquare, UserCheck } from "lucide-react";
+import { Home, Users, ChevronLeft, ChevronRight, PaintRoller, LandPlot, SquareChartGantt, NotebookPen, Package, MessageSquare, UserCheck, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
 
@@ -19,6 +19,18 @@ const navItems = [
   { icon: LandPlot, label: "Properties", path: "/admin/properties" },
   { icon: NotebookPen, label: "Plans", path: "/admin/plans" },
   { icon: Package, label: "Addons", path: "/admin/addons" },
+  { 
+    icon: FileText, 
+    label: "Privacy Policy", 
+    path: "/admin/policy-editor/privacy-policy",
+    subLabel: "Policy"
+  },
+  { 
+    icon: FileText, 
+    label: "Refund Policy", 
+    path: "/admin/policy-editor/refund-policy",
+    subLabel: "Policy"
+  },
 ];
 
 const Sidebar = ({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: SidebarProps) => {
@@ -37,8 +49,8 @@ const Sidebar = ({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: Sidebar
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-16 bottom-0 bg-background border-r border-border z-40 transition-all duration-300 overflow-y-auto",
-          "lg:relative lg:top-16",
+          "fixed left-0 top-0 bottom-0 bg-background border-r border-border z-40 transition-all duration-300 overflow-y-auto",
+          "lg:relative lg:top-0",
           isCollapsed ? "w-16" : "w-64",
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}

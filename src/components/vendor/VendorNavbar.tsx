@@ -20,6 +20,7 @@ import logoDark from "@/assets/logo-dark.png";
 import { useTheme } from "next-themes";
 import { VendorNotificationCenter } from "./VendorNotificationCenter";
 import { useDebounce } from "@/hooks/use-debounce";
+import UnifiedProfileDropdown from "@/components/shared/UnifiedProfileDropdown";
 
 interface SearchSuggestion {
   type: 'location' | 'property' | 'portal';
@@ -175,48 +176,6 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
     setSelectedIndex(-1);
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your vendor account.",
-      });
-      navigate("/"); // Redirect to home page
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Logout failed",
-        description: "There was an error logging out. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleProfileClick = () => {
-    console.log("Profile clicked");
-    navigate("/vendor/profile");
-  };
-
-  const handleCompanyDetailsClick = () => {
-    console.log("Company details clicked");
-    navigate("/vendor/profile");
-  };
-
-  const handleBillingClick = () => {
-    console.log("Billing clicked");
-    navigate("/vendor/billing");
-  };
-
-  const handleSupportClick = () => {
-    console.log("Support clicked");
-    // Could navigate to support page or open help center
-    toast({
-      title: "Support",
-      description: "Support feature coming soon. Please contact admin for assistance.",
-    });
-  };
-
   return (
     <>
       {/* Logo - Responsive positioning */}
@@ -309,48 +268,7 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
               
               <VendorNotificationCenter />
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-1 sm:gap-2 h-8 xs:h-9 sm:h-10 px-2 xs:px-3">
-                    <div className="w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 bg-primary/20 rounded-full flex items-center justify-center">
-                      <User className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
-                    </div>
-                    <div className="text-left hidden sm:block">
-                      <div className="text-xs sm:text-sm font-medium truncate max-w-[100px] lg:max-w-[150px]">
-                        {user?.profile?.firstName && user?.profile?.lastName
-                          ? `${user.profile.firstName} ${user.profile.lastName}`
-                          : "Vendor User"
-                        }
-                      </div>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 sm:w-56 mt-2">
-                  <DropdownMenuLabel className="text-xs sm:text-sm">My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleProfileClick} className="text-xs sm:text-sm">
-                    <Settings className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Profile Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCompanyDetailsClick} className="text-xs sm:text-sm">
-                    <Building className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Company Details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleBillingClick} className="text-xs sm:text-sm">
-                    <CreditCard className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Billing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSupportClick} className="text-xs sm:text-sm">
-                    <HelpCircle className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Support
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive text-xs sm:text-sm">
-                    <LogOut className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UnifiedProfileDropdown />
             </div>
           </div>
 

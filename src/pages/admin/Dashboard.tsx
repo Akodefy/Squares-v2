@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Users, DollarSign, Activity, Loader2 } from "lucide-react";
 import { dashboardService, DashboardStats, RecentActivity } from "@/services/dashboardService";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,7 @@ const Dashboard = () => {
       icon: DollarSign,
       color: "text-emerald-500 dark:text-emerald-400",
       bgColor: "bg-emerald-500/10",
+      onClick: () => navigate('/admin/revenue-details'),
     },
     {
       title: "Total Users",
@@ -59,6 +62,7 @@ const Dashboard = () => {
       icon: Users,
       color: "text-blue-500 dark:text-blue-400",
       bgColor: "bg-blue-500/10",
+      onClick: () => navigate('/admin/users-details'),
     },
     {
       title: "Total Properties",
@@ -67,6 +71,7 @@ const Dashboard = () => {
       icon: TrendingUp,
       color: "text-accent",
       bgColor: "bg-accent/10",
+      onClick: () => navigate('/admin/properties-details'),
     },
     {
       title: "Engagement Rate",
@@ -75,11 +80,12 @@ const Dashboard = () => {
       icon: Activity,
       color: "text-primary",
       bgColor: "bg-primary/10",
+      onClick: () => navigate('/admin/engagement-details'),
     },
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in relative top-[60px]">
+    <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -93,7 +99,11 @@ const Dashboard = () => {
           {statsCards.map((stat) => {
             const Icon = stat.icon;
             return (
-              <Card key={stat.title} className="hover:shadow-lg transition-shadow">
+              <Card 
+                key={stat.title} 
+                className={`hover:shadow-lg transition-all ${stat.onClick ? 'cursor-pointer hover:scale-105' : ''}`}
+                onClick={stat.onClick}
+              >
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                   <CardTitle className="text-sm font-medium">
                     {stat.title}

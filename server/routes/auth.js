@@ -658,96 +658,147 @@ router.post('/verify-email', asyncHandler(async (req, res) => {
   }
 }));
 
-// @desc    Forgot password
+// @desc    Forgot password - Send OTP
 // @route   POST /api/auth/forgot-password
 // @access  Public
 router.post('/forgot-password', validateRequest(forgotPasswordSchema), asyncHandler(async (req, res) => {
   const { email } = req.body;
 
+  // Find user
   const user = await User.findOne({ email });
 
-  // Always return success to prevent email enumeration
+  // Always return success even if user doesn't exist (security)
   if (!user) {
     return res.json({
       success: true,
-      message: 'If an account with that email exists, we sent a password reset link.'
+      message: 'If an account with that email exists, we sent a password reset OTP.'
     });
   }
 
-  // Generate reset token
-  const resetToken = jwt.sign(
-    { userId: user._id, type: 'password_reset' },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h' }
-  );
+  // Check rate limiting for OTP requests
+  const rateLimitCheck = await canRequestOTP(email, 'password_reset');
+  if (!rateLimitCheck.canRequest) {
+    return res.status(429).json({
+      success: false,
+      message: rateLimitCheck.message,
+      remainingSeconds: rateLimitCheck.remainingSeconds
+    });
+  }
 
-  // Send reset email
+  // Generate OTP for password reset
+  const otpResult = await createOTP(email, 'password_reset', {
+    userId: user._id.toString(),
+    expiryMinutes: 10
+  });
+
+  // Send OTP email
   try {
     await sendEmail({
-      to: email,
-      subject: 'Password Reset - BuildHomeMartSquares',
-      template: 'password-reset',
+      to: user.email,
+      template: 'password-reset-otp',
       data: {
         firstName: user.profile.firstName || 'User',
-        resetLink: `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`
+        otpCode: otpResult.otpCode,
+        expiryMinutes: otpResult.expiryMinutes
       }
     });
   } catch (emailError) {
-    console.error('Failed to send reset email:', emailError);
+    console.error('Failed to send password reset OTP email:', emailError);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP email. Please try again.'
+    });
   }
 
   res.json({
     success: true,
-    message: 'If an account with that email exists, we sent a password reset link.'
+    message: 'Password reset OTP has been sent to your email address.',
+    expiryMinutes: otpResult.expiryMinutes
   });
 }));
 
-// @desc    Reset password
+// @desc    Verify OTP and reset password
 // @route   POST /api/auth/reset-password
 // @access  Public
-router.post('/reset-password', validateRequest(resetPasswordSchema), asyncHandler(async (req, res) => {
-  const { token, password } = req.body;
+router.post('/reset-password', asyncHandler(async (req, res) => {
+  const { email, otp, newPassword } = req.body;
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    if (decoded.type !== 'password_reset') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid reset token'
-      });
-    }
-
-    // Update password
-    const user = await User.findById(decoded.userId);
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    user.password = password;
-    await user.save();
-
-    res.json({
-      success: true,
-      message: 'Password reset successfully'
-    });
-
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Reset token has expired'
-      });
-    }
-    
+  if (!email || !otp || !newPassword) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid reset token'
+      message: 'Email, OTP, and new password are required'
     });
   }
+
+  // Validate new password
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password must be at least 8 characters long'
+    });
+  }
+
+  // Verify OTP
+  const verificationResult = await verifyOTP(email, otp, 'password_reset');
+  if (!verificationResult.success) {
+    return res.status(400).json({
+      success: false,
+      message: verificationResult.message,
+      error: verificationResult.error,
+      attemptsLeft: verificationResult.attemptsLeft
+    });
+  }
+
+  // Find user
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Check if new password is different from current password
+  const isSamePassword = await user.comparePassword(newPassword);
+  if (isSamePassword) {
+    return res.status(400).json({
+      success: false,
+      message: 'New password must be different from your current password'
+    });
+  }
+
+  // Update password
+  user.password = newPassword;
+  await user.save();
+
+  // Consume the OTP after successful password reset
+  await consumeVerifiedOTP(email, 'password_reset');
+
+  // Send password change confirmation email
+  try {
+    await sendEmail({
+      to: user.email,
+      template: 'password-changed',
+      data: {
+        firstName: user.profile.firstName || 'User',
+        changeDate: new Date().toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }
+    });
+  } catch (emailError) {
+    console.error('Failed to send password change confirmation:', emailError);
+  }
+
+  res.json({
+    success: true,
+    message: 'Password reset successfully! You can now login with your new password.'
+  });
 }));
 
 // @desc    Request OTP for password change
@@ -877,6 +928,9 @@ router.post('/change-password-with-otp', authenticateToken, asyncHandler(async (
   // Update password
   user.password = newPassword;
   await user.save();
+
+  // Consume the verified OTP
+  await consumeVerifiedOTP(user.email, 'password_change');
 
   // Send password change confirmation email
   try {

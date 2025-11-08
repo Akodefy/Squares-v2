@@ -316,6 +316,47 @@ const emailTemplates = {
     `
   }),
 
+  'password-reset-otp': (data) => ({
+    subject: 'Password Reset Code - BuildHomeMart Squares',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0;">BuildHomeMart Squares</h1>
+          <p style="color: #666; margin: 5px 0 0 0;">Password Reset Request</p>
+        </div>
+        
+        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="color: #991b1b; margin: 0 0 20px 0;">🔐 Reset Your Password</h2>
+          <p style="color: #475569; line-height: 1.6; margin: 0 0 25px 0;">
+            Hello ${data.firstName}, we received a request to reset your password. Use the code below to proceed:
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <div style="background: #dc2626; color: white; padding: 20px; border-radius: 8px; display: inline-block; font-family: 'Courier New', monospace;">
+              <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Your reset code:</div>
+              <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px;">${data.otpCode}</div>
+            </div>
+          </div>
+          
+          <p style="color: #64748b; font-size: 14px; margin: 20px 0 0 0; text-align: center;">
+            <strong>Security Notice:</strong> This code expires in ${data.expiryMinutes} minutes.
+          </p>
+        </div>
+
+        <div style="background: #fffbeb; border: 1px solid #fcd34d; padding: 20px; border-radius: 6px; margin: 20px 0;">
+          <p style="color: #92400e; margin: 0; font-size: 14px;">
+            <strong>Didn't request this?</strong> If you didn't request a password reset, please ignore this email or contact support immediately.
+          </p>
+        </div>
+        
+        <div style="text-align: center; color: #94a3b8; font-size: 12px;">
+          <p>&copy; 2024 BuildHomeMart Squares. All rights reserved.</p>
+          <p>Security Team: security@buildhomemartsquares.com</p>
+        </div>
+      </div>
+    `
+  }),
+
   // Login Alert Template
   'login-alert': (data) => ({
     subject: 'New Login to Your Account - Security Alert',

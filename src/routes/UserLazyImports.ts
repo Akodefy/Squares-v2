@@ -6,6 +6,7 @@ export const Products = lazy(() => import("@/pages/Products"));
 export const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
 export const Login = lazy(() => import("@/pages/Login"));
 export const Signup = lazy(() => import("@/pages/Signup"));
+export const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 export const Contact = lazy(() => import("@/pages/Contact"));
 export const TrackSupport = lazy(() => import("@/pages/TrackSupport"));
 export const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));

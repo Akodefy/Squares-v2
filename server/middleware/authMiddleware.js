@@ -120,8 +120,46 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  if (!['admin', 'superadmin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  next();
+};
+
+const requireSubAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  if (!['subadmin', 'admin', 'superadmin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'SubAdmin access required'
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   authenticateToken,
   authorizeRoles,
-  optionalAuth
+  optionalAuth,
+  requireAdmin,
+  requireSubAdmin
 };

@@ -8,6 +8,7 @@ import {
   SubscriptionPlans,
   Login,
   Signup,
+  ForgotPassword,
   Contact,
   PrivacyPolicy,
   RefundPolicy,
@@ -23,6 +24,7 @@ const UserRoutes = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route element={<UserLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />

@@ -31,6 +31,7 @@ const customerReviewsRoutes = require('./routes/customerReviews');
 const customerRoutes = require('./routes/customer');
 const notificationRoutes = require('./routes/notifications');
 const supportRoutes = require('./routes/support');
+const policyRoutes = require('./routes/policies');
 
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
@@ -244,6 +245,7 @@ app.use('/api/customer/reviews', customerReviewsRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/policies', policyRoutes);
 
 // Import admin real-time service
 const adminRealtimeService = require('./services/adminRealtimeService');

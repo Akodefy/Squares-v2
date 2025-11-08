@@ -326,7 +326,7 @@ const Roles = () => {
   }
 
   return (
-      <div className="space-y-6 relative top-[60px]">
+      <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>

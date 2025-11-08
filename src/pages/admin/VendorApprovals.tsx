@@ -301,7 +301,7 @@ const VendorApprovals: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 mt-16">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>

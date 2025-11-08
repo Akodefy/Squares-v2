@@ -85,6 +85,22 @@ router.get('/', authorizeRoles('admin', 'subadmin', 'superadmin', 'agent'), asyn
   });
 }));
 
+// @desc    Get all users (no pagination)
+// @route   GET /api/users/all
+// @access  Private (Admin only)
+router.get('/all', authorizeRoles('admin', 'superadmin'), asyncHandler(async (req, res) => {
+  const users = await User.find()
+    .select('-password -verificationToken')
+    .sort({ createdAt: -1 });
+
+  res.json({
+    success: true,
+    data: {
+      users
+    }
+  });
+}));
+
 // @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
@@ -286,9 +302,29 @@ router.put('/profile', asyncHandler(async (req, res) => {
   }
 
   const {
+    email,
     profile,
     preferences,
   } = req.body;
+
+  // Update email if provided and different
+  if (email && email !== user.email) {
+    // Check if email is already taken by another user
+    const existingUser = await User.findOne({ 
+      email: email,
+      _id: { $ne: user._id }
+    });
+    
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already in use by another account'
+      });
+    }
+    
+    user.email = email;
+    user.emailVerified = false; // Reset verification status on email change
+  }
 
   // Update fields
   if (profile) {

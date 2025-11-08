@@ -1,5 +1,5 @@
 import { Menu } from "lucide-react";
-import ProfileDropdown from "./ProfileDropdown";
+import UnifiedProfileDropdown from "@/components/shared/UnifiedProfileDropdown";
 import { useTheme } from "next-themes";
 import ThemeToggle from "../ThemeToggle";
 import logoLight from "@/assets/logo-light.png";
@@ -46,7 +46,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 
           <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 mr-2 xs:mr-0">
             <ThemeToggle />
-            <ProfileDropdown />
+            <UnifiedProfileDropdown />
           </div>
         </div>
       </nav>

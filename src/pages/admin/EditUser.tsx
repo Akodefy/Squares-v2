@@ -133,7 +133,7 @@ const EditUser = () => {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto relative top-[60px]">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -142,7 +142,7 @@ const EditUser = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto relative top-[60px]">
+    <div className="max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Edit User</h1>
         <p className="text-muted-foreground mt-1">Update user information</p>

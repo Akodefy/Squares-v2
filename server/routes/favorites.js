@@ -200,4 +200,66 @@ router.get('/stats', asyncHandler(async (req, res) => {
   });
 }));
 
+// @desc    Get all favorites count by property (Admin only)
+// @route   GET /api/favorites/all
+// @access  Private/Admin
+router.get('/all', asyncHandler(async (req, res) => {
+  // Only admins can access this
+  if (!['admin', 'superadmin', 'subadmin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  // Get favorite counts grouped by property
+  const favoriteCounts = await Favorite.aggregate([
+    {
+      $group: {
+        _id: '$property',
+        count: { $sum: 1 },
+        users: { $addToSet: '$user' }
+      }
+    },
+    {
+      $lookup: {
+        from: 'properties',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'property'
+      }
+    },
+    {
+      $unwind: '$property'
+    },
+    {
+      $project: {
+        _id: '$property._id',
+        title: '$property.title',
+        propertyType: '$property.propertyType',
+        listingType: '$property.listingType',
+        status: '$property.status',
+        address: '$property.address',
+        favoriteCount: '$count',
+        uniqueUsers: { $size: '$users' }
+      }
+    },
+    {
+      $sort: { favoriteCount: -1 }
+    }
+  ]);
+
+  // Get total favorites count
+  const totalFavorites = await Favorite.countDocuments();
+
+  res.json({
+    success: true,
+    data: {
+      properties: favoriteCounts,
+      totalFavorites,
+      totalProperties: favoriteCounts.length
+    }
+  });
+}));
+
 module.exports = router;

@@ -185,7 +185,7 @@ const AddRole = () => {
   const permissionsByCategory = getPermissionsByCategory();
 
   return (
-    <div className="space-y-6 relative top-[60px] pb-10">
+    <div className="space-y-6 pb-10">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

@@ -32,7 +32,7 @@ const Login = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <a href="#" className="text-sm text-primary hover:underline">
+                  <a href="/forgot-password" className="text-sm text-primary hover:underline">
                     Forgot password?
                   </a>
                 </div>

@@ -484,6 +484,7 @@ const Profile = () => {
 
       // Prepare update data from formData
       const updateData = {
+        email: formData.email,
         profile: {
           firstName: formData.profile.firstName,
           lastName: formData.profile.lastName,
@@ -593,7 +594,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto relative top-[60px]">
+      <div className="max-w-5xl mx-auto">
         <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin mr-2" />
           <span className="text-lg">Loading profile...</span>
@@ -604,7 +605,7 @@ const Profile = () => {
 
   if (!profileData) {
     return (
-      <div className="max-w-5xl mx-auto relative top-[60px]">
+      <div className="max-w-5xl mx-auto">
         <div className="text-center py-12">
           <p className="text-muted-foreground">Failed to load profile data</p>
           <Button onClick={loadProfile} className="mt-4">
@@ -738,7 +739,19 @@ const Profile = () => {
               <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex items-center">
                   <Mail className="w-4 h-4 mr-1" />
-                  {profileData.email}
+                  {isEditing ? (
+                    <Input
+                      type="email"
+                      value={formData?.email || ""}
+                      onChange={(e) =>
+                        setFormData(prev => prev ? {...prev, email: e.target.value} : null)
+                      }
+                      className="h-6 text-sm w-48"
+                      placeholder="Email address"
+                    />
+                  ) : (
+                    profileData.email
+                  )}
                 </div>
                 <div className="flex items-center">
                   <Phone className="w-4 h-4 mr-1" />

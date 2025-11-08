@@ -4,7 +4,7 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ThemeToggle from "@/components/ThemeToggle";
-import CustomerProfileDropdown from "./CustomerProfileDropdown";
+import UnifiedProfileDropdown from "@/components/shared/UnifiedProfileDropdown";
 import logoLight from "@/assets/logo-light.png";
 import logoDark from "@/assets/logo-dark.png";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -222,7 +222,7 @@ const CustomerNavbar = ({ onMenuClick }: CustomerNavbarProps) => {
               <Bell className="h-4 w-4 xs:h-5 xs:w-5" />
             </Button>
             <ThemeToggle />
-            <CustomerProfileDropdown />
+            <UnifiedProfileDropdown />
           </div>
         </div>
       </nav>

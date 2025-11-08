@@ -1,6 +1,7 @@
 import { useState } from "react";
 import SubAdminSidebar from "./SubAdminSidebar";
 import Navbar from "../adminpanel/Navbar";
+import SubAdminFooter from "./SubAdminFooter";
 
 interface SubAdminLayoutProps {
   children: React.ReactNode;
@@ -23,10 +24,14 @@ const SubAdminLayout = ({ children }: SubAdminLayoutProps) => {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-background flex flex-col">
-      <Navbar onMenuClick={toggleMobileSidebar} />
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Navbar with proper z-index */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <Navbar onMenuClick={toggleMobileSidebar} />
+      </div>
       
-      <div className="flex flex-1 overflow-hidden">
+      {/* Content with proper spacing */}
+      <div className="flex flex-1 pt-14 xs:pt-15 sm:pt-16">
         <SubAdminSidebar
           isCollapsed={isSidebarCollapsed}
           onToggle={toggleSidebar}
@@ -34,13 +39,12 @@ const SubAdminLayout = ({ children }: SubAdminLayoutProps) => {
           onMobileClose={closeMobileSidebar}
         />
         
-        {/* Main content area */}
-        <main 
-          className={`flex-1 overflow-auto transition-all duration-300 ${
-            isSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
-          } p-6`}
-        >
-          {children}
+        {/* Main content area with footer */}
+        <main className="flex-1 flex flex-col min-h-[calc(100vh-3.5rem)]">
+          <div className="flex-1 p-6">
+            {children}
+          </div>
+          <SubAdminFooter />
         </main>
       </div>
     </div>

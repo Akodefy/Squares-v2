@@ -518,6 +518,10 @@ router.get('/properties/stats', asyncHandler(async (req, res) => {
     ]
   };
 
+  // Get property IDs for this user
+  const userProperties = await Property.find(propertyFilter).select('_id');
+  const propertyIds = userProperties.map(p => p._id);
+
   // Get property statistics
   const [
     totalProperties,
@@ -526,8 +530,10 @@ router.get('/properties/stats', asyncHandler(async (req, res) => {
     soldProperties,
     draftProperties,
     pendingProperties,
-    // Aggregated views, inquiries, favorites
-    propertiesData
+    // Aggregated views
+    propertiesData,
+    // Count favorites from Favorite model
+    totalFavorites
   ] = await Promise.all([
     Property.countDocuments(propertyFilter),
     Property.countDocuments({ ...propertyFilter, status: { $in: ['active', 'available'] } }),
@@ -541,17 +547,16 @@ router.get('/properties/stats', asyncHandler(async (req, res) => {
         $group: {
           _id: null,
           totalViews: { $sum: '$views' },
-          totalInquiries: { $sum: '$inquiries' },
-          totalFavorites: { $sum: '$favorites' }
+          totalInquiries: { $sum: '$inquiries' }
         }
       }
-    ])
+    ]),
+    Favorite.countDocuments({ property: { $in: propertyIds } })
   ]);
 
   const aggregatedData = propertiesData.length > 0 ? propertiesData[0] : {
     totalViews: 0,
-    totalInquiries: 0,
-    totalFavorites: 0
+    totalInquiries: 0
   };
 
   // Calculate averages
@@ -570,7 +575,7 @@ router.get('/properties/stats', asyncHandler(async (req, res) => {
     pendingProperties,
     totalViews: aggregatedData.totalViews,
     totalInquiries: aggregatedData.totalInquiries,
-    totalFavorites: aggregatedData.totalFavorites,
+    totalFavorites: totalFavorites,
     totalRevenue: 0, // TODO: Implement revenue tracking
     monthlyRevenue: 0, // TODO: Implement monthly revenue
     averageViews,

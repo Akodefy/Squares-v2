@@ -326,7 +326,7 @@ const AdminMessages = () => {
   }
 
   return (
-    <div className="space-y-6 relative top-[60px]">
+    <div className="space-y-6">
       {/* Realtime Status */}
       <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
         <div className="flex items-center gap-2">
