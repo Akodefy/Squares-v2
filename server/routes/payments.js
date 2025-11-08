@@ -5,9 +5,11 @@ const crypto = require('crypto');
 // const mongoose = require('mongoose');
 const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
+const Payment = require('../models/Payment');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const User = require('../models/User');
+const paymentStatusService = require('../services/paymentStatusService');
 
 const router = express.Router();
 
@@ -142,6 +144,28 @@ router.post('/create-order', authenticateToken, asyncHandler(async (req, res) =>
       };
     }
 
+    // Create payment record
+    const payment = await Payment.create({
+      user: req.user.id,
+      razorpayOrderId: order.id,
+      amount: amount,
+      currency: order.currency,
+      status: 'pending',
+      paymentMethod: 'razorpay',
+      paymentGateway: 'razorpay',
+      type: 'subscription_purchase',
+      description: `Payment for Subscription - ${plan.name}`,
+      metadata: {
+        planId: planId,
+        planName: plan.name,
+        billingCycle: billingCycle,
+        addons: addons
+      },
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes expiry
+    });
+
+    console.log('Payment record created:', payment._id);
+
     res.json({
       success: true,
       data: {
@@ -150,7 +174,8 @@ router.post('/create-order', authenticateToken, asyncHandler(async (req, res) =>
         currency: order.currency,
         keyId: process.env.RAZORPAY_KEY_ID,
         planName: plan.name,
-        userEmail: req.user.email || 'test@example.com'
+        userEmail: req.user.email || 'test@example.com',
+        paymentId: payment._id
       }
     });
   } catch (error) {
@@ -282,6 +307,28 @@ router.post('/create-subscription-order', authenticateToken, asyncHandler(async 
       };
     }
 
+    // Create payment record
+    const payment = await Payment.create({
+      user: req.user.id,
+      razorpayOrderId: order.id,
+      amount: amount,
+      currency: order.currency,
+      status: 'pending',
+      paymentMethod: 'razorpay',
+      paymentGateway: 'razorpay',
+      type: addons.length > 0 ? 'subscription_purchase' : 'subscription_purchase',
+      description: `Payment for Subscription - ${plan.name}${addons.length > 0 ? ` with ${addons.length} addon(s)` : ''}`,
+      metadata: {
+        planId: planId,
+        planName: plan.name,
+        billingCycle: billingCycle,
+        addons: addons
+      },
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes expiry
+    });
+
+    console.log('Payment record created:', payment._id);
+
     res.json({
       success: true,
       data: {
@@ -291,7 +338,8 @@ router.post('/create-subscription-order', authenticateToken, asyncHandler(async 
         keyId: process.env.RAZORPAY_KEY_ID || 'mock_key',
         planName: plan.name,
         userEmail: req.user.email || 'test@example.com',
-        addons: addonServices
+        addons: addonServices,
+        paymentId: payment._id
       }
     });
   } catch (error) {
@@ -483,6 +531,27 @@ router.post('/create-addon-order', authenticateToken, asyncHandler(async (req, r
       });
     }
 
+    // Create payment record
+    const payment = await Payment.create({
+      user: userId,
+      subscription: activeSubscription._id,
+      razorpayOrderId: order.id,
+      amount: finalAmount,
+      currency: 'INR',
+      status: 'pending',
+      paymentMethod: 'razorpay',
+      paymentGateway: 'razorpay',
+      type: 'addon_purchase',
+      description: `Payment for ${addonServices.length} Addon(s)`,
+      metadata: {
+        addons: addons,
+        subscriptionId: activeSubscription._id.toString()
+      },
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes expiry
+    });
+
+    console.log('Payment record created:', payment._id);
+
     // Prepare response
     console.log('📤 Preparing response...');
     const responseData = {
@@ -496,13 +565,15 @@ router.post('/create-addon-order', authenticateToken, asyncHandler(async (req, r
         id: addon._id,
         name: addon.name,
         price: addon.price
-      }))
+      })),
+      paymentId: payment._id
     };
 
     console.log('✅ Addon order creation completed successfully:', {
       orderId: responseData.orderId,
       amount: responseData.amount,
-      addonCount: responseData.addons.length
+      addonCount: responseData.addons.length,
+      paymentId: payment._id
     });
 
     res.json({
@@ -583,6 +654,23 @@ router.post('/verify-subscription-payment', authenticateToken, asyncHandler(asyn
       });
     }
 
+    // Find and update payment record
+    const paymentRecord = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
+    if (!paymentRecord) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment record not found'
+      });
+    }
+
+    // Update payment record with payment ID
+    paymentRecord.razorpayPaymentId = razorpay_payment_id;
+    paymentRecord.razorpaySignature = razorpay_signature;
+    paymentRecord.status = 'paid';
+    await paymentRecord.save();
+
+    console.log('Payment record updated to paid:', paymentRecord._id);
+
     // Get addon details
     let addonServices = [];
     if (addons.length > 0) {
@@ -645,6 +733,10 @@ router.post('/verify-subscription-payment', authenticateToken, asyncHandler(asyn
     });
 
     await subscription.save();
+
+    // Link payment to subscription
+    paymentRecord.subscription = subscription._id;
+    await paymentRecord.save();
 
     // Update plan subscriber count using the plan ObjectId
     await Plan.findByIdAndUpdate(plan._id, {
@@ -799,17 +891,29 @@ router.post('/verify-payment', asyncHandler(async (req, res) => {
 // @access  Private
 router.get('/:paymentId/status', asyncHandler(async (req, res) => {
   try {
-    const payment = await razorpay.payments.fetch(req.params.paymentId);
+    const razorpayPayment = await razorpay.payments.fetch(req.params.paymentId);
+    
+    // Find and update local payment record
+    const payment = await Payment.findOne({ razorpayPaymentId: req.params.paymentId });
+    if (payment) {
+      if (razorpayPayment.status === 'failed' && payment.status === 'pending') {
+        await payment.markAsFailed(razorpayPayment.error_description || 'Payment failed');
+      } else if (razorpayPayment.status === 'captured' && payment.status === 'pending') {
+        payment.status = 'paid';
+        await payment.save();
+      }
+    }
     
     res.json({
       success: true,
       data: {
-        id: payment.id,
-        status: payment.status,
-        amount: payment.amount,
-        currency: payment.currency,
-        method: payment.method,
-        createdAt: payment.created_at
+        id: razorpayPayment.id,
+        status: razorpayPayment.status,
+        amount: razorpayPayment.amount,
+        currency: razorpayPayment.currency,
+        method: razorpayPayment.method,
+        createdAt: razorpayPayment.created_at,
+        errorDescription: razorpayPayment.error_description
       }
     });
   } catch (error) {
@@ -898,6 +1002,23 @@ router.post('/verify-addon-payment', authenticateToken, asyncHandler(async (req,
       orderId: razorpay_order_id,
       paymentId: razorpay_payment_id
     });
+
+    // Find and update payment record
+    const paymentRecord = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
+    if (!paymentRecord) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment record not found'
+      });
+    }
+
+    // Update payment record with payment ID
+    paymentRecord.razorpayPaymentId = razorpay_payment_id;
+    paymentRecord.razorpaySignature = razorpay_signature;
+    paymentRecord.status = 'paid';
+    await paymentRecord.save();
+
+    console.log('Payment record updated to paid:', paymentRecord._id);
 
     // Find user's active subscription
     const activeSubscription = await Subscription.findOne({
@@ -1034,6 +1155,161 @@ router.post('/verify-addon-payment', authenticateToken, asyncHandler(async (req,
     res.status(500).json({
       success: false,
       message: 'Failed to verify addon payment and update subscription'
+    });
+  }
+}));
+
+// @desc    Check and update expired pending payments
+// @route   POST /api/payments/check-expired
+// @access  Private/Admin
+router.post('/check-expired', authenticateToken, asyncHandler(async (req, res) => {
+  if (!['admin', 'superadmin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  try {
+    const result = await paymentStatusService.checkExpiredPayments();
+    res.json({
+      success: true,
+      message: 'Expired payments checked and updated',
+      data: result
+    });
+  } catch (error) {
+    console.error('Check expired payments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check expired payments'
+    });
+  }
+}));
+
+// @desc    Get payment by order ID or payment ID
+// @route   GET /api/payments/status/:orderId
+// @access  Private
+router.get('/status/:orderId', authenticateToken, asyncHandler(async (req, res) => {
+  try {
+    const payment = await Payment.findOne({
+      $or: [
+        { razorpayOrderId: req.params.orderId },
+        { razorpayPaymentId: req.params.orderId },
+        { _id: req.params.orderId }
+      ],
+      user: req.user.id
+    }).populate('subscription');
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    // Check if payment is expired and update if needed
+    if (payment.isExpired && payment.status === 'pending') {
+      await payment.markAsCancelled('Payment timeout');
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: payment._id,
+        orderId: payment.razorpayOrderId,
+        paymentId: payment.razorpayPaymentId,
+        status: payment.status,
+        amount: payment.amount,
+        currency: payment.currency,
+        type: payment.type,
+        description: payment.description,
+        createdAt: payment.createdAt,
+        expiresAt: payment.expiresAt,
+        isExpired: payment.isExpired,
+        failureReason: payment.failureReason
+      }
+    });
+  } catch (error) {
+    console.error('Payment status fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payment status'
+    });
+  }
+}));
+
+// @desc    Mark payment as failed (webhook handler)
+// @route   POST /api/payments/mark-failed
+// @access  Private
+router.post('/mark-failed', authenticateToken, asyncHandler(async (req, res) => {
+  const { orderId, paymentId, reason } = req.body;
+
+  try {
+    const payment = await Payment.findOne({
+      $or: [
+        { razorpayOrderId: orderId },
+        { razorpayPaymentId: paymentId }
+      ],
+      user: req.user.id
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    await payment.markAsFailed(reason || 'Payment failed during processing');
+
+    // Update subscription if linked
+    if (payment.subscription) {
+      await Subscription.findByIdAndUpdate(payment.subscription, {
+        status: 'cancelled',
+        cancellationReason: 'Payment failed'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment marked as failed',
+      data: {
+        id: payment._id,
+        status: payment.status,
+        failureReason: payment.failureReason
+      }
+    });
+  } catch (error) {
+    console.error('Mark payment failed error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark payment as failed'
+    });
+  }
+}));
+
+// @desc    Get payment statistics
+// @route   GET /api/payments/stats
+// @access  Private/Admin
+router.get('/stats', authenticateToken, asyncHandler(async (req, res) => {
+  if (!['admin', 'superadmin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  try {
+    const result = await paymentStatusService.getPaymentStats();
+    res.json({
+      success: true,
+      data: result.stats
+    });
+  } catch (error) {
+    console.error('Get payment stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get payment statistics'
     });
   }
 }));

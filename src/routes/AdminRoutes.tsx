@@ -43,9 +43,9 @@ const AdminRoutes = () => {
             <Route path="/properties" element={<PropertyListPage/>} />
             <Route path="/properties/add" element={<AddPropertyPage/>} />
             <Route path="/properties/edit/:id" element={<PropertyEditPage/>} />
-            <Route path="/addons" element={<AddonManagementPage/>} />
-            <Route path="/policy-editor/:policyType" element={<PolicyEditor />} />
-          </Routes>
+  <Route path="/addons" element={<AddonManagementPage/>} />
+  <Route path="/policy-editor/:policyType" element={<PolicyEditor />} />
+</Routes>
         </Suspense>
       </DashboardLayout>
     </AdminProtectedRoute>
@@ -53,26 +53,3 @@ const AdminRoutes = () => {
 };
 
 export default AdminRoutes;
-
-
-
-// const AdminRoutes = () => {
-//   return (
-//     <Suspense fallback="Loading....">
-//       <Routes>
-//         {/* Public Admin Routes (No Layout) */}
-//         {/* <Route element={<AdminPublicRoute />}> */}
-//           {/* <Route path="/admin/login" element={<AdminLogin />} /> */}
-//         {/* </Route> */}
-
-//         {/* Protected Admin Routes (With Layout) */}
-//         {/* <Route element={<AdminPrivateRoute />}> */}
-//           {/* <Route element={<AdminLayout />}> */}
-//             <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
-//             <Route path="/admin/dashboard" element={<HomePage />} />
-//           {/* </Route> */}
-//         {/* </Route> */}
-//       </Routes>
-//     </Suspense>
-//   );
-// };

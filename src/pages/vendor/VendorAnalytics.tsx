@@ -805,11 +805,10 @@ const VendorAnalytics = () => {
                     {propertyPerformance.reduce((acc, p) => acc + (p.views || 0), 0).toLocaleString()}
                   </div>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-xs text-gray-600 font-medium mb-1">Total Leads</div>
-                  <div className="text-sm font-semibold text-gray-500 flex items-center justify-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    Coming Soon
+                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                  <div className="text-xs text-purple-600 font-medium mb-1">Total Favorites</div>
+                  <div className="text-2xl font-bold text-purple-700">
+                    {propertyPerformance.reduce((acc, p) => acc + (p.favorites || 0), 0).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center p-3 bg-purple-50 rounded-lg">

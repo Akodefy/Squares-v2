@@ -61,25 +61,21 @@ const Messages = () => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activityIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Realtime messaging events
+    // Messaging events
   useMessagingRealtime({
     refreshConversations: () => {
-      console.log("Conversations updated via realtime");
       loadConversations();
     },
     onNewMessage: (newMsg) => {
-      console.log("New message received:", newMsg);
-      // If message is for current conversation, add it to messages
-      if (selectedConversation && newMsg.conversationId === selectedConversation) {
-        setMessages(prev => [...prev, newMsg]);
+      if (newMsg.conversationId === selectedConversation) {
+        loadMessages(selectedConversation);
       }
-      // Refresh conversations to update last message and unread count
       loadConversations();
     },
     onMessageRead: (data) => {
-      console.log("Message read:", data);
-      // Refresh conversations to update unread count
-      loadConversations();
+      if (data.conversationId === selectedConversation) {
+        loadMessages(selectedConversation);
+      }
     }
   });
 
@@ -370,22 +366,6 @@ const Messages = () => {
 
   return (
     <div className="space-y-6 pt-16">
-      {/* Realtime Status */}
-      <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? 'Real-time messaging active' : 'Offline mode'}
-          </span>
-        </div>
-        {loading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Loading conversations...
-          </div>
-        )}
-      </div>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

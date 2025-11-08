@@ -5,8 +5,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api"
 export interface VendorStats {
   totalProperties: number;
   totalPropertiesChange: string;
-  activeLeads: number;
-  activeLeadsChange: string;
   propertyViews: number;
   propertyViewsChange: string;
   dateRangeViews?: number;
@@ -18,6 +16,10 @@ export interface VendorStats {
   revenueChange: string;
   conversionRate: number;
   conversionChange: string;
+  averageRating?: number;
+  ratingChange?: string;
+  phoneCalls?: number;
+  phoneCallsChange?: string;
 }
 
 export interface Property {
@@ -31,6 +33,8 @@ export interface Property {
   views: number;
   leads: number;
   favorites: number;
+  rating?: number;
+  averageRating?: number;
   images: string[];
   createdAt: string;
   updatedAt: string;
@@ -198,8 +202,6 @@ class VendorDashboardService {
       return {
         totalProperties: 0,
         totalPropertiesChange: "+0",
-        activeLeads: 0,
-        activeLeadsChange: "+0",
         propertyViews: 0,
         propertyViewsChange: "+0%",
         unreadMessages: 0,
@@ -208,7 +210,9 @@ class VendorDashboardService {
         totalRevenue: 0,
         revenueChange: "+0%",
         conversionRate: 0,
-        conversionChange: "+0%"
+        conversionChange: "+0%",
+        phoneCalls: 0,
+        phoneCallsChange: "+0%"
       };
     }
   }
@@ -407,8 +411,6 @@ class VendorDashboardService {
       stats: {
         totalProperties: 0,
         totalPropertiesChange: "+0",
-        activeLeads: 0,
-        activeLeadsChange: "+0",
         propertyViews: 0,
         propertyViewsChange: "+0%",
         unreadMessages: 0,
@@ -417,7 +419,9 @@ class VendorDashboardService {
         totalRevenue: 0,
         revenueChange: "+0%",
         conversionRate: 0,
-        conversionChange: "+0%"
+        conversionChange: "+0%",
+        phoneCalls: 0,
+        phoneCallsChange: "+0%"
       },
       recentProperties: [],
       recentLeads: [],

@@ -56,6 +56,7 @@ import {
 import { useVendorDashboard } from "@/hooks/useVendorDashboard";
 import { vendorDashboardService } from "@/services/vendorDashboardService";
 import { toast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 const VendorDashboard = () => {
   const [dateRange, setDateRange] = useState("7d");
@@ -140,13 +141,6 @@ const VendorDashboard = () => {
       color: "text-blue-600",
     },
     {
-      title: "Active Leads",
-      value: stats?.activeLeads || 0,
-      change: stats?.activeLeadsChange || "+0",
-      icon: Users,
-      color: "text-green-600",
-    },
-    {
       title: "Property Views",
       value: stats?.propertyViews || 0,
       change: stats?.propertyViewsChange || "+0%",
@@ -168,11 +162,18 @@ const VendorDashboard = () => {
       color: "text-emerald-600",
     },
     {
-      title: "Conversion Rate",
-      value: `${stats?.conversionRate || 0}%`,
-      change: stats?.conversionChange || "+0%",
-      icon: Target,
-      color: "text-indigo-600",
+      title: "Avg. Rating",
+      value: stats?.averageRating ? stats.averageRating.toFixed(1) : "0.0",
+      change: stats?.ratingChange || "+0%",
+      icon: Star,
+      color: "text-yellow-600",
+    },
+    {
+      title: "Phone Calls",
+      value: stats?.phoneCalls || 0,
+      change: stats?.phoneCallsChange || "+0%",
+      icon: Phone,
+      color: "text-green-600",
     },
   ];
 
@@ -207,14 +208,18 @@ const VendorDashboard = () => {
               Notifications ({unreadNotifications})
             </Button>
           )}
-          <Button variant="outline">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            View Analytics
-          </Button>
-          <Button>
-            <Home className="w-4 h-4 mr-2" />
-            Add Property
-          </Button>
+          <Link to="/vendor/analytics">
+            <Button variant="outline">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              View Analytics
+            </Button>
+          </Link>
+          <Link to="/vendor/properties/add">
+            <Button>
+              <Home className="w-4 h-4 mr-2" />
+              Add Property
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -346,11 +351,11 @@ const VendorDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Recent Leads */}
+        {/* Recent Activities */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Recent Leads
+              Recent Activities
               <Button variant="ghost" size="sm">View All</Button>
             </CardTitle>
           </CardHeader>
@@ -361,18 +366,18 @@ const VendorDashboard = () => {
                   <div key={lead._id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5" />
+                        <MessageSquare className="w-5 h-5" />
                       </div>
                       <div>
                         <p className="font-medium">{lead.name}</p>
                         <p className="text-sm text-muted-foreground">{lead.propertyTitle}</p>
-                        <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                        <p className="text-xs text-muted-foreground">{lead.message || 'New inquiry'}</p>
                       </div>
                     </div>
                     <div className="text-right space-y-2">
                       <div className="flex items-center gap-2">
-                        <Badge className={vendorDashboardService.getInterestColor(lead.interestLevel)}>
-                          {lead.interestLevel}
+                        <Badge variant="secondary">
+                          {lead.status || 'new'}
                         </Badge>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -408,9 +413,9 @@ const VendorDashboard = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No recent leads</p>
-                  <p className="text-sm">New leads will appear here</p>
+                  <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No recent activities</p>
+                  <p className="text-sm">Property inquiries and messages will appear here</p>
                 </div>
               )}
             </div>
@@ -461,12 +466,12 @@ const VendorDashboard = () => {
                         {property.views} views
                       </span>
                       <span className="flex items-center">
-                        <Users className="w-4 h-4 mr-1" />
-                        {property.leads} leads
+                        <Heart className="w-4 h-4 mr-1" />
+                        {property.favorites} favorites
                       </span>
                       <span className="flex items-center">
-                        <Heart className="w-4 h-4 mr-1" />
-                        {property.favorites}
+                        <Star className="w-4 h-4 mr-1" />
+                        {property.rating || 0} rating
                       </span>
                     </div>
                   </CardContent>

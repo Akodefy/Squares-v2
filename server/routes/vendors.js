@@ -581,13 +581,6 @@ router.get('/dashboard', requireVendorRole, asyncHandler(async (req, res) => {
     const propertyIds = vendorProperties.map(p => p._id);
     const totalProperties = vendorProperties.length;
 
-    // Get active leads (messages sent to this vendor)
-    const activeLeads = await Message.countDocuments({
-      recipient: vendorId,
-      type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
-      status: { $in: ['unread', 'new'] }
-    });
-
     // Calculate total views from PropertyView collection (more accurate)
     const totalViewsResult = await PropertyView.countDocuments({
       property: { $in: propertyIds }
@@ -635,29 +628,51 @@ router.get('/dashboard', requireVendorRole, asyncHandler(async (req, res) => {
       return sum + (isNaN(price) ? 0 : price);
     }, 0);
 
-    const conversionRate = activeLeads > 0 ? ((activeLeads * 0.12) / activeLeads * 100) : 0;
+    // Get phone call count from PropertyView interactions
+    const phoneCalls = await PropertyView.countDocuments({
+      property: { $in: propertyIds },
+      'interactions.clickedPhone': true
+    });
 
-    // Get recent properties
+    // Calculate conversion rate
+    const totalInquiries = await Message.countDocuments({
+      recipient: vendorId,
+      type: { $in: ['inquiry', 'lead', 'property_inquiry'] }
+    });
+    const conversionRate = totalInquiries > 0 ? ((soldProps.length / totalInquiries) * 100) : 0;
+
+    // Get recent properties with favorites and ratings
     const recentProperties = await Property.find({ owner: vendorId })
       .sort({ createdAt: -1 })
       .limit(6)
       .select('title location price currency listingType status views images createdAt updatedAt');
 
-    // Format properties
-    const formattedProperties = recentProperties.map(property => ({
-      _id: property._id,
-      title: property.title,
-      location: property.location,
-      price: property.price,
-      currency: property.currency || '₹',
-      listingType: property.listingType || 'sale',
-      status: property.status || 'active',
-      views: property.views || 0,
-      leads: 0, // Calculate from messages
-      favorites: 0, // Calculate from favorites model
-      images: property.images || [],
-      createdAt: property.createdAt,
-      updatedAt: property.updatedAt
+    // Get favorites count for each property
+    const Favorite = require('../models/Favorite');
+    const Review = require('../models/Review');
+
+    const formattedProperties = await Promise.all(recentProperties.map(async (property) => {
+      const favoritesCount = await Favorite.countDocuments({ property: property._id });
+      const reviews = await Review.find({ property: property._id }).select('rating');
+      const avgRating = reviews.length > 0 
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
+        : 0;
+
+      return {
+        _id: property._id,
+        title: property.title,
+        location: property.location,
+        price: property.price,
+        currency: property.currency || '₹',
+        listingType: property.listingType || 'sale',
+        status: property.status || 'active',
+        views: property.views || 0,
+        favorites: favoritesCount,
+        rating: avgRating,
+        images: property.images || [],
+        createdAt: property.createdAt,
+        updatedAt: property.updatedAt
+      };
     }));
 
     // Get recent leads
@@ -790,15 +805,30 @@ router.get('/dashboard', requireVendorRole, asyncHandler(async (req, res) => {
       viewedAt: { $gte: previousPeriodStart, $lt: previousPeriodEnd }
     });
     
-    const previousLeads = await Message.countDocuments({
-      recipient: vendorId,
-      type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
-      createdAt: { $gte: previousPeriodStart, $lt: previousPeriodEnd }
-    });
+    const previousRevenue = await Property.aggregate([
+      {
+        $match: {
+          owner: new mongoose.Types.ObjectId(vendorId),
+          status: 'sold',
+          updatedAt: { $gte: previousPeriodStart, $lt: previousPeriodEnd }
+        }
+      }
+    ]);
+
+    const prevRevenue = previousRevenue.reduce((sum, prop) => {
+      const price = parseFloat(prop.price?.toString().replace(/[^0-9.]/g, '') || '0');
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
     
     const previousProperties = await Property.countDocuments({
       owner: vendorId,
       createdAt: { $lt: previousPeriodEnd }
+    });
+
+    const previousPhoneCalls = await PropertyView.countDocuments({
+      property: { $in: propertyIds },
+      'interactions.clickedPhone': true,
+      viewedAt: { $gte: previousPeriodStart, $lt: previousPeriodEnd }
     });
     
     // Calculate percentage changes
@@ -806,21 +836,25 @@ router.get('/dashboard', requireVendorRole, asyncHandler(async (req, res) => {
       ? Math.round(((dateRangeViews - previousViews) / previousViews) * 100) 
       : (dateRangeViews > 0 ? 100 : 0);
     
-    const leadsChange = previousLeads > 0
-      ? Math.round(((activeLeads - previousLeads) / previousLeads) * 100)
-      : (activeLeads > 0 ? 100 : 0);
+    const revenueChange = prevRevenue > 0
+      ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100)
+      : (totalRevenue > 0 ? 100 : 0);
     
     const propertiesChange = previousProperties > 0
       ? Math.round(((totalProperties - previousProperties) / previousProperties) * 100)
       : (totalProperties > 0 ? 100 : 0);
+
+    const phoneCallsChange = previousPhoneCalls > 0
+      ? Math.round(((phoneCalls - previousPhoneCalls) / previousPhoneCalls) * 100)
+      : (phoneCalls > 0 ? 100 : 0);
+
+    const conversionChange = 0;
 
     // Build dashboard data with real values and trends
     const dashboardData = {
       stats: {
         totalProperties,
         totalPropertiesChange: `${propertiesChange >= 0 ? '+' : ''}${propertiesChange}%`,
-        activeLeads,
-        activeLeadsChange: `${leadsChange >= 0 ? '+' : ''}${leadsChange}%`,  
         propertyViews,
         propertyViewsChange: `${viewsChange >= 0 ? '+' : ''}${viewsChange}%`,
         dateRangeViews,
@@ -829,9 +863,11 @@ router.get('/dashboard', requireVendorRole, asyncHandler(async (req, res) => {
         totalMessages,
         messagesChange: `${unreadMessages} unread`,
         totalRevenue,
-        revenueChange: "0%",
+        revenueChange: `${revenueChange >= 0 ? '+' : ''}${revenueChange}%`,
         conversionRate: Math.round(conversionRate * 10) / 10,
-        conversionChange: "0%"
+        conversionChange: `${conversionChange >= 0 ? '+' : ''}${conversionChange}%`,
+        phoneCalls,
+        phoneCallsChange: `${phoneCallsChange >= 0 ? '+' : ''}${phoneCallsChange}%`
       },
       recentProperties: formattedProperties,
       recentLeads: formattedLeads,
@@ -1596,6 +1632,25 @@ router.get('/statistics', requireVendorRole, asyncHandler(async (req, res) => {
   const reviewCount = vendor?.performance?.rating?.count || 0;
   const totalSales = vendor?.performance?.statistics?.soldProperties || 0;
 
+  // Calculate average rating from property reviews
+  const Review = require('../models/Review');
+  const Favorite = require('../models/Favorite');
+  const vendorProperties = await Property.find({ owner: vendorId }).select('_id');
+  const propertyIds = vendorProperties.map(p => p._id);
+  
+  const reviewsAggregation = await Review.aggregate([
+    { $match: { property: { $in: propertyIds } } },
+    { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } }
+  ]);
+  
+  const averageRating = reviewsAggregation[0]?.avgRating || 0;
+  const totalReviews = reviewsAggregation[0]?.count || 0;
+
+  // Calculate total favorites across all vendor properties
+  const totalFavorites = await Favorite.countDocuments({ 
+    property: { $in: propertyIds } 
+  });
+
   res.json({
     success: true,
     data: {
@@ -1605,9 +1660,10 @@ router.get('/statistics', requireVendorRole, asyncHandler(async (req, res) => {
       totalRevenue: formatValue(totalRevenue),
       totalLeads,
       totalViews,
+      totalFavorites,
       avgResponseTime,
-      rating,
-      reviewCount,
+      rating: averageRating,
+      reviewCount: totalReviews,
       activeProperties,
       soldProperties,
       pendingProperties
@@ -1658,6 +1714,7 @@ router.get('/properties', requireVendorRole, asyncHandler(async (req, res) => {
     limit = 10,
     status,
     type,
+    search,
     sort = '-createdAt'
   } = req.query;
 
@@ -1674,6 +1731,17 @@ router.get('/properties', requireVendorRole, asyncHandler(async (req, res) => {
     filter.type = type;
   }
 
+  // Add search functionality
+  if (search) {
+    filter.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+      { 'address.city': { $regex: search, $options: 'i' } },
+      { 'address.state': { $regex: search, $options: 'i' } },
+      { 'address.locationName': { $regex: search, $options: 'i' } }
+    ];
+  }
+
   // Get total count for pagination
   const totalProperties = await Property.countDocuments(filter);
   
@@ -1684,12 +1752,35 @@ router.get('/properties', requireVendorRole, asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .populate('owner', 'profile.firstName profile.lastName email');
 
+  // Get favorites and ratings for each property
+  const Favorite = require('../models/Favorite');
+  const Review = require('../models/Review');
+
+  const enhancedProperties = await Promise.all(properties.map(async (property) => {
+    const propertyObj = property.toObject();
+    
+    // Get favorites count
+    const favoritesCount = await Favorite.countDocuments({ property: property._id });
+    
+    // Get average rating
+    const reviews = await Review.find({ property: property._id }).select('rating');
+    const avgRating = reviews.length > 0 
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
+      : 0;
+    
+    return {
+      ...propertyObj,
+      favorites: favoritesCount,
+      averageRating: avgRating
+    };
+  }));
+
   const totalPages = Math.ceil(totalProperties / parseInt(limit));
 
   res.json({
     success: true,
     data: {
-      properties,
+      properties: enhancedProperties,
       pagination: {
         currentPage: parseInt(page),
         totalPages,
@@ -2236,22 +2327,11 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
     // Get real analytics data from database
     const [
       totalProperties,
-      totalCalls,
-      totalMessages,
       previousLeads,
       previousProperties
     ] = await Promise.all([
       // Current period data
       Property.countDocuments({ owner: vendorObjectId }),
-      Message.countDocuments({
-        recipient: vendorObjectId,
-        type: 'call_request',
-        createdAt: { $gte: currentStartDate, $lte: currentEndDate }
-      }),
-      Message.countDocuments({
-        recipient: vendorObjectId,
-        createdAt: { $gte: currentStartDate, $lte: currentEndDate }
-      }),
       // Previous period data for trends
       Message.countDocuments({
         recipient: vendorObjectId,
@@ -2268,8 +2348,8 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
     const vendorProperties = await Property.find({ owner: vendorObjectId }).select('_id');
     const propertyIds = vendorProperties.map(p => p._id);
 
-    // Get real views from PropertyView collection
-    const [currentViews, previousViews, currentLeads] = await Promise.all([
+    // Get real views, phone calls, and messages from PropertyView collection
+    const [currentViews, previousViews, currentLeads, totalCalls, totalMessages] = await Promise.all([
       PropertyView.countDocuments({
         property: { $in: propertyIds },
         viewedAt: { $gte: currentStartDate, $lte: currentEndDate }
@@ -2282,11 +2362,30 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
         recipient: vendorObjectId,
         type: { $in: ['inquiry', 'lead', 'property_inquiry'] },
         createdAt: { $gte: currentStartDate, $lte: currentEndDate }
+      }),
+      // Phone calls from PropertyView interactions
+      PropertyView.countDocuments({
+        property: { $in: propertyIds },
+        'interactions.clickedPhone': true,
+        viewedAt: { $gte: currentStartDate, $lte: currentEndDate }
+      }),
+      Message.countDocuments({
+        recipient: vendorObjectId,
+        createdAt: { $gte: currentStartDate, $lte: currentEndDate }
       })
     ]);
     
-    const currentMessages = totalMessages;
-    const currentCalls = totalCalls;
+    // Calculate total revenue from sold properties in this period
+    const soldProperties = await Property.find({
+      owner: vendorObjectId,
+      status: 'sold',
+      updatedAt: { $gte: currentStartDate, $lte: currentEndDate }
+    }).select('price');
+    
+    const totalRevenue = soldProperties.reduce((sum, prop) => {
+      const price = parseFloat(prop.price?.toString().replace(/[^0-9.]/g, '') || '0');
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
     
     const prevViews = previousViews;
     const prevLeads = previousLeads;
@@ -2327,9 +2426,9 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
     const analyticsData = {
       totalViews: currentViews,
       totalLeads: currentLeads,
-      totalCalls: currentCalls,
-      totalMessages: currentMessages,
-      totalRevenue: 0, // Will be calculated when payment system is implemented
+      totalCalls: totalCalls,
+      totalMessages: totalMessages,
+      totalRevenue: totalRevenue,
       totalProperties,
       averageRating: Math.round(averageRating * 10) / 10,
       responseTime: "4.2 hours", // Will be calculated from message response times

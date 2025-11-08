@@ -77,6 +77,8 @@ export interface Property {
   assignedBy?: string;
   assignmentNotes?: string;
   views: number;
+  favorites?: number;
+  averageRating?: number;
   featured: boolean;
   verified: boolean;
   rejectionReason?: string;
@@ -408,7 +410,7 @@ class PropertyService {
   async getVendorPropertyStats(): Promise<{
     totalProperties: number;
     totalViews: number;
-    totalLeads: number;
+    totalFavorites: number;
     averageRating: number;
     activeProperties: number;
     soldProperties: number;
@@ -424,7 +426,7 @@ class PropertyService {
         return {
           totalProperties: response.data.totalProperties || 0,
           totalViews: response.data.totalViews || 0,
-          totalLeads: response.data.totalLeads || 0,
+          totalFavorites: response.data.totalFavorites || 0,
           averageRating: response.data.rating || 0,
           activeProperties: response.data.activeProperties || 0,
           soldProperties: response.data.soldProperties || 0,
@@ -432,11 +434,10 @@ class PropertyService {
         };
       }
 
-      // Return default stats if endpoint doesn't return property stats
       return {
         totalProperties: 0,
         totalViews: 0,
-        totalLeads: 0,
+        totalFavorites: 0,
         averageRating: 0,
         activeProperties: 0,
         soldProperties: 0,
@@ -444,11 +445,10 @@ class PropertyService {
       };
     } catch (error) {
       console.error("Failed to fetch vendor property stats:", error);
-      // Return default stats on error
       return {
         totalProperties: 0,
         totalViews: 0,
-        totalLeads: 0,
+        totalFavorites: 0,
         averageRating: 0,
         activeProperties: 0,
         soldProperties: 0,

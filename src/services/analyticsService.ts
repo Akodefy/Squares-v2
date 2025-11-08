@@ -56,6 +56,7 @@ export interface PerformanceMetrics {
     leads: number;
     conversionRate: number;
     revenue: number;
+    favorites?: number;
   }>;
   leadSources: ChartData[];
   demographicsData: ChartData[];

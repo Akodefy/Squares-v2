@@ -296,7 +296,6 @@ const Profile = () => {
 
   // Memoize event handlers to prevent infinite loops
   const handleProfileUpdate = useCallback(() => {
-    console.log("Profile updated via realtime");
     // Directly call loadUserData without going through refreshData
     loadUserData();
   }, []); // Empty dependency array since we want this to be stable
@@ -472,19 +471,8 @@ const Profile = () => {
 
   return (
     <div className="space-y-6 pt-16">
-      {/* Realtime Status */}
-      <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? 'Real-time profile updates active' : 'Offline mode'}
-          </span>
-          {lastEvent && (
-            <Badge variant="secondary" className="text-xs">
-              Last update: {new Date(lastEvent.timestamp).toLocaleTimeString()}
-            </Badge>
-          )}
-        </div>
+      {/* Refresh Button */}
+      <div className="flex justify-end">
         <Button 
           variant="outline" 
           size="sm" 

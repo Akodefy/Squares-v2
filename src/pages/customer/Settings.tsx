@@ -130,7 +130,6 @@ const CustomerSettings = () => {
 
   // Event handler for settings updates
   const handleSettingsUpdated = useCallback(() => {
-    console.log("Settings updated");
     setLastSyncTime(new Date().toISOString());
     loadSettings();
   }, []);
@@ -369,8 +368,6 @@ const CustomerSettings = () => {
         title: "✅ Export Ready",
         description: "Download will begin shortly",
       });
-
-      console.log("Data export requested:", new Date().toISOString());
     } catch (error) {
       toast({
         title: "Export Failed",
@@ -398,8 +395,6 @@ const CustomerSettings = () => {
         description: `Confirmation link sent to ${userEmail}`,
         variant: "destructive"
       });
-
-      console.log("Account deletion requested:", new Date().toISOString());
     } catch (error) {
       toast({
         title: "Request Failed",
@@ -545,7 +540,6 @@ const CustomerSettings = () => {
                   title: "✅ Test Email Sent",
                   description: "Check support@buildhomemartsquares.com",
                 });
-                console.log("Test email sent from support@buildhomemartsquares.com");
               } catch (error) {
                 toast({
                   title: "Test Failed",

@@ -32,10 +32,16 @@ const customerRoutes = require('./routes/customer');
 const notificationRoutes = require('./routes/notifications');
 const supportRoutes = require('./routes/support');
 const policyRoutes = require('./routes/policies');
+const webhookRoutes = require('./routes/webhooks');
+const refund_policyRoutes = require('./routes/refund_policy');
 
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { authenticateToken } = require('./middleware/authMiddleware');
+
+// Import services
+const paymentStatusService = require('./services/paymentStatusService');
+const paymentCleanupJob = require('./jobs/paymentCleanup');
 
 // Import database
 const { connectDB } = require('./config/database');
@@ -246,6 +252,8 @@ app.use('/api/customer', customerRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/policies', policyRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/refund_policy', refund_policyRoutes);
 
 // Import admin real-time service
 const adminRealtimeService = require('./services/adminRealtimeService');
@@ -421,6 +429,11 @@ const startServer = async () => {
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Client URL: ${process.env.CLIENT_URL || 'http://localhost:8001'}`);
       console.log(`✅ Database connection established`);
+      
+      // Start payment cleanup job (runs every 5 minutes)
+      paymentCleanupJob.start(5);
+      console.log(`💳 Payment cleanup job started (runs every 5 minutes)`);
+      console.log(`⏱️  Razorpay timeout limit: 15 minutes`);
     });
   } catch (error) {
     console.error('🚫 Failed to start server:', error.message);
@@ -446,6 +459,10 @@ const gracefulShutdown = (signal) => {
     console.log('HTTP server closed');
     
     try {
+      // Stop payment cleanup job
+      paymentCleanupJob.stop();
+      console.log('Payment cleanup job stopped');
+      
       // Close database connection
       await mongoose.connection.close();
       console.log('Database connection closed');

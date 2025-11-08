@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   GitCompare, 
   X, 
@@ -17,7 +24,8 @@ import {
   Check,
   Minus,
   RefreshCw,
-  Home
+  Home,
+  User
 } from "lucide-react";
 import { isAdminUser, getOwnerDisplayName, getPropertyOwnerDisplayName } from "@/utils/propertyUtils";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
@@ -35,6 +43,8 @@ const PropertyComparison = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showPropertyDialog, setShowPropertyDialog] = useState(false);
+  const [showContactDialog, setShowContactDialog] = useState(false);
+  const [selectedContactProperty, setSelectedContactProperty] = useState<Property | null>(null);
   const hasInitialized = useRef(false);
 
   // Load properties from API
@@ -244,21 +254,48 @@ const PropertyComparison = () => {
     return Array.from(new Set(properties.flatMap(p => p.amenities)));
   }, [properties]);
 
+  // Handle call button click
+  const handleCallClick = useCallback((property: Property) => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const contactNumber = property.owner?.profile?.phone || property.agent?.profile?.phone;
+
+    if (!contactNumber) {
+      toast({
+        title: "Contact Unavailable",
+        description: "Contact information is not available for this property",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isMobile) {
+      // On mobile, directly open dialer
+      window.location.href = `tel:${contactNumber}`;
+    } else {
+      // On desktop, show popup with number
+      setSelectedContactProperty(property);
+      setShowContactDialog(true);
+    }
+  }, []);
+
+  const getContactNumber = (property: Property) => {
+    return property.owner?.profile?.phone || property.agent?.profile?.phone || null;
+  };
+
+  const getContactName = (property: Property) => {
+    if (property.owner?.profile) {
+      return getPropertyOwnerDisplayName(property);
+    }
+    if (property.agent?.profile) {
+      return getOwnerDisplayName(property.agent);
+    }
+    return "Property Contact";
+  };
+
   return (
     <div className="space-y-6 pt-16">
-      {/* Realtime Status */}
-      <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          {/* <span className="text-sm text-muted-foreground">
-            {isConnected ? 'Real-time property updates active' : 'Offline mode'}
-          </span> */}
-          {lastEvent && (
-            <Badge variant="secondary" className="text-xs">
-              Last update: {new Date(lastEvent.timestamp).toLocaleTimeString()}
-            </Badge>
-          )}
-        </div>
+      {/* Refresh Button */}
+      <div className="flex justify-end">
         <Button 
           variant="outline" 
           size="sm" 
@@ -554,28 +591,44 @@ const PropertyComparison = () => {
             <CardHeader>
               <CardTitle>Amenities Comparison</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Get all unique amenities */}
-                {uniqueAmenities.map((amenity, index) => (
-                  <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-                    <span className="font-medium min-w-[200px]">{String(amenity)}</span>
-                    <div className="flex gap-4 overflow-x-auto flex-1">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="sticky left-0 z-10 bg-background p-4 text-left font-semibold min-w-[200px] border-r">
+                        Amenity
+                      </th>
                       {properties.map((property) => (
-                        <div key={property._id} className="flex items-center gap-2 min-w-[120px]">
-                          <span className="text-xs text-muted-foreground truncate flex-1">
-                            {property.title.slice(0, 15)}...
-                          </span>
-                          {property.amenities.includes(String(amenity)) ? (
-                            <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                          ) : (
-                            <Minus className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          )}
-                        </div>
+                        <th key={property._id} className="p-4 text-center font-medium min-w-[150px]">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm truncate" title={property.title}>
+                              {property.title.length > 20 ? `${property.title.slice(0, 20)}...` : property.title}
+                            </span>
+                          </div>
+                        </th>
                       ))}
-                    </div>
-                  </div>
-                ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uniqueAmenities.map((amenity, index) => (
+                      <tr key={index} className="border-b hover:bg-muted/50">
+                        <td className="sticky left-0 z-10 bg-background p-4 font-medium border-r">
+                          {String(amenity)}
+                        </td>
+                        {properties.map((property) => (
+                          <td key={property._id} className="p-4 text-center">
+                            {property.amenities.includes(String(amenity)) ? (
+                              <Check className="w-5 h-5 text-green-600 mx-auto" />
+                            ) : (
+                              <X className="w-5 h-5 text-red-400 mx-auto" />
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -642,11 +695,16 @@ const PropertyComparison = () => {
                     {property.title}
                   </h4>
                   <div className="flex gap-2 justify-center">
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleCallClick(property)}
+                      disabled={!getContactNumber(property)}
+                    >
                       <Phone className="w-4 h-4 mr-1" />
                       Call
                     </Button>
-                    <Link to={`/property/${property._id}`}>
+                    <Link to={`/customer/property/${property._id}`}>
                       <Button size="sm">
                         View Details
                       </Button>
@@ -667,6 +725,73 @@ const PropertyComparison = () => {
         selectedPropertyIds={selectedProperties}
         maxSelections={10}
       />
+
+      {/* Contact Number Dialog */}
+      <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Contact Information</DialogTitle>
+            <DialogDescription>
+              {selectedContactProperty?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+              <User className="w-10 h-10 text-primary" />
+              <div className="flex-1">
+                <p className="font-medium text-sm">
+                  {selectedContactProperty && getContactName(selectedContactProperty)}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {selectedContactProperty?.owner && !isAdminUser(selectedContactProperty.owner) ? 'Owner' : 
+                   selectedContactProperty?.agent && !isAdminUser(selectedContactProperty.agent) ? 'Agent' : 'Contact'}
+                </p>
+              </div>
+            </div>
+            
+            {selectedContactProperty && getContactNumber(selectedContactProperty) && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-5 h-5 text-primary" />
+                    <span className="font-medium text-lg">
+                      {getContactNumber(selectedContactProperty)}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const number = getContactNumber(selectedContactProperty);
+                      if (number) {
+                        navigator.clipboard.writeText(number);
+                        toast({
+                          description: "Phone number copied to clipboard"
+                        });
+                      }
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+                
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => {
+                    const number = getContactNumber(selectedContactProperty);
+                    if (number) {
+                      window.location.href = `tel:${number}`;
+                    }
+                  }}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Call Now
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

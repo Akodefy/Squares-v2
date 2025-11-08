@@ -105,6 +105,7 @@ const VendorBilling: React.FC = () => {
       case "sent":
         return <Clock className="w-4 h-4 text-yellow-600" />;
       case "failed":
+        return <AlertCircle className="w-4 h-4 text-red-600" />;
       case "cancelled":
       case "expired":
       case "overdue":
@@ -124,10 +125,11 @@ const VendorBilling: React.FC = () => {
       case "sent":
         return "bg-yellow-100 text-yellow-800";
       case "failed":
+        return "bg-red-100 text-red-800";
       case "cancelled":
       case "expired":
       case "overdue":
-        return "bg-red-100 text-red-800";
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -148,6 +150,28 @@ const VendorBilling: React.FC = () => {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const getStatusMessage = (payment: Payment) => {
+    if (payment.status === 'failed' && payment.failureReason) {
+      return payment.failureReason;
+    }
+    if (payment.status === 'cancelled') {
+      if (payment.failureReason?.includes('timeout') || payment.failureReason?.includes('exceeded')) {
+        return 'Payment cancelled - exceeded 15-minute Razorpay time limit';
+      }
+      return payment.failureReason || 'Payment cancelled';
+    }
+    if (payment.status === 'pending') {
+      const createdAt = new Date(payment.createdAt);
+      const now = new Date();
+      const minutesElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
+      if (minutesElapsed > 15) {
+        return 'Payment may have expired - please refresh';
+      }
+      return `Pending (${15 - minutesElapsed} minutes remaining)`;
+    }
+    return payment.description || '';
   };
 
   const handleExport = async () => {
@@ -656,6 +680,13 @@ const VendorBilling: React.FC = () => {
                           <p className="text-sm text-muted-foreground">
                             {payment?.createdAt ? formatDate(payment.createdAt) : 'N/A'}
                           </p>
+                          {(payment.status === 'failed' || payment.status === 'cancelled') && payment.failureReason && (
+                            <p className="text-xs text-red-600 mt-1 max-w-md">
+                              {payment.failureReason.includes('timeout') || payment.failureReason.includes('exceeded')
+                                ? '⏱️ Payment expired - exceeded 15-minute time limit'
+                                : `❌ ${payment.failureReason}`}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">

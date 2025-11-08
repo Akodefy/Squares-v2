@@ -272,7 +272,6 @@ class PlanService {
   // Helper method to get plan type badge variant
   getPlanBadgeVariant(plan: Plan): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (!plan.isActive) return 'destructive';
-    if (plan.isPopular) return 'default';
     return 'secondary';
   }
 

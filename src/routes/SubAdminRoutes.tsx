@@ -30,7 +30,6 @@ const SubAdminRoutes = () => {
             <Route path="/content-moderation" element={<ContentModeration />} />
             <Route path="/support-tickets" element={<SupportTickets />} />
             <Route path="/vendor-performance" element={<VendorPerformance />} />
-            <Route path="/addon-services" element={<AddonServices />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/profile" element={<ProfilePage />} />

@@ -373,16 +373,6 @@ const OwnedProperties = () => {
         </Button>
       </div>
 
-      {/* Realtime Status */}
-      <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? 'Real-time updates active' : 'Offline mode'}
-          </span>
-        </div>
-      </div>
-
       {/* Stats Cards */}
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

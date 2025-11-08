@@ -43,7 +43,7 @@ const VendorProperties = () => {
   const [stats, setStats] = useState({
     totalProperties: 0,
     totalViews: 0,
-    totalLeads: 0,
+    totalFavorites: 0,
     averageRating: 0
   });
   const [pagination, setPagination] = useState({
@@ -204,7 +204,7 @@ const VendorProperties = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -224,17 +224,6 @@ const VendorProperties = () => {
                 <p className="text-2xl font-bold">{stats.totalViews.toLocaleString()}</p>
               </div>
               <Eye className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Leads</p>
-                <p className="text-2xl font-bold">{stats.totalLeads}</p>
-              </div>
-              <Users className="h-8 w-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
@@ -374,7 +363,7 @@ const VendorProperties = () => {
                         </DropdownMenuItem>
                         
                         {/* Status Update Option - Only show for approved properties */}
-                        {property.status === 'active' && (
+                        {(property.status === 'active' || property.status === 'available') && (
                           <DropdownMenuItem onClick={() => openStatusDialog(property)}>
                             <Users className="w-4 h-4 mr-2" />
                             {property.listingType === 'sale' ? 'Mark as Sold' : 
@@ -419,12 +408,12 @@ const VendorProperties = () => {
                       {property.views} views
                     </span>
                     <span className="flex items-center">
-                      <Users className="w-4 h-4 mr-1" />
-                      0 leads
+                      <Star className="w-4 h-4 mr-1" />
+                      {property.favorites || 0} favorites
                     </span>
                     <span className="flex items-center">
-                      <Star className="w-4 h-4 mr-1" />
-                      0 favorites
+                      <Star className="w-4 h-4 mr-1 fill-current text-yellow-500" />
+                      {property.averageRating?.toFixed(1) || '0.0'} rating
                     </span>
                     <span className="flex items-center">
                       <Calendar className="w-4 h-4 mr-1" />
@@ -451,7 +440,7 @@ const VendorProperties = () => {
                     </Button>
                     
                     {/* Status Update Button - Only show for approved properties */}
-                    {property.status === 'active' && (
+                    {(property.status === 'active' || property.status === 'available') && (
                       <Button size="sm" variant="outline" onClick={() => openStatusDialog(property)}>
                         {property.listingType === 'sale' ? 'Mark as Sold' : 
                          property.listingType === 'rent' ? 'Mark as Rented' : 'Mark as Leased'}

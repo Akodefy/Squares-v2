@@ -115,10 +115,9 @@ const PropertyDetails: React.FC = () => {
     loadProperty();
   }, [loadProperty]);
 
-  // Listen for real-time updates
+  // Listen for updates
   useRealtimeEvent('property_updated', useCallback((data) => {
     if (data.propertyId === id) {
-      console.log('Property updated via realtime, refreshing...');
       loadProperty();
     }
   }, [id, loadProperty]));
@@ -318,14 +317,6 @@ const PropertyDetails: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pt-20 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        {/* Realtime Status */}
-        <div className="flex items-center gap-2 bg-muted/50 p-3 rounded-lg">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? 'Real-time property updates active' : 'Offline mode'}
-          </span>
-        </div>
-
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">

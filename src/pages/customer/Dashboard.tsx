@@ -146,14 +146,12 @@ const Dashboard = () => {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  // Realtime integration for dashboard updates - memoize callbacks
+  // Integration for dashboard updates - memoize callbacks
   const handleStatsUpdate = useCallback(() => {
-    console.log("Stats updated via realtime");
     refreshDashboard();
   }, [refreshDashboard]);
 
   const handlePropertiesUpdate = useCallback(() => {
-    console.log("Properties updated via realtime");
     refreshDashboard();
   }, [refreshDashboard]);
 
@@ -225,19 +223,8 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in-responsive mt-16">
-      {/* Realtime Status */}
-      <div className="flex-responsive items-center justify-between bg-muted/50 padding-responsive rounded-lg">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-body-responsive text-muted-foreground">
-            {isConnected ? 'Real-time updates active' : 'Offline mode'}
-          </span>
-          {lastEvent && (
-            <Badge variant="secondary" className="text-xs">
-              Last update: {customerDashboardService.formatTimeAgo(lastEvent.timestamp)}
-            </Badge>
-          )}
-        </div>
+      {/* Refresh Button */}
+      <div className="flex justify-end">
         <Button 
           variant="outline" 
           size="sm" 

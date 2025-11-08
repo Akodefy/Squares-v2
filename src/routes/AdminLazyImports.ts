@@ -19,3 +19,4 @@ export const PropertyListPage = lazy(() => import("@/pages/admin/Properties"));
 export const PropertyEditPage = lazy(() => import("@/pages/admin/EditProperty"));
 export const AddPropertyPage = lazy(() => import("@/pages/admin/AddProperty"));
 export const AddonManagementPage = lazy(() => import("@/pages/admin/AddonManagement"));
+export const Refund_policy = lazy(() => import("@/pages/admin/Refund_policy"));

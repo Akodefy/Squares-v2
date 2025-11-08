@@ -47,15 +47,13 @@ const MyFavorites: React.FC = () => {
     }
   }, []);
 
-  // Listen for real-time favorite events
+  // Listen for favorite events
   useRealtimeEvent('favorite_added', useCallback((data) => {
-    console.log('Favorite added:', data);
     loadFavorites();
     loadStats();
   }, [loadFavorites, loadStats]));
 
   useRealtimeEvent('favorite_removed', useCallback((data) => {
-    console.log('Favorite removed:', data);
     loadFavorites();
     loadStats();
   }, [loadFavorites, loadStats]));
@@ -202,14 +200,6 @@ const MyFavorites: React.FC = () => {
               </Button>
             </div>
           )}
-        </div>
-
-        {/* Realtime Status */}
-        <div className="flex items-center gap-2 bg-muted/50 p-3 rounded-lg">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? 'Real-time favorite updates active' : 'Offline mode'}
-          </span>
         </div>
 
         {/* Search and Filters */}

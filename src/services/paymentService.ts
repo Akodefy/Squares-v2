@@ -508,16 +508,61 @@ class PaymentService {
     }
   }
 
-  async getPaymentStatus(paymentId: string): Promise<any> {
+  async getPaymentStatus(orderId: string): Promise<any> {
     try {
       const response = await this.makeRequest<{
         success: boolean;
         data: any;
-      }>(`/payments/${paymentId}/status`);
+      }>(`/payments/status/${orderId}`);
 
       return response.data;
     } catch (error) {
       console.error('Failed to fetch payment status:', error);
+      throw error;
+    }
+  }
+
+  async markPaymentAsFailed(orderId: string, paymentId?: string, reason?: string): Promise<any> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: any;
+      }>('/payments/mark-failed', {
+        method: 'POST',
+        body: JSON.stringify({ orderId, paymentId, reason })
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to mark payment as failed:', error);
+      throw error;
+    }
+  }
+
+  async checkPaymentStatus(orderId: string): Promise<{
+    status: 'pending' | 'paid' | 'failed' | 'cancelled';
+    isExpired: boolean;
+    message?: string;
+  }> {
+    try {
+      const data = await this.getPaymentStatus(orderId);
+      
+      // Auto-mark as failed if user reports failure
+      if (data.status === 'pending' && data.isExpired) {
+        return {
+          status: 'cancelled',
+          isExpired: true,
+          message: 'Payment timeout - exceeded Razorpay limit'
+        };
+      }
+
+      return {
+        status: data.status,
+        isExpired: data.isExpired || false,
+        message: data.failureReason
+      };
+    } catch (error) {
+      console.error('Failed to check payment status:', error);
       throw error;
     }
   }

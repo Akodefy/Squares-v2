@@ -210,22 +210,6 @@ const ServiceRequests = () => {
 
   return (
     <div className="space-y-6 pt-16">
-      {/* Realtime Status */}
-      <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? 'Real-time service updates active' : 'Offline mode'}
-          </span>
-        </div>
-        {loading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            Loading requests...
-          </div>
-        )}
-      </div>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
