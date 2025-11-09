@@ -555,7 +555,7 @@ router.get('/vendors/performance',
                 $filter: {
                   input: '$properties',
                   as: 'prop',
-                  cond: { $eq: ['$$prop.status', 'active'] }
+                  cond: { $eq: ['$$prop.status', 'available'] }
                 }
               }
             },
@@ -821,11 +821,37 @@ router.get('/reports',
   asyncHandler(async (req, res) => {
     const { range = '30days' } = req.query;
 
+    // Calculate date range
+    const now = new Date();
+    let startDate = new Date();
+    switch (range) {
+      case '7days':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '30days':
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case '90days':
+        startDate.setDate(now.getDate() - 90);
+        break;
+      case '1year':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 30);
+    }
+
     const [
       propertyStats,
       userStats,
       totalViews,
-      totalMessages
+      allMessages,
+      totalReviews,
+      reviewStats,
+      supportTickets,
+      openSupportTickets,
+      resolvedSupportTickets,
+      newUsers
     ] = await Promise.all([
       Property.aggregate([
         {
@@ -851,7 +877,26 @@ router.get('/reports',
           }
         }
       ]),
-      Message.countDocuments({ type: 'support' })
+      Message.countDocuments(),
+      Review.countDocuments({ status: 'active' }),
+      Review.aggregate([
+        {
+          $match: { status: 'active' }
+        },
+        {
+          $group: {
+            _id: null,
+            avgRating: { $avg: '$rating' },
+            totalRatings: { $sum: 1 }
+          }
+        }
+      ]),
+      SupportTicket.countDocuments(),
+      SupportTicket.countDocuments({ status: 'open' }),
+      SupportTicket.countDocuments({ status: 'resolved' }),
+      User.countDocuments({ 
+        createdAt: { $gte: startDate }
+      })
     ]);
 
     const propertyStatsMap = propertyStats.reduce((acc, stat) => {
@@ -864,12 +909,27 @@ router.get('/reports',
       return acc;
     }, {});
 
+    // Calculate average resolution time for support tickets
+    const resolvedTicketsWithTime = await SupportTicket.find({ 
+      status: 'resolved',
+      resolvedAt: { $exists: true }
+    }).select('createdAt resolvedAt');
+
+    let avgResolutionTime = 24;
+    if (resolvedTicketsWithTime.length > 0) {
+      const totalHours = resolvedTicketsWithTime.reduce((sum, ticket) => {
+        const diff = new Date(ticket.resolvedAt).getTime() - new Date(ticket.createdAt).getTime();
+        return sum + (diff / (1000 * 60 * 60));
+      }, 0);
+      avgResolutionTime = Math.round(totalHours / resolvedTicketsWithTime.length);
+    }
+
     res.json({
       success: true,
       data: {
         propertyStats: {
           total: Object.values(propertyStatsMap).reduce((sum, count) => sum + count, 0),
-          active: propertyStatsMap.active || 0,
+          active: propertyStatsMap.available || 0, // Only count 'available' status
           pending: propertyStatsMap.pending || 0,
           rejected: propertyStatsMap.rejected || 0
         },
@@ -877,19 +937,19 @@ router.get('/reports',
           totalVendors: userStatsMap.agent || 0,
           totalCustomers: userStatsMap.customer || 0,
           activeUsers: Object.values(userStatsMap).reduce((sum, count) => sum + count, 0),
-          newUsersThisMonth: 15
+          newUsersThisMonth: newUsers
         },
         engagementStats: {
           totalViews: totalViews[0]?.totalViews || 0,
-          totalMessages: totalMessages || 0,
-          totalReviews: 0,
-          averageRating: 4.2
+          totalMessages: allMessages,
+          totalReviews: totalReviews,
+          averageRating: reviewStats[0]?.avgRating ? Number(reviewStats[0].avgRating.toFixed(1)) : 0
         },
         supportStats: {
-          totalTickets: totalMessages || 0,
-          openTickets: await Message.countDocuments({ type: 'support', status: 'open' }),
-          resolvedTickets: await Message.countDocuments({ type: 'support', status: 'resolved' }),
-          avgResolutionTime: 24
+          totalTickets: supportTickets,
+          openTickets: openSupportTickets,
+          resolvedTickets: resolvedSupportTickets,
+          avgResolutionTime: avgResolutionTime
         }
       }
     });
@@ -899,11 +959,170 @@ router.get('/reports',
 router.get('/reports/export',
   hasPermission(SUB_ADMIN_PERMISSIONS.GENERATE_REPORTS),
   asyncHandler(async (req, res) => {
-    const { type, range } = req.query;
+    const { type, range = '30days' } = req.query;
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${type}_report.csv"`);
-    res.send('Report data would be here in CSV format');
+    // Calculate date range
+    const now = new Date();
+    let startDate = new Date();
+    switch (range) {
+      case '7days':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '30days':
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case '90days':
+        startDate.setDate(now.getDate() - 90);
+        break;
+      case '1year':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 30);
+    }
+
+    let csvContent = '';
+    const timestamp = new Date().toISOString().split('T')[0];
+
+    try {
+      switch (type) {
+        case 'properties':
+          const properties = await Property.find()
+            .populate('owner', 'email profile role')
+            .populate('vendor', 'email profile')
+            .select('title type listingType price address status views createdAt')
+            .sort({ createdAt: -1 })
+            .limit(1000);
+
+          csvContent = 'Property ID,Title,Type,Listing Type,Price,City,State,Status,Views,Created Date,Owner Email,Owner Role\n';
+          properties.forEach(prop => {
+            const ownerEmail = prop.owner?.email || 'N/A';
+            const ownerRole = prop.owner?.role || 'N/A';
+            csvContent += `"${prop._id}","${prop.title}","${prop.type}","${prop.listingType}","${prop.price}","${prop.address?.city || 'N/A'}","${prop.address?.state || 'N/A'}","${prop.status}","${prop.views || 0}","${new Date(prop.createdAt).toLocaleDateString()}","${ownerEmail}","${ownerRole}"\n`;
+          });
+          break;
+
+        case 'users':
+          const users = await User.find()
+            .select('email role profile createdAt status')
+            .sort({ createdAt: -1 })
+            .limit(1000);
+
+          csvContent = 'User ID,Email,Role,Name,Phone,City,Status,Join Date\n';
+          users.forEach(user => {
+            const name = `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim();
+            csvContent += `"${user._id}","${user.email}","${user.role}","${name}","${user.profile?.phone || 'N/A'}","${user.profile?.address?.city || 'N/A'}","${user.status}","${new Date(user.createdAt).toLocaleDateString()}"\n`;
+          });
+          break;
+
+        case 'engagement':
+          const [propertyViews, reviews, messages, allReviews] = await Promise.all([
+            Property.aggregate([
+              {
+                $group: {
+                  _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                  totalViews: { $sum: { $ifNull: ['$views', 0] } },
+                  propertyCount: { $sum: 1 }
+                }
+              },
+              { $sort: { _id: -1 } },
+              { $limit: 100 }
+            ]),
+            Review.countDocuments({ status: 'active' }),
+            Message.countDocuments(),
+            Review.find({ status: 'active' })
+              .populate('vendor', 'email profile')
+              .populate('client', 'email profile')
+              .populate('property', 'title')
+              .select('rating comment reviewType createdAt')
+              .sort({ createdAt: -1 })
+              .limit(500)
+          ]);
+
+          csvContent = 'Date,Properties,Total Views,Average Views\n';
+          propertyViews.forEach(day => {
+            const avgViews = day.propertyCount > 0 ? (day.totalViews / day.propertyCount).toFixed(2) : 0;
+            csvContent += `"${day._id}","${day.propertyCount}","${day.totalViews}","${avgViews}"\n`;
+          });
+          csvContent += `\n"Summary"\n`;
+          csvContent += `"Total Reviews","${reviews}"\n`;
+          csvContent += `"Total Messages","${messages}"\n\n`;
+          
+          csvContent += 'Recent Reviews\n';
+          csvContent += 'Review ID,Vendor,Client,Property,Rating,Review Type,Comment,Date\n';
+          allReviews.forEach(review => {
+            const vendorName = review.vendor ? `${review.vendor.profile?.firstName || ''} ${review.vendor.profile?.lastName || ''}`.trim() || review.vendor.email : 'N/A';
+            const clientName = review.client ? `${review.client.profile?.firstName || ''} ${review.client.profile?.lastName || ''}`.trim() || review.client.email : 'N/A';
+            const propertyTitle = review.property?.title || 'N/A';
+            const comment = (review.comment || '').replace(/"/g, '""'); // Escape quotes
+            csvContent += `"${review._id}","${vendorName}","${clientName}","${propertyTitle}","${review.rating}","${review.reviewType}","${comment}","${new Date(review.createdAt).toLocaleDateString()}"\n`;
+          });
+          break;
+
+        case 'support':
+          const tickets = await SupportTicket.find()
+            .populate('user', 'email profile')
+            .populate('assignedTo', 'email profile')
+            .select('subject status priority createdAt resolvedAt')
+            .sort({ createdAt: -1 })
+            .limit(500);
+
+          csvContent = 'Ticket ID,Subject,Status,Priority,User Email,Assigned To,Created Date,Resolved Date,Resolution Time (hours)\n';
+          tickets.forEach(ticket => {
+            const userEmail = ticket.user?.email || 'N/A';
+            const assignedToEmail = ticket.assignedTo?.email || 'Unassigned';
+            const createdDate = new Date(ticket.createdAt).toLocaleDateString();
+            const resolvedDate = ticket.resolvedAt ? new Date(ticket.resolvedAt).toLocaleDateString() : 'N/A';
+            const resolutionTime = ticket.resolvedAt 
+              ? Math.round((new Date(ticket.resolvedAt) - new Date(ticket.createdAt)) / (1000 * 60 * 60))
+              : 'N/A';
+            
+            csvContent += `"${ticket._id}","${ticket.subject}","${ticket.status}","${ticket.priority}","${userEmail}","${assignedToEmail}","${createdDate}","${resolvedDate}","${resolutionTime}"\n`;
+          });
+          break;
+
+        case 'full':
+        default:
+          const [
+            propertyCount,
+            userCount,
+            totalViews,
+            totalReviews,
+            totalMessages,
+            totalTickets
+          ] = await Promise.all([
+            Property.countDocuments(),
+            User.countDocuments(),
+            Property.aggregate([{ $group: { _id: null, total: { $sum: { $ifNull: ['$views', 0] } } } }]),
+            Review.countDocuments({ status: 'active' }),
+            Message.countDocuments(),
+            SupportTicket.countDocuments()
+          ]);
+
+          csvContent = 'Report Summary\n';
+          csvContent += `"Report Type","${type}"\n`;
+          csvContent += `"Date Range","${range}"\n`;
+          csvContent += `"Generated On","${new Date().toLocaleString()}"\n\n`;
+          csvContent += 'Metric,Value\n';
+          csvContent += `"Total Properties","${propertyCount}"\n`;
+          csvContent += `"Total Users","${userCount}"\n`;
+          csvContent += `"Total Property Views","${totalViews[0]?.total || 0}"\n`;
+          csvContent += `"Total Reviews","${totalReviews}"\n`;
+          csvContent += `"Total Messages","${totalMessages}"\n`;
+          csvContent += `"Total Support Tickets","${totalTickets}"\n`;
+          break;
+      }
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="subadmin_${type}_report_${timestamp}.csv"`);
+      res.send(csvContent);
+    } catch (error) {
+      console.error('CSV export error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate CSV report'
+      });
+    }
   })
 );
 

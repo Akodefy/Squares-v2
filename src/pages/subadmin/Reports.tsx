@@ -246,20 +246,24 @@ const Reports = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Active Properties</span>
                     <span className="text-sm font-semibold text-green-600">
-                      {reportData.propertyStats.active} ({Math.round((reportData.propertyStats.active / reportData.propertyStats.total) * 100)}%)
+                      {reportData.propertyStats.active} ({reportData.propertyStats.total > 0 ? Math.round((reportData.propertyStats.active / reportData.propertyStats.total) * 100) : 0}%)
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Pending Review</span>
                     <span className="text-sm font-semibold text-yellow-600">
-                      {reportData.propertyStats.pending} ({Math.round((reportData.propertyStats.pending / reportData.propertyStats.total) * 100)}%)
+                      {reportData.propertyStats.pending} ({reportData.propertyStats.total > 0 ? Math.round((reportData.propertyStats.pending / reportData.propertyStats.total) * 100) : 0}%)
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Rejected</span>
                     <span className="text-sm font-semibold text-red-600">
-                      {reportData.propertyStats.rejected} ({Math.round((reportData.propertyStats.rejected / reportData.propertyStats.total) * 100)}%)
+                      {reportData.propertyStats.rejected} ({reportData.propertyStats.total > 0 ? Math.round((reportData.propertyStats.rejected / reportData.propertyStats.total) * 100) : 0}%)
                     </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-sm font-medium">Total</span>
+                    <span className="text-sm font-semibold">{reportData.propertyStats.total}</span>
                   </div>
                 </div>
               </CardContent>
@@ -318,7 +322,11 @@ const Reports = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Average Rating</span>
-                    <span className="text-sm font-semibold">{reportData.engagementStats.averageRating.toFixed(1)} / 5.0</span>
+                    <span className="text-sm font-semibold">
+                      {reportData.engagementStats.averageRating > 0 
+                        ? `${reportData.engagementStats.averageRating.toFixed(1)} / 5.0` 
+                        : 'No ratings yet'}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -345,7 +353,11 @@ const Reports = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Avg Resolution Time</span>
-                    <span className="text-sm font-semibold">{reportData.supportStats.avgResolutionTime}h</span>
+                    <span className="text-sm font-semibold">
+                      {reportData.supportStats.resolvedTickets > 0 
+                        ? `${reportData.supportStats.avgResolutionTime}h` 
+                        : 'N/A'}
+                    </span>
                   </div>
                 </div>
               </CardContent>
