@@ -120,6 +120,22 @@ const Messages = () => {
     } catch (error) {
       console.error("Failed to load messages:", error);
     }
+  };
+
+  // Load user statuses for all conversations
+  const loadUserStatuses = async () => {
+    const statuses: Record<string, UserStatus> = {};
+    
+    for (const conv of conversations) {
+      try {
+        const status = await messageService.getUserStatus(conv.otherUser._id);
+        statuses[conv.otherUser._id] = status;
+      } catch (error) {
+        console.error(`Failed to load status for user ${conv.otherUser._id}:`, error);
+      }
+    }
+    
+    setUserStatuses(statuses);
   };  useEffect(() => {
     loadConversations();
   }, [statusFilter]);
@@ -132,6 +148,20 @@ const Messages = () => {
       setMessages([]);
     }
   }, [selectedConversation]);
+
+  // Load user statuses when conversations change
+  useEffect(() => {
+    if (conversations.length > 0) {
+      loadUserStatuses();
+      
+      // Set up periodic status refresh every 30 seconds
+      const statusInterval = setInterval(() => {
+        loadUserStatuses();
+      }, 30000);
+      
+      return () => clearInterval(statusInterval);
+    }
+  }, [conversations]);
 
   const activeConversation = conversations.find(c => (c.id || c._id) === selectedConversation);
 
@@ -148,7 +178,7 @@ const Messages = () => {
     try {
       setSending(true);
 
-      let attachments: Array<{type: 'image' | 'document'; url: string; name: string; size?: number}> = [];
+      const attachments: Array<{type: 'image' | 'document'; url: string; name: string; size?: number}> = [];
 
       // Upload files if any
       if (selectedFiles.length > 0) {
@@ -449,19 +479,38 @@ const Messages = () => {
                                 {participantName.split(' ').map(n => n[0]).join('')}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white bg-green-500" 
-                                 title="Online" />
+                            {/* Dynamic online status indicator */}
+                            {userStatuses[otherParticipant._id]?.isOnline ? (
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white bg-green-500" 
+                                   title="Online" />
+                            ) : (
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white bg-gray-400" 
+                                   title={`Last seen ${userStatuses[otherParticipant._id]?.lastSeen ? messageService.formatTime(userStatuses[otherParticipant._id].lastSeen) : 'recently'}`} />
+                            )}
                           </div>
                           
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
                                 <p className="font-semibold text-sm truncate">{participantName}</p>
+                                {/* Online status indicator */}
+                                {userStatuses[otherParticipant._id]?.isOnline && (
+                                  <span className="text-[10px] text-green-600 font-medium">● Online</span>
+                                )}
                               </div>
                               <span className="text-xs text-muted-foreground">
                                 {messageService.formatTime(conversation.lastMessage.createdAt)}
                               </span>
                             </div>
+                            
+                            {/* Show last seen if offline */}
+                            {userStatuses[otherParticipant._id] && !userStatuses[otherParticipant._id]?.isOnline && (
+                              <p className="text-[10px] text-muted-foreground mb-1">
+                                Last seen {userStatuses[otherParticipant._id]?.lastSeen 
+                                  ? messageService.formatTime(userStatuses[otherParticipant._id].lastSeen)
+                                  : 'recently'}
+                              </p>
+                            )}
                             
                             {conversation.property && (
                               <p className="text-xs text-primary font-medium mb-1 truncate">
@@ -537,8 +586,14 @@ const Messages = () => {
                           {getOtherParticipant(activeConversation).name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white bg-green-500" 
-                           title="Online" />
+                      {/* Dynamic online status indicator */}
+                      {userStatuses[getOtherParticipant(activeConversation)._id]?.isOnline ? (
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white bg-green-500" 
+                             title="Online" />
+                      ) : (
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white bg-gray-400" 
+                             title={`Last seen ${userStatuses[getOtherParticipant(activeConversation)._id]?.lastSeen ? messageService.formatTime(userStatuses[getOtherParticipant(activeConversation)._id].lastSeen) : 'recently'}`} />
+                      )}
                     </div>
                     
                     <div>
@@ -546,7 +601,19 @@ const Messages = () => {
                         <h3 className="font-semibold">
                           {getOtherParticipant(activeConversation).name}
                         </h3>
+                        {/* Online status indicator */}
+                        {userStatuses[getOtherParticipant(activeConversation)._id]?.isOnline && (
+                          <span className="text-xs text-green-600 font-medium">● Active now</span>
+                        )}
                       </div>
+                      {/* Show last seen if offline */}
+                      {userStatuses[getOtherParticipant(activeConversation)._id] && !userStatuses[getOtherParticipant(activeConversation)._id]?.isOnline && (
+                        <p className="text-xs text-muted-foreground">
+                          Last seen {userStatuses[getOtherParticipant(activeConversation)._id]?.lastSeen 
+                            ? messageService.formatTime(userStatuses[getOtherParticipant(activeConversation)._id].lastSeen)
+                            : 'recently'}
+                        </p>
+                      )}
                       {activeConversation.property && (
                         <p className="text-sm text-muted-foreground">{activeConversation.property.title}</p>
                       )}
@@ -661,7 +728,7 @@ const Messages = () => {
                             {/* Attachments */}
                             {message.attachments && message.attachments.length > 0 && (
                               <div className="mt-2 space-y-2">
-                                {message.attachments.map((attachment: any, idx: number) => (
+                                {message.attachments.map((attachment: {type: 'image' | 'document'; url: string; name: string; size?: number}, idx: number) => (
                                   <div key={idx}>
                                     {attachment.type === 'image' ? (
                                       <a href={attachment.url} target="_blank" rel="noopener noreferrer">

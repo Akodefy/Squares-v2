@@ -491,7 +491,7 @@ class MessageService {
       }>(`/messages/online-status/${userId}`);
 
       return {
-        isOnline: response.data.isOnline,
+        isOnline: response.data.isOnline || false,
         lastSeen: response.data.lastSeen ? new Date(response.data.lastSeen) : null
       };
     } catch (error) {
@@ -690,28 +690,12 @@ class MessageService {
 
   async getUserStatus(userId: string): Promise<UserStatus> {
     try {
-      const response = await this.makeRequest<{
-        success: boolean;
-        data: {
-          userId: string;
-          isOnline: boolean;
-          lastSeen: string | Date;
-        };
-      }>(`/messages/online-status/${userId}`);
-
-      if (response.success && response.data) {
-        return {
-          userId: response.data.userId,
-          isOnline: response.data.isOnline || false,
-          lastSeen: response.data.lastSeen ? new Date(response.data.lastSeen).toISOString() : new Date().toISOString(),
-          isTyping: false
-        };
-      }
-
+      const onlineStatus = await this.getUserOnlineStatus(userId);
+      
       return {
         userId,
-        isOnline: false,
-        lastSeen: new Date().toISOString(),
+        isOnline: onlineStatus.isOnline,
+        lastSeen: onlineStatus.lastSeen ? onlineStatus.lastSeen.toISOString() : new Date().toISOString(),
         isTyping: false
       };
     } catch (error) {

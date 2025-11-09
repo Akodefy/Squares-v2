@@ -118,11 +118,6 @@ const VendorMessages = () => {
         
         // Refresh conversations to update unread count
         loadConversations();
-        
-        toast({
-          title: "Messages loaded",
-          description: `${response.messages.length} messages loaded and marked as read`,
-        });
       }
     } catch (error) {
       console.error("Failed to load messages:", error);
