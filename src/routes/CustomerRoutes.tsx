@@ -16,7 +16,8 @@ import {
   CustomerProfile,
   CustomerSettings,
   Messages,
-  ReviewsRatings
+  ReviewsRatings,
+  CustomerNotifications
 } from "@/routes/CustomerLazyImports";
 
 const CustomerRoutes = () => {
@@ -62,6 +63,11 @@ const CustomerRoutes = () => {
           <Route path="messages" element={
             <Suspense fallback={<PageLoader />}>
               <Messages />
+            </Suspense>
+          } />
+          <Route path="notifications" element={
+            <Suspense fallback={<PageLoader />}>
+              <CustomerNotifications />
             </Suspense>
           } />
           
