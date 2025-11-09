@@ -25,7 +25,7 @@ const testAdminAuth = async () => {
     }
 
     const loginData = await loginResponse.json();
-    console.log('✅ Login successful!');
+    console.log(' Login successful!');
     console.log('User:', loginData.data?.user?.email, 'Role:', loginData.data?.user?.role);
     
     const token = loginData.data?.token;
