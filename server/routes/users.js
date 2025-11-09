@@ -176,14 +176,10 @@ router.post('/', asyncHandler(async (req, res) => {
     });
   }
 
-  // Hash password
-  const saltRounds = 12;
-  const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-  // Create user
+  // Create user - password will be hashed by pre-save middleware
   const user = await User.create({
     email,
-    password: hashedPassword,
+    password, // Don't hash here, let the model's pre-save middleware handle it
     profile,
     role,
     status,
@@ -431,6 +427,86 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: { user }
+  });
+}));
+
+// @desc    Promote user to different role
+// @route   PATCH /api/users/:id/promote
+// @access  Private/SuperAdmin
+router.patch('/:id/promote', asyncHandler(async (req, res) => {
+  if (req.user.role !== 'superadmin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Superadmin access required to promote users'
+    });
+  }
+
+  const { role } = req.body;
+  
+  const validRoles = ['customer', 'agent', 'admin', 'subadmin', 'superadmin'];
+  if (!validRoles.includes(role)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid role value. Must be one of: ' + validRoles.join(', ')
+    });
+  }
+
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  const oldRole = user.role;
+  user.role = role;
+  
+  // Get role pages from Role collection
+  try {
+    const Role = require('../models/Role');
+    const roleDoc = await Role.findOne({ name: role });
+    
+    if (roleDoc && roleDoc.pages) {
+      user.rolePages = roleDoc.pages;
+    } else {
+      user.rolePages = [];
+    }
+  } catch (error) {
+    console.error('Error fetching role pages:', error);
+    user.rolePages = [];
+  }
+
+  await user.save();
+
+  // Send notification email
+  try {
+    const { sendTemplateEmail } = require('../utils/emailService');
+    await sendTemplateEmail(
+      user.email,
+      'role-promotion',
+      {
+        firstName: user.profile?.firstName || 'User',
+        oldRole,
+        newRole: role,
+        websiteUrl: process.env.FRONTEND_URL || 'https://buildhomemartsquares.com'
+      }
+    );
+    console.log(`✅ Role promotion notification sent to ${user.email}`);
+  } catch (emailError) {
+    console.error('❌ Failed to send promotion notification email:', emailError);
+  }
+
+  // Remove password from response
+  const userResponse = user.toObject();
+  delete userResponse.password;
+  delete userResponse.verificationToken;
+
+  res.json({
+    success: true,
+    message: `User promoted from ${oldRole} to ${role}`,
+    data: { user: userResponse }
   });
 }));
 

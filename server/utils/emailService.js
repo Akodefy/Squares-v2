@@ -686,6 +686,68 @@ const emailTemplates = {
     `
   }),
 
+  // System notification template
+  'system-notification': (data) => ({
+    subject: `${data.notificationTitle} - BuildHomeMart Squares`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0;">BuildHomeMart Squares</h1>
+          <p style="color: #666; margin: 5px 0 0 0;">System Notification</p>
+        </div>
+        
+        <div style="background: ${
+          data.notificationType === 'info' ? '#eff6ff' : 
+          data.notificationType === 'success' ? '#f0fdf4' :
+          data.notificationType === 'warning' ? '#fffbeb' : '#fef2f2'
+        }; border: 1px solid ${
+          data.notificationType === 'info' ? '#93c5fd' : 
+          data.notificationType === 'success' ? '#86efac' :
+          data.notificationType === 'warning' ? '#fcd34d' : '#fca5a5'
+        }; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="color: ${
+            data.notificationType === 'info' ? '#1e40af' : 
+            data.notificationType === 'success' ? '#15803d' :
+            data.notificationType === 'warning' ? '#b45309' : '#b91c1c'
+          }; margin: 0 0 20px 0;">${data.notificationType === 'info' ? '📢' : data.notificationType === 'success' ? '✅' : data.notificationType === 'warning' ? '⚠️' : '🔴'} ${data.notificationTitle}</h2>
+          
+          <div style="background: white; padding: 20px; border-radius: 6px; margin: 20px 0;">
+            <p style="color: #475569; line-height: 1.6; margin: 0; white-space: pre-wrap;">${data.notificationMessage}</p>
+          </div>
+
+          ${data.actionUrl ? `
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${data.actionUrl}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+                ${data.actionText || 'View Details'}
+              </a>
+            </div>
+          ` : ''}
+
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+            <p style="color: #64748b; font-size: 14px; margin: 0;">
+              <strong>Hello ${data.firstName},</strong><br>
+              This is an important notification from the BuildHomeMart Squares platform.
+            </p>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${data.dashboardUrl}" style="color: #2563eb; text-decoration: none; font-size: 14px;">
+            Visit Dashboard
+          </a>
+        </div>
+        
+        <div style="text-align: center; color: #94a3b8; font-size: 12px;">
+          <p>&copy; 2024 BuildHomeMart Squares. All rights reserved.</p>
+          <p>Support: support@buildhomemartsquares.com</p>
+          <p style="margin-top: 10px;">
+            <a href="${data.websiteUrl}/settings/notifications" style="color: #94a3b8; text-decoration: underline;">Manage Notification Preferences</a>
+          </p>
+        </div>
+      </div>
+    `
+  }),
+
   // Vendor application rejected
   'vendor-application-rejected': (data) => ({
     subject: 'Vendor Application Update - BuildHomeMart Squares',

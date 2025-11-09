@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { notificationService } from '@/services/notificationService';
 
 interface RealtimeEvent {
   type: 'favorite_added' | 'favorite_removed' | 'message_received' | 'property_updated' | 
@@ -7,7 +8,12 @@ interface RealtimeEvent {
         'typing_indicator' | 'conversation_updated' | 'user_online' | 'user_offline' |
         'property_viewed' | 'property_favorited' | 'property_inquiry' |
         'review_created' | 'review_updated' | 'review_deleted' | 'review_replied' |
-        'service_booking_created' | 'service_booking_updated';
+        'service_booking_created' | 'service_booking_updated' |
+        'property_alert' | 'price_alert' | 'property_update' | 'service_update' |
+        'lead_alert' | 'inquiry_received' | 'weekly_report' | 'business_update' |
+        'connection' | 'broadcast' | 'announcement' | 'test' |
+        'property_approved' | 'property_rejected' | 'property_reactivated' |
+        'support_ticket_created' | 'support_ticket_updated' | 'property_created';
   data: any;
   timestamp: string;
 }
@@ -39,49 +45,36 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({ children }) 
   const [lastEvent, setLastEvent] = useState<RealtimeEvent | null>(null);
   const [eventListeners, setEventListeners] = useState<Map<string, ((data: any) => void)[]>>(new Map());
 
-  // Simulate WebSocket connection (in a real app, this would be actual WebSocket)
+  // Connect to notification service
   useEffect(() => {
     if (!isAuthenticated || !user) {
       setIsConnected(false);
+      notificationService.disconnectFromStream();
       return;
     }
 
-    // Simulate connection
-    setIsConnected(true);
-
-    // Simulate periodic events for demo purposes
-    const eventInterval = setInterval(() => {
-      // Randomly emit events to simulate real-time activity
-      const eventTypes = [
-        'favorite_added', 
-        'message_received', 
-        'property_updated', 
-        'property_viewed', 
-        'property_inquiry', 
-        'property_favorited'
-      ];
-      const randomType = eventTypes[Math.floor(Math.random() * eventTypes.length)] as RealtimeEvent['type'];
-      
-      const mockEvent: RealtimeEvent = {
-        type: randomType,
-        data: {
-          id: Math.random().toString(36).substr(2, 9),
-          propertyId: Math.random().toString(36).substr(2, 9),
-          message: `Mock ${randomType} event`,
-          action: randomType.includes('favorited') ? (Math.random() > 0.5 ? 'add' : 'remove') : undefined
-        },
-        timestamp: new Date().toISOString()
+    // Connect to notification stream
+    notificationService.connectToStream();
+    
+    // Subscribe to all notifications and bridge them to realtime events
+    const unsubscribe = notificationService.subscribe('all', (notification) => {
+      const realtimeEvent: RealtimeEvent = {
+        type: notification.type as RealtimeEvent['type'],
+        data: notification.data || notification,
+        timestamp: notification.timestamp
       };
+      handleEvent(realtimeEvent);
+    });
 
-      // Only emit occasionally to not overwhelm
-      if (Math.random() > 0.85) {
-        handleEvent(mockEvent);
-      }
-    }, 8000); // Every 8 seconds
+    // Check connection status
+    const checkConnection = setInterval(() => {
+      setIsConnected(notificationService.isConnected());
+    }, 3000);
 
     return () => {
-      clearInterval(eventInterval);
-      setIsConnected(false);
+      unsubscribe();
+      clearInterval(checkConnection);
+      notificationService.disconnectFromStream();
     };
   }, [isAuthenticated, user]);
 

@@ -6,10 +6,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useRealtimeEvent } from "@/contexts/RealtimeContext";
 
 interface DashboardStats {
-  pendingProperties: number;
   totalProperties: number;
-  pendingSupport: number;
+  availableProperties: number;
+  pendingProperties: number;
+  rejectedProperties: number;
   totalUsers: number;
+  vendorUsers: number;
+  customerUsers: number;
+  totalViews: number;
+  totalSupport: number;
+  openSupport: number;
+  resolvedSupport: number;
 }
 
 const SubAdminDashboard = () => {
@@ -94,40 +101,22 @@ const SubAdminDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Properties</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.pendingProperties || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Properties awaiting review
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Properties</CardTitle>
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalProperties || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              All properties in system
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.pendingSupport || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Open support requests
-            </p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <p className="text-xs text-green-600">
+                {stats?.availableProperties || 0} Available
+              </p>
+              <p className="text-xs text-yellow-600">
+                {stats?.pendingProperties || 0} Pending
+              </p>
+              <p className="text-xs text-red-600">
+                {stats?.rejectedProperties || 0} Rejected
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -138,9 +127,45 @@ const SubAdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Active system users
+            <div className="flex gap-2 mt-2">
+              <p className="text-xs text-blue-600">
+                {stats?.vendorUsers || 0} Vendors
+              </p>
+              <p className="text-xs text-purple-600">
+                {stats?.customerUsers || 0} Customers
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalViews?.toLocaleString() || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Property page views
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalSupport || 0}</div>
+            <div className="flex gap-2 mt-2">
+              <p className="text-xs text-orange-600">
+                {stats?.openSupport || 0} Open
+              </p>
+              <p className="text-xs text-green-600">
+                {stats?.resolvedSupport || 0} Resolved
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -170,7 +195,7 @@ const SubAdminDashboard = () => {
             >
               <div className="font-medium">Handle Support</div>
               <div className="text-sm text-muted-foreground">
-                {stats?.pendingSupport} open tickets
+                {stats?.openSupport} open tickets
               </div>
             </a>
           </CardContent>

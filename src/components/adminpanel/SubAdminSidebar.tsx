@@ -32,7 +32,7 @@ const SubAdminSidebar = ({ isCollapsed, onToggle, isMobileOpen, onMobileClose }:
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[60] lg:hidden"
           onClick={onMobileClose}
         />
       )}
@@ -40,7 +40,7 @@ const SubAdminSidebar = ({ isCollapsed, onToggle, isMobileOpen, onMobileClose }:
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-16 bottom-0 bg-background border-r border-border z-40 transition-all duration-300 overflow-y-auto",
+          "fixed left-0 top-16 bottom-0 bg-background border-r border-border z-[70] transition-all duration-300 overflow-y-auto",
           "lg:relative lg:top-16",
           isCollapsed ? "w-16" : "w-64",
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"

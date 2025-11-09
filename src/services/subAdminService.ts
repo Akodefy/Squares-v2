@@ -50,10 +50,17 @@ interface VendorPerformance {
 }
 
 interface DashboardStats {
-  pendingProperties: number;
   totalProperties: number;
-  pendingSupport: number;
+  availableProperties: number;
+  pendingProperties: number;
+  rejectedProperties: number;
   totalUsers: number;
+  vendorUsers: number;
+  customerUsers: number;
+  totalViews: number;
+  totalSupport: number;
+  openSupport: number;
+  resolvedSupport: number;
 }
 
 class SubAdminService {

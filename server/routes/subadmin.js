@@ -20,24 +20,52 @@ router.use(isSubAdmin);
 // Get sub admin dashboard statistics
 router.get('/dashboard', asyncHandler(async (req, res) => {
   const [
-    pendingProperties,
     totalProperties,
-    pendingSupport,
-    totalUsers
+    availableProperties,
+    pendingProperties,
+    rejectedProperties,
+    totalUsers,
+    vendorUsers,
+    customerUsers,
+    totalViews,
+    totalSupport,
+    openSupport,
+    resolvedSupport
   ] = await Promise.all([
-    Property.countDocuments({ status: 'pending' }),
     Property.countDocuments(),
+    Property.countDocuments({ status: 'available' }),
+    Property.countDocuments({ status: 'pending' }),
+    Property.countDocuments({ status: 'rejected' }),
+    User.countDocuments({ role: { $in: ['customer', 'agent'] } }),
+    User.countDocuments({ role: 'agent' }),
+    User.countDocuments({ role: 'customer' }),
+    Property.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalViews: { $sum: { $ifNull: ['$views', 0] } }
+        }
+      }
+    ]),
+    SupportTicket.countDocuments(),
     SupportTicket.countDocuments({ status: 'open' }),
-    User.countDocuments({ role: { $in: ['customer', 'agent'] } })
+    SupportTicket.countDocuments({ status: 'resolved' })
   ]);
 
   res.json({
     success: true,
     data: {
-      pendingProperties,
       totalProperties,
-      pendingSupport,
+      availableProperties,
+      pendingProperties,
+      rejectedProperties,
       totalUsers,
+      vendorUsers,
+      customerUsers,
+      totalViews: totalViews[0]?.totalViews || 0,
+      totalSupport,
+      openSupport,
+      resolvedSupport,
       recentActivity: []
     }
   });
@@ -801,7 +829,14 @@ router.get('/notifications',
 router.post('/notifications/send',
   hasPermission(SUB_ADMIN_PERMISSIONS.SEND_NOTIFICATIONS),
   asyncHandler(async (req, res) => {
-    const { title, message, recipients, type = 'info' } = req.body;
+    const { 
+      title, 
+      message, 
+      recipients = 'all', 
+      type = 'info',
+      sendEmail = true,
+      sendInApp = true 
+    } = req.body;
 
     if (!title || !message) {
       return res.status(400).json({
@@ -810,25 +845,109 @@ router.post('/notifications/send',
       });
     }
 
-    // Broadcast notification to all connected clients
-    adminRealtimeService.broadcastNotification({
-      type: type || 'info',
+    // Build user query based on recipients
+    let userQuery = {};
+    if (recipients === 'vendors') {
+      userQuery.role = 'agent';
+    } else if (recipients === 'customers') {
+      userQuery.role = 'customer';
+    } else {
+      userQuery.role = { $in: ['agent', 'customer'] };
+    }
+
+    // Fetch target users
+    const targetUsers = await User.find(userQuery)
+      .select('_id email profile.firstName profile.preferences.notifications')
+      .lean();
+
+    let emailsSent = 0;
+    let inAppSent = 0;
+    const notificationService = require('../services/notificationService');
+
+    // Send in-app notifications
+    if (sendInApp) {
+      const userIds = targetUsers.map(u => u._id.toString());
+      
+      notificationService.broadcast({
+        type: type,
+        title,
+        message,
+        data: {
+          sentBy: req.user.email,
+          sentByName: `${req.user.profile?.firstName || ''} ${req.user.profile?.lastName || ''}`.trim() || req.user.email,
+          recipients,
+          sentAt: new Date(),
+          category: 'system_announcement'
+        }
+      });
+
+      inAppSent = userIds.length;
+    }
+
+    // Send email notifications
+    if (sendEmail) {
+      for (const user of targetUsers) {
+        // Check if user has email notifications enabled
+        const emailEnabled = user.profile?.preferences?.notifications?.email !== false;
+        
+        if (emailEnabled && user.email) {
+          try {
+            await emailService.sendTemplateEmail(
+              user.email,
+              'system-notification',
+              {
+                firstName: user.profile?.firstName || 'User',
+                notificationTitle: title,
+                notificationMessage: message,
+                notificationType: type,
+                dashboardUrl: `${process.env.FRONTEND_URL || 'https://buildhomemartsquares.com'}/dashboard`,
+                websiteUrl: process.env.FRONTEND_URL || 'https://buildhomemartsquares.com'
+              }
+            );
+            emailsSent++;
+          } catch (error) {
+            console.error(`Failed to send email to ${user.email}:`, error);
+          }
+        }
+      }
+    }
+
+    // Create notification record
+    const Notification = require('../models/Notification');
+    const notificationRecord = await Notification.create({
       title,
+      subject: title,
       message,
-      data: {
-        sentBy: req.user.email,
-        recipients: recipients || 'all',
-        sentAt: new Date()
-      },
-      timestamp: new Date()
+      type: type === 'info' ? 'informational' : 
+            type === 'warning' ? 'alert' : 
+            type === 'success' ? 'system' : 'alert',
+      targetAudience: recipients === 'all' ? 'all_users' : 
+                      recipients === 'vendors' ? 'vendors' : 'customers',
+      channels: [
+        sendInApp ? 'in_app' : null,
+        sendEmail ? 'email' : null
+      ].filter(Boolean),
+      recipients: targetUsers.map(u => ({
+        user: u._id,
+        delivered: sendInApp || sendEmail
+      })),
+      status: 'sent',
+      sentAt: new Date(),
+      sentBy: req.user.id,
+      statistics: {
+        totalRecipients: targetUsers.length,
+        delivered: emailsSent + inAppSent
+      }
     });
 
     res.json({
       success: true,
       message: 'Notification sent successfully',
       data: {
-        recipientCount: 100,
-        readCount: 0
+        recipientCount: targetUsers.length,
+        emailsSent,
+        inAppSent,
+        notificationId: notificationRecord._id
       }
     });
   })

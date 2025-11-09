@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Get the intended destination from location state
   const from = location.state?.from?.pathname || null;
@@ -39,15 +41,33 @@ const Login = () => {
       const success = await login(email, password);
       
       if (success) {
+        // Get user from auth service to determine role
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        console.log('Login: User role detected:', user.role);
+        
+        // Block vendors from logging in through default login
+        if (user.role === 'agent') {
+          console.log('Login: Vendor attempted to login through default portal');
+          toast({
+            title: "Access Denied",
+            description: "Vendors must use the vendor login portal. Redirecting...",
+            variant: "destructive",
+          });
+          // Clear auth data
+          const { authService } = await import("@/services/authService");
+          authService.clearAuthData();
+          // Redirect to vendor login
+          setTimeout(() => {
+            navigate("/vendor/login");
+          }, 1500);
+          return;
+        }
+        
         // If user was trying to access a specific route, redirect there
         if (from) {
           navigate(from, { replace: true });
         } else {
           // Otherwise redirect based on user role
-          // Get user from auth service to determine role
-          const user = JSON.parse(localStorage.getItem("user") || "{}");
-          console.log('Login: User role detected:', user.role);
-          
           if (user.role === 'superadmin') {
             console.log('Login: Redirecting superadmin to admin dashboard');
             navigate("/admin/dashboard");
@@ -57,9 +77,6 @@ const Login = () => {
           } else if (user.role === 'admin') {
             console.log('Login: Redirecting admin to admin dashboard');
             navigate("/admin/dashboard");
-          } else if (user.role === 'agent') {
-            console.log('Login: Redirecting vendor to vendor dashboard');
-            navigate("/vendor/dashboard");
           } else {
             console.log('Login: Redirecting customer to customer dashboard');
             navigate("/customer/dashboard");
@@ -105,14 +122,24 @@ const Login = () => {
                     Forgot password?
                   </a>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>

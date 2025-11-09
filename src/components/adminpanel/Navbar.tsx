@@ -18,7 +18,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       {/* Logo - Responsive positioning */}
       <Link 
         to="/" 
-        className="fixed -top-7 left-2 xs:left-3 sm:left-4 md:-top-6 md:left-4 lg:left-6 z-[60] transition-transform hover:scale-105 duration-300"
+        className="fixed -top-5 left-2 xs:left-3 sm:left-4 md:-top-6 md:left-4 lg:left-6 z-[60] transition-transform hover:scale-105 duration-300"
       >
         <img
           src={theme === "dark" ? logoDark : logoLight}
@@ -30,14 +30,6 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       <nav className="fixed top-0 left-0 right-0 h-14 xs:h-15 sm:h-16 bg-card border-b border-border z-50 px-2 xs:px-3 sm:px-4 lg:px-6 transition-colors duration-300">
         <div className="h-full flex items-center justify-between max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-2 xs:gap-3 sm:gap-4">
-            <button
-              onClick={onMenuClick}
-              className="lg:hidden p-1.5 xs:p-2 hover:bg-accent/10 rounded-lg transition-colors touch-manipulation"
-              aria-label="Toggle menu"
-            >
-              <Menu className="w-4 h-4 xs:w-5 xs:h-5" />
-            </button>
-            
             {/* Spacer for logo - Responsive */}
             <div className="ml-[130px] xs:ml-[150px] sm:ml-[170px] md:ml-[190px] lg:ml-[210px]">
               {/* Admin panel specific content can go here */}
@@ -47,6 +39,13 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
           <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 mr-2 xs:mr-0">
             <ThemeToggle />
             <UnifiedProfileDropdown />
+            <button
+              onClick={onMenuClick}
+              className="lg:hidden p-1.5 xs:p-2 hover:bg-accent/10 rounded-lg transition-colors touch-manipulation"
+              aria-label="Toggle menu"
+            >
+              <Menu className="w-4 h-4 xs:w-5 xs:h-5" />
+            </button>
           </div>
         </div>
       </nav>

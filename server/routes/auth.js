@@ -495,7 +495,42 @@ router.post('/login', validateRequest(loginSchema), asyncHandler(async (req, res
   // Get role pages from Role collection if user has rolePages
   let rolePages = user.rolePages || [];
   
+  // Check if user's role is active and exists
+  let userRoleDoc = null;
+  try {
+    const Role = require('../models/Role');
+    userRoleDoc = await Role.findOne({ name: user.role });
+    
+    // Check if role exists
+    if (!userRoleDoc) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your role has been removed from the system. Please contact support for assistance.',
+        reason: 'role_deleted'
+      });
+    }
+    
+    // Check if role is active
+    if (!userRoleDoc.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your role has been deactivated. Please contact support for assistance.',
+        reason: 'role_inactive'
+      });
+    }
+    
+    // Get pages from role if user doesn't have rolePages
+    if (!rolePages || rolePages.length === 0) {
+      if (userRoleDoc.pages) {
+        rolePages = userRoleDoc.pages;
+      }
+    }
+  } catch (error) {
+    console.error('Error checking role status:', error);
+  }
+  
   // If user doesn't have rolePages set, try to get from their role
+  // This is kept for backward compatibility but role check above is more important
   if (!rolePages || rolePages.length === 0) {
     try {
       const Role = require('../models/Role');

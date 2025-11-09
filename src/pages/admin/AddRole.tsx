@@ -40,14 +40,15 @@ const AddRole = () => {
       return;
     }
 
-    if (formData.pages.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "Please select at least one page",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Pages validation removed - not required anymore
+    // if (formData.pages.length === 0) {
+    //   toast({
+    //     title: "Validation Error",
+    //     description: "Please select at least one page",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     try {
       setSaving(true);
@@ -184,7 +185,7 @@ const AddRole = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Page Access</CardTitle>
             <CardDescription>
@@ -239,7 +240,7 @@ const AddRole = () => {
               })}
             </Tabs>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <div className="flex gap-4">
           <Button type="submit" disabled={saving}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, Trash2, Loader2, User as UserIcon, Mail, Phone, MapPin, Calendar, Shield, Activity } from "lucide-react";
+import { Eye, Trash2, Loader2, User as UserIcon, Mail, Phone, MapPin, Calendar, Shield, Activity, ArrowUpCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -38,12 +38,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserTableProps {
   searchQuery: string;
 }
 
 const UserTable = ({ searchQuery }: UserTableProps) => {
+  const { isSuperAdmin } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +61,9 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
+  const [promotingUserId, setPromotingUserId] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("");
   const itemsPerPage = 10;
 
   // Fetch users when page or search changes
@@ -106,6 +118,41 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
     setSelectedUser(user);
     setIsDetailsDialogOpen(true);
   };
+
+  const handlePromoteUser = (user: User) => {
+    setSelectedUser(user);
+    setSelectedRole(user.role);
+    setIsPromoteDialogOpen(true);
+  };
+
+  const handlePromoteSubmit = async () => {
+    if (!selectedUser || !selectedRole) return;
+
+    setPromotingUserId(selectedUser._id);
+    try {
+      await userService.promoteUser(selectedUser._id, selectedRole);
+      // Refresh the user list
+      const response = await userService.getUsers({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchQuery || undefined,
+      });
+      if (response.success) {
+        setUsers(response.data.users);
+        setTotalPages(response.data.pagination.totalPages);
+        setTotalUsers(response.data.pagination.totalUsers);
+      }
+      setIsPromoteDialogOpen(false);
+      setSelectedUser(null);
+      setSelectedRole("");
+    } catch (error) {
+      console.error("Failed to promote user:", error);
+    } finally {
+      setPromotingUserId(null);
+    }
+  };
+
+  const availableRoles = ["customer", "agent", "subadmin", "superadmin"];
 
   if (loading) {
     return (
@@ -179,6 +226,16 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      {isSuperAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handlePromoteUser(user)}
+                          title="Promote User"
+                        >
+                          <ArrowUpCircle className="h-4 w-4" />
+                        </Button>
+                      )}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="icon">
@@ -465,6 +522,75 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Promote User Dialog */}
+      <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Promote User</DialogTitle>
+            <DialogDescription>
+              Change the role of {selectedUser ? userService.getFullName(selectedUser) : 'user'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Current Role</p>
+                <Badge variant="secondary">{selectedUser.role}</Badge>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-sm font-medium">New Role</p>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  <strong>Warning:</strong> Changing a user's role will affect their permissions and access to features.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsPromoteDialogOpen(false);
+                    setSelectedUser(null);
+                    setSelectedRole("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePromoteSubmit}
+                  disabled={!selectedRole || selectedRole === selectedUser.role || promotingUserId === selectedUser._id}
+                >
+                  {promotingUserId === selectedUser._id ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Promoting...
+                    </>
+                  ) : (
+                    "Promote User"
+                  )}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

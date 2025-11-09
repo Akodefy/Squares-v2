@@ -222,24 +222,25 @@ const Roles = () => {
         </Badge>
       ),
     },
-    {
-      key: "pages",
-      label: "Pages",
-      render: (role) => (
-        <div className="flex flex-wrap gap-1">
-          {(role.pages || []).slice(0, 2).map((page, idx) => (
-            <Badge key={idx} variant="secondary" className="text-xs">
-              {page.replace(/_/g, ' ')}
-            </Badge>
-          ))}
-          {(role.pages?.length || 0) > 2 && (
-            <Badge variant="secondary" className="text-xs">
-              +{(role.pages?.length || 0) - 2}
-            </Badge>
-          )}
-        </div>
-      ),
-    },
+    // Pages column removed
+    // {
+    //   key: "pages",
+    //   label: "Pages",
+    //   render: (role) => (
+    //     <div className="flex flex-wrap gap-1">
+    //       {(role.pages || []).slice(0, 2).map((page, idx) => (
+    //         <Badge key={idx} variant="secondary" className="text-xs">
+    //           {page.replace(/_/g, ' ')}
+    //         </Badge>
+    //       ))}
+    //       {(role.pages?.length || 0) > 2 && (
+    //         <Badge variant="secondary" className="text-xs">
+    //           +{(role.pages?.length || 0) - 2}
+    //         </Badge>
+    //       )}
+    //     </div>
+    //   ),
+    // },
     { 
       key: "userCount", 
       label: "Users",
@@ -279,7 +280,8 @@ const Roles = () => {
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
+            {/* Edit option removed */}
+            {/* <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
                 navigate(`/admin/roles/edit/${role._id}`);
@@ -288,7 +290,7 @@ const Roles = () => {
             >
               <Edit className="w-4 h-4 mr-2" />
               {role.isSystemRole && !isSuperAdmin ? 'View Role' : 'Edit Role'}
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
@@ -453,10 +455,11 @@ const Roles = () => {
                       <span className="font-bold">{superAdminRole.userCount || 0}</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
+                  {/* Pages info removed */}
+                  {/* <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Pages:</span>
                     <span className="font-bold text-red-600">{superAdminRole.pages?.length || 0}</span>
-                  </div>
+                  </div> */}
                   <div className="pt-2">
                     <Button
                       variant="outline"
@@ -499,10 +502,11 @@ const Roles = () => {
                       <span className="font-bold">{subAdminRole.userCount || 0}</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
+                  {/* Pages info removed */}
+                  {/* <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Pages:</span>
                     <span className="font-bold text-orange-500">{subAdminRole.pages?.length || 0}</span>
-                  </div>
+                  </div> */}
                   <div className="pt-2">
                     <Button
                       variant="outline"

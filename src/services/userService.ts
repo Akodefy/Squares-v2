@@ -239,6 +239,30 @@ class UserService {
     }
   }
 
+  async promoteUser(id: string, newRole: string): Promise<SingleUserResponse> {
+    try {
+      const response = await this.makeRequest<SingleUserResponse>(`/users/${id}/promote`, {
+        method: "PATCH",
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      toast({
+        title: "Success",
+        description: `User promoted to ${newRole} successfully!`,
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to promote user";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   async getCurrentUser(): Promise<SingleUserResponse> {
     try {
       const response = await this.makeRequest<SingleUserResponse>("/auth/me");

@@ -1,5 +1,6 @@
 import { emailService } from './emailService';
 import { userService } from './userService';
+import { authService } from './authService';
 
 export interface NotificationData {
   type: 'property_alert' | 'price_drop' | 'new_message' | 'news_update' | 'welcome' | 'password_reset' | 'email_verification';
@@ -15,10 +16,22 @@ export interface PushNotificationOptions {
   data?: Record<string, any>;
 }
 
+export interface RealtimeNotification {
+  type: string;
+  title: string;
+  message: string;
+  data?: any;
+  timestamp: string;
+  userId?: string;
+}
+
 class NotificationService {
   private static instance: NotificationService;
   private pushSupported = 'Notification' in window && 'serviceWorker' in navigator;
   private pushPermission: NotificationPermission = 'default';
+  private eventSource: EventSource | null = null;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private listeners: Map<string, ((notification: RealtimeNotification) => void)[]> = new Map();
 
   constructor() {
     if (this.pushSupported) {
@@ -31,6 +44,116 @@ class NotificationService {
       NotificationService.instance = new NotificationService();
     }
     return NotificationService.instance;
+  }
+
+  // Connect to SSE notification stream
+  connectToStream(): void {
+    const token = authService.getToken();
+    if (!token) {
+      console.warn('No auth token available for notification stream');
+      return;
+    }
+
+    if (this.eventSource) {
+      console.log('Already connected to notification stream');
+      return;
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const streamUrl = `${apiUrl}/notifications/stream?token=${encodeURIComponent(token)}`;
+      
+      this.eventSource = new EventSource(streamUrl);
+
+      this.eventSource.onopen = () => {
+        console.log('✅ Connected to notification stream');
+      };
+
+      this.eventSource.onmessage = (event) => {
+        try {
+          const notification: RealtimeNotification = JSON.parse(event.data);
+          this.handleNotification(notification);
+        } catch (error) {
+          console.error('Error parsing notification:', error);
+        }
+      };
+
+      this.eventSource.onerror = (error) => {
+        console.error('❌ Notification stream error:', error);
+        this.eventSource?.close();
+        this.eventSource = null;
+
+        // Reconnect after 5 seconds
+        if (this.reconnectTimeout) {
+          clearTimeout(this.reconnectTimeout);
+        }
+        this.reconnectTimeout = setTimeout(() => {
+          console.log('🔄 Reconnecting to notification stream...');
+          this.connectToStream();
+        }, 5000);
+      };
+    } catch (error) {
+      console.error('Failed to connect to notification stream:', error);
+    }
+  }
+
+  // Disconnect from SSE stream
+  disconnectFromStream(): void {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+      console.log('Disconnected from notification stream');
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+  }
+
+  // Handle incoming notification
+  private handleNotification(notification: RealtimeNotification): void {
+    // Notify all listeners
+    const typeListeners = this.listeners.get(notification.type) || [];
+    const allListeners = this.listeners.get('all') || [];
+    
+    [...typeListeners, ...allListeners].forEach(callback => {
+      try {
+        callback(notification);
+      } catch (error) {
+        console.error('Error in notification listener:', error);
+      }
+    });
+
+    // Show browser push notification if enabled
+    if (this.pushPermission === 'granted' && notification.title && notification.message) {
+      this.showPushNotification({
+        title: notification.title,
+        body: notification.message,
+        data: notification.data
+      });
+    }
+  }
+
+  // Subscribe to notifications
+  subscribe(type: string, callback: (notification: RealtimeNotification) => void): () => void {
+    if (!this.listeners.has(type)) {
+      this.listeners.set(type, []);
+    }
+    this.listeners.get(type)!.push(callback);
+
+    // Return unsubscribe function
+    return () => {
+      const typeListeners = this.listeners.get(type);
+      if (typeListeners) {
+        const index = typeListeners.indexOf(callback);
+        if (index > -1) {
+          typeListeners.splice(index, 1);
+        }
+        if (typeListeners.length === 0) {
+          this.listeners.delete(type);
+        }
+      }
+    };
   }
 
   async requestPushPermission(): Promise<boolean> {
@@ -55,7 +178,6 @@ class NotificationService {
 
   async showPushNotification(options: PushNotificationOptions): Promise<void> {
     if (!this.pushSupported || this.pushPermission !== 'granted') {
-      console.warn('Push notifications not available or not permitted');
       return;
     }
 
@@ -83,7 +205,7 @@ class NotificationService {
       }
 
       const user = userResponse.data.user;
-      const preferences = user.preferences?.notifications;
+      const preferences = (user as any).preferences?.notifications;
       const userName = userService.getFullName(user);
 
       // Send email notification if enabled
@@ -223,6 +345,10 @@ class NotificationService {
 
   getPushPermission(): NotificationPermission {
     return this.pushPermission;
+  }
+
+  isConnected(): boolean {
+    return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
   }
 
   async testNotification(): Promise<void> {

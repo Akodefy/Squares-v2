@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, Send, Search, Eye, Plus, Users, Building } from "lucide-react";
+import { Bell, Send, Search, Eye, Plus, Users, Building, Mail, Smartphone } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Notification {
   _id: string;
@@ -59,6 +60,8 @@ const Notifications = () => {
     message: "",
     type: "info" as 'info' | 'warning' | 'success' | 'error',
     recipients: "all" as 'all' | 'vendors' | 'customers' | 'specific',
+    sendEmail: true,
+    sendInApp: true,
   });
 
   useEffect(() => {
@@ -94,6 +97,15 @@ const Notifications = () => {
       return;
     }
 
+    if (!formData.sendEmail && !formData.sendInApp) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one delivery method (Email or In-App)",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setSendLoading(true);
       const response = await fetchWithAuth(`/subadmin/notifications/send`, {
@@ -101,10 +113,19 @@ const Notifications = () => {
         body: JSON.stringify(formData)
       });
       
-      await handleApiResponse(response);
+      const result = await handleApiResponse<{ 
+        data: { 
+          recipientCount: number; 
+          emailsSent: number; 
+          inAppSent: number;
+        } 
+      }>(response);
+      
+      const { recipientCount, emailsSent, inAppSent } = result.data;
+      
       toast({
         title: "Success",
-        description: "Notification sent successfully",
+        description: `Notification sent to ${recipientCount} users (${emailsSent} emails, ${inAppSent} in-app)`,
       });
       setCreateDialogOpen(false);
       setFormData({
@@ -112,12 +133,14 @@ const Notifications = () => {
         message: "",
         type: "info",
         recipients: "all",
+        sendEmail: true,
+        sendInApp: true,
       });
       fetchNotifications();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to send notification",
+        description: error.message || "Failed to send notification",
         variant: "destructive",
       });
     } finally {
@@ -418,7 +441,7 @@ const Notifications = () => {
           <DialogHeader>
             <DialogTitle>Send New Notification</DialogTitle>
             <DialogDescription>
-              Create and send a notification to users
+              Create and send a notification to users via email and/or in-app
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -426,7 +449,7 @@ const Notifications = () => {
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
-                placeholder="Enter notification title"
+                placeholder="e.g., System Maintenance, New Feature, Important Update"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               />
@@ -436,16 +459,19 @@ const Notifications = () => {
               <Label htmlFor="message">Message *</Label>
               <Textarea
                 id="message"
-                placeholder="Enter notification message"
+                placeholder="Enter your notification message..."
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                rows={4}
+                rows={5}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use clear and concise language. This message will be sent to all selected recipients.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="type">Notification Type</Label>
                 <Select
                   value={formData.type}
                   onValueChange={(value: any) => setFormData({ ...formData, type: value })}
@@ -454,10 +480,10 @@ const Notifications = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="success">Success</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="info">ℹ️ Info</SelectItem>
+                    <SelectItem value="success">✅ Success</SelectItem>
+                    <SelectItem value="warning">⚠️ Warning</SelectItem>
+                    <SelectItem value="error">🔴 Error/Alert</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -479,6 +505,71 @@ const Notifications = () => {
                 </Select>
               </div>
             </div>
+
+            <div className="border rounded-lg p-4 space-y-3">
+              <Label className="text-base">Delivery Methods *</Label>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="sendInApp"
+                    checked={formData.sendInApp}
+                    onCheckedChange={(checked) => 
+                      setFormData({ ...formData, sendInApp: checked as boolean })
+                    }
+                  />
+                  <Label 
+                    htmlFor="sendInApp" 
+                    className="flex items-center gap-2 font-normal cursor-pointer"
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    <span>In-App Notification</span>
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground ml-7">
+                  Real-time notification shown to users while they're active on the platform
+                </p>
+
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="sendEmail"
+                    checked={formData.sendEmail}
+                    onCheckedChange={(checked) => 
+                      setFormData({ ...formData, sendEmail: checked as boolean })
+                    }
+                  />
+                  <Label 
+                    htmlFor="sendEmail" 
+                    className="flex items-center gap-2 font-normal cursor-pointer"
+                  >
+                    <Mail className="h-4 w-4" />
+                    <span>Email Notification</span>
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground ml-7">
+                  Send formatted email to users' registered email addresses
+                </p>
+              </div>
+
+              {!formData.sendEmail && !formData.sendInApp && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 mt-2">
+                  <p className="text-xs text-destructive">
+                    ⚠️ Please select at least one delivery method
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                📋 Common Use Cases:
+              </h4>
+              <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                <li>• System Maintenance: Scheduled downtime notifications</li>
+                <li>• Platform Updates: New features or policy changes</li>
+                <li>• Security Alerts: Important security updates</li>
+                <li>• Service Announcements: General platform announcements</li>
+              </ul>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -490,14 +581,28 @@ const Notifications = () => {
                   message: "",
                   type: "info",
                   recipients: "all",
+                  sendEmail: true,
+                  sendInApp: true,
                 });
               }}
             >
               Cancel
             </Button>
-            <Button onClick={handleSendNotification} disabled={sendLoading}>
-              <Send className="h-4 w-4 mr-2" />
-              Send Notification
+            <Button 
+              onClick={handleSendNotification} 
+              disabled={sendLoading || (!formData.sendEmail && !formData.sendInApp)}
+            >
+              {sendLoading ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Notification
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
