@@ -12,3 +12,4 @@ export const CustomerProfile = lazy(() => import("@/pages/customer/Profile"));
 export const CustomerSettings = lazy(() => import("@/pages/customer/Settings"));
 export const Messages = lazy(() => import("@/pages/customer/Messages"));
 export const ReviewsRatings = lazy(() => import("@/pages/customer/ReviewsRatings"));
+export const CustomerNotifications = lazy(() => import("@/pages/customer/CustomerNotifications"));
