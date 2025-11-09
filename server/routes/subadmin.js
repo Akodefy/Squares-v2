@@ -929,7 +929,7 @@ router.get('/reports',
       data: {
         propertyStats: {
           total: Object.values(propertyStatsMap).reduce((sum, count) => sum + count, 0),
-          active: propertyStatsMap.available || 0, // Only count 'available' status
+          available: propertyStatsMap.available || 0,
           pending: propertyStatsMap.pending || 0,
           rejected: propertyStatsMap.rejected || 0
         },
