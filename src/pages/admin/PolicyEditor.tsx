@@ -180,32 +180,34 @@ const PolicyEditor = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
+    <div className="space-y-4 md:space-y-6">
+      <div className="dashboard-header-responsive">
+        <div className="flex items-center gap-2 md:gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <FileText className="w-8 h-8 text-primary" />
-              {policyTitle}
+            <h1 className="dashboard-title-responsive flex items-center gap-2">
+              <FileText className="w-6 h-6 md:w-8 md:h-8 text-primary flex-shrink-0" />
+              <span className="truncate">{policyTitle}</span>
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
               Edit and manage your {policyTitle.toLowerCase()}
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saving || !hasChanges}>
+        <Button onClick={handleSave} disabled={saving || !hasChanges} className="w-full sm:w-auto mt-3 sm:mt-0">
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
+              <span className="hidden sm:inline">Saving...</span>
+              <span className="sm:hidden">Save</span>
             </>
           ) : (
             <>
               <Save className="w-4 h-4 mr-2" />
-              Save Changes
+              <span className="hidden sm:inline">Save Changes</span>
+              <span className="sm:hidden">Save</span>
             </>
           )}
         </Button>
@@ -213,8 +215,8 @@ const PolicyEditor = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Policy Content</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg md:text-xl">Policy Content</CardTitle>
+          <CardDescription className="text-sm md:text-base">
             Use the rich text editor below to edit the policy content. Changes will be reflected on the public-facing pages.
           </CardDescription>
         </CardHeader>
@@ -226,32 +228,36 @@ const PolicyEditor = () => {
               onChange={setContent}
               modules={modules}
               formats={formats}
-              className="min-h-[500px]"
+              className="min-h-[400px] md:min-h-[500px]"
             />
           </div>
         </CardContent>
       </Card>
 
       {hasChanges && (
-        <div className="fixed bottom-6 right-6 bg-card border rounded-lg shadow-lg p-4 flex items-center gap-4">
-          <p className="text-sm text-muted-foreground">You have unsaved changes</p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={loadPolicy}>
-              Discard
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-3 h-3 mr-2" />
-                  Save
-                </>
-              )}
-            </Button>
+        <div className="fixed bottom-4 md:bottom-6 right-4 md:right-6 bg-card border rounded-lg shadow-lg p-3 md:p-4 max-w-[calc(100vw-2rem)] md:max-w-md">
+          <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4">
+            <p className="text-sm text-muted-foreground text-center sm:text-left">You have unsaved changes</p>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" onClick={loadPolicy} className="flex-1 sm:flex-none">
+                Discard
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none">
+                {saving ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                    <span className="hidden sm:inline">Saving...</span>
+                    <span className="sm:hidden">Save</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3 h-3 mr-2" />
+                    <span className="hidden sm:inline">Save</span>
+                    <span className="sm:hidden">Save</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   Dialog,
   DialogContent,
@@ -136,17 +139,145 @@ const Clients = () => {
   };
 
   const handleExportExcel = () => {
-    toast({
-      title: "Exporting to Excel",
-      description: "Your data is being exported to Excel format.",
-    });
+    try {
+      // Prepare data for Excel export
+      const excelData = subscriptions.map((subscription) => ({
+        'Client Name': subscription.user.name,
+        'Email': subscription.user.email,
+        'Phone': subscription.user.phone || 'N/A',
+        'Plan Name': subscription.plan?.name || 'N/A',
+        'Billing Period': subscription.plan?.billingPeriod || 'N/A',
+        'Amount': subscriptionService.formatAmount(subscription),
+        'Currency': subscription.currency,
+        'Status': subscriptionService.formatSubscriptionStatus(subscription.status).label,
+        'Start Date': new Date(subscription.startDate).toLocaleDateString(),
+        'End Date': new Date(subscription.endDate).toLocaleDateString(),
+        'Auto Renew': subscription.autoRenew ? 'Yes' : 'No',
+        'Payment Method': subscription.paymentMethod || 'N/A',
+        'Addons Count': subscription.addons?.length || 0,
+        'Created At': new Date(subscription.createdAt).toLocaleDateString(),
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Auto-size columns
+      const colWidths = [
+        { wch: 15 }, // Client Name
+        { wch: 25 }, // Email
+        { wch: 15 }, // Phone
+        { wch: 20 }, // Plan Name
+        { wch: 15 }, // Billing Period
+        { wch: 12 }, // Amount
+        { wch: 10 }, // Currency
+        { wch: 12 }, // Status
+        { wch: 12 }, // Start Date
+        { wch: 12 }, // End Date
+        { wch: 10 }, // Auto Renew
+        { wch: 15 }, // Payment Method
+        { wch: 12 }, // Addons Count
+        { wch: 12 }, // Created At
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Clients');
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `clients_${timestamp}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+
+      toast({
+        title: "Export Successful",
+        description: `Data exported to ${filename}`,
+      });
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export data to Excel. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExportPDF = () => {
-    toast({
-      title: "Exporting to PDF",
-      description: "Your data is being exported to PDF format.",
-    });
+    try {
+      const doc = new jsPDF();
+
+      // Add title
+      doc.setFontSize(20);
+      doc.text('Subscribed Clients Report', 14, 22);
+
+      // Add timestamp
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
+
+      // Prepare table data
+      const tableData = subscriptions.map((subscription) => [
+        subscription.user.name,
+        subscription.user.email,
+        subscription.plan?.name || 'N/A',
+        subscriptionService.formatAmount(subscription),
+        subscriptionService.formatSubscriptionStatus(subscription.status).label,
+        new Date(subscription.startDate).toLocaleDateString(),
+        new Date(subscription.endDate).toLocaleDateString(),
+      ]);
+
+      // Add table
+      autoTable(doc, {
+        head: [['Client Name', 'Email', 'Plan', 'Amount', 'Status', 'Start Date', 'End Date']],
+        body: tableData,
+        startY: 40,
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [41, 128, 185],
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        margin: { top: 40 },
+      });
+
+      // Add summary at the bottom
+      const pageHeight = doc.internal.pageSize.height;
+      const pageWidth = doc.internal.pageSize.width;
+      const summaryY = pageHeight - 30;
+
+      doc.setFontSize(10);
+      doc.text(`Total Clients: ${subscriptions.length}`, 14, summaryY);
+      doc.text(`Active Subscriptions: ${subscriptions.filter(s => s.status === 'active').length}`, 14, summaryY + 6);
+      doc.text(`Expired Subscriptions: ${subscriptions.filter(s => s.status === 'expired').length}`, 14, summaryY + 12);
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `clients_${timestamp}.pdf`;
+
+      // Save file
+      doc.save(filename);
+
+      toast({
+        title: "Export Successful",
+        description: `Report exported to ${filename}`,
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export data to PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewDetails = (subscription: Subscription) => {
@@ -257,7 +388,93 @@ const Clients = () => {
               filterPlaceholder="Filter by status"
             />
 
-            <div className="rounded-lg border border-border bg-card overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="block sm:hidden space-y-4">
+              {subscriptions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No subscriptions found
+                </div>
+              ) : (
+                subscriptions.map((subscription) => (
+                  <Card key={subscription._id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* Client Info */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-base truncate">{subscription.user.name}</div>
+                            <div className="text-sm text-muted-foreground truncate">{subscription.user.email}</div>
+                          </div>
+                          <Badge
+                            variant={
+                              subscription.status === "active"
+                                ? "default"
+                                : subscription.status === "expired"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className="ml-2 flex-shrink-0"
+                          >
+                            {subscriptionService.formatSubscriptionStatus(subscription.status).label}
+                          </Badge>
+                        </div>
+
+                        {/* Plan Info */}
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Plan:</span>
+                          <div className="text-right">
+                            <div className="font-medium">{subscription.plan?.name || 'N/A'}</div>
+                            <div className="text-muted-foreground capitalize">
+                              {subscription.plan?.billingPeriod || 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Amount */}
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Amount:</span>
+                          <span className="font-semibold">
+                            {subscriptionService.formatAmount(subscription)}
+                          </span>
+                        </div>
+
+                        {/* Dates */}
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Start:</span>
+                            <div className="font-medium">
+                              {new Date(subscription.startDate).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">End:</span>
+                            <div className="font-medium">
+                              {new Date(subscription.endDate).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <div className="pt-2 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(subscription)}
+                            className="w-full"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden sm:block rounded-lg border border-border bg-card overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">

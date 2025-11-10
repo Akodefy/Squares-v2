@@ -14,22 +14,6 @@ const VendorSidebar = ({ sidebarOpen, setSidebarOpen }: VendorSidebarProps) => {
 
   return (
     <>
-      {/* Mobile close button overlay - only show on mobile */}
-      {sidebarOpen && (
-        <div className="lg:hidden">
-          <div className="fixed inset-y-0 left-0 z-50 w-64">
-            <div className="flex h-16 items-center justify-end px-6 border-b border-sidebar-border bg-sidebar">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className={cn(
         "lg:block",

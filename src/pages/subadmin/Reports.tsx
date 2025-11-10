@@ -122,16 +122,16 @@ const Reports = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Reports</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Reports</h1>
           <p className="text-muted-foreground mt-1">
             Analytics and insights dashboard
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -141,7 +141,7 @@ const Reports = () => {
               <SelectItem value="1year">Last Year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => handleExportReport('full')}>
+          <Button variant="outline" onClick={() => handleExportReport('full')} className="w-full sm:w-auto touch-manipulation min-h-[40px]">
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </Button>
@@ -149,7 +149,7 @@ const Reports = () => {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Properties</CardTitle>
@@ -225,17 +225,17 @@ const Reports = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="properties">Properties</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="engagement">Engagement</TabsTrigger>
-          <TabsTrigger value="support">Support</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="properties" className="text-xs sm:text-sm">Properties</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs sm:text-sm">Users</TabsTrigger>
+          <TabsTrigger value="engagement" className="text-xs sm:text-sm">Engagement</TabsTrigger>
+          <TabsTrigger value="support" className="text-xs sm:text-sm">Support</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Property Distribution</CardTitle>
@@ -369,30 +369,32 @@ const Reports = () => {
               <CardTitle>Export Options</CardTitle>
               <CardDescription>Download detailed reports</CardDescription>
             </CardHeader>
-            <CardContent className="flex gap-2">
-              <Button variant="outline" onClick={() => handleExportReport('properties')}>
-                <Download className="h-4 w-4 mr-2" />
-                Properties Report
-              </Button>
-              <Button variant="outline" onClick={() => handleExportReport('users')}>
-                <Download className="h-4 w-4 mr-2" />
-                Users Report
-              </Button>
-              <Button variant="outline" onClick={() => handleExportReport('engagement')}>
-                <Download className="h-4 w-4 mr-2" />
-                Engagement Report
-              </Button>
-              <Button variant="outline" onClick={() => handleExportReport('support')}>
-                <Download className="h-4 w-4 mr-2" />
-                Support Report
-              </Button>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <Button variant="outline" onClick={() => handleExportReport('properties')} className="w-full touch-manipulation min-h-[40px]">
+                  <Download className="h-4 w-4 mr-2" />
+                  Properties Report
+                </Button>
+                <Button variant="outline" onClick={() => handleExportReport('users')} className="w-full touch-manipulation min-h-[40px]">
+                  <Download className="h-4 w-4 mr-2" />
+                  Users Report
+                </Button>
+                <Button variant="outline" onClick={() => handleExportReport('engagement')} className="w-full touch-manipulation min-h-[40px]">
+                  <Download className="h-4 w-4 mr-2" />
+                  Engagement Report
+                </Button>
+                <Button variant="outline" onClick={() => handleExportReport('support')} className="w-full touch-manipulation min-h-[40px]">
+                  <Download className="h-4 w-4 mr-2" />
+                  Support Report
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Properties Tab */}
         <TabsContent value="properties" className="space-y-4 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Available Properties</CardTitle>
@@ -514,7 +516,7 @@ const Reports = () => {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" onClick={() => handleExportReport('properties')} className="w-full">
+              <Button variant="outline" onClick={() => handleExportReport('properties')} className="w-full touch-manipulation min-h-[40px]">
                 <Download className="h-4 w-4 mr-2" />
                 Export Detailed Property Report
               </Button>
@@ -524,7 +526,7 @@ const Reports = () => {
 
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Total Users</CardTitle>
@@ -666,7 +668,7 @@ const Reports = () => {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" onClick={() => handleExportReport('users')} className="w-full">
+              <Button variant="outline" onClick={() => handleExportReport('users')} className="w-full touch-manipulation min-h-[40px]">
                 <Download className="h-4 w-4 mr-2" />
                 Export Detailed User Report
               </Button>
@@ -676,7 +678,7 @@ const Reports = () => {
 
         {/* Engagement Tab */}
         <TabsContent value="engagement" className="space-y-4 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Total Views</CardTitle>
@@ -743,7 +745,7 @@ const Reports = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -837,7 +839,7 @@ const Reports = () => {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" onClick={() => handleExportReport('engagement')} className="w-full">
+              <Button variant="outline" onClick={() => handleExportReport('engagement')} className="w-full touch-manipulation min-h-[40px]">
                 <Download className="h-4 w-4 mr-2" />
                 Export Detailed Engagement Report
               </Button>
@@ -847,7 +849,7 @@ const Reports = () => {
 
         {/* Support Tab */}
         <TabsContent value="support" className="space-y-4 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Total Tickets</CardTitle>
@@ -1014,7 +1016,7 @@ const Reports = () => {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" onClick={() => handleExportReport('support')} className="w-full">
+              <Button variant="outline" onClick={() => handleExportReport('support')} className="w-full touch-manipulation min-h-[40px]">
                 <Download className="h-4 w-4 mr-2" />
                 Export Detailed Support Report
               </Button>

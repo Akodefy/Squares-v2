@@ -34,6 +34,7 @@ const VendorMessages = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [showConversations, setShowConversations] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -73,6 +74,9 @@ const VendorMessages = () => {
   useEffect(() => {
     if (selectedChat) {
       loadMessages(selectedChat);
+      if (isMobile) {
+        setShowConversations(false);
+      }
     }
   }, [selectedChat]);
 
@@ -400,17 +404,34 @@ const VendorMessages = () => {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col md:flex-row gap-0 relative top-[60px]">
+      {/* Mobile Back Button */}
+      {isMobile && !showConversations && (
+        <div className="md:hidden p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowConversations(true)}
+            className="flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Messages
+          </Button>
+        </div>
+      )}
+
       {/* Conversations List */}
-      <div className="w-full md:w-1/3 border-r border-border flex flex-col">
+      <div className={`w-full md:w-1/3 border-r border-border flex flex-col ${isMobile && !showConversations ? 'hidden' : ''}`}>
         <div className="p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <h2 className="text-lg font-semibold mb-3 text-foreground">Messages</h2>
+          <h2 className={`font-semibold mb-3 text-foreground ${isMobile ? 'text-xl' : 'text-lg'}`}>Messages</h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9"
+              className={`pl-10 ${isMobile ? 'h-11 text-base' : 'h-9'}`}
             />
           </div>
         </div>
@@ -453,7 +474,7 @@ const VendorMessages = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold truncate">{participantName}</h4>
+                        <h4 className={`font-semibold truncate ${isMobile ? 'text-base' : 'text-sm'}`}>{participantName}</h4>
                         {/* Online status text */}
                         {userStatuses[otherParticipant._id]?.isOnline && (
                           <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">● Online</span>
@@ -486,7 +507,7 @@ const VendorMessages = () => {
                       </p>
                     )}
                     
-                    <p className="text-sm text-muted-foreground truncate line-clamp-1">
+                    <p className={`text-muted-foreground truncate line-clamp-1 ${isMobile ? 'text-base' : 'text-sm'}`}>
                       {conversation.lastMessage?.isFromMe && (
                         <span className="text-primary font-medium mr-1">You:</span>
                       )}
@@ -502,11 +523,11 @@ const VendorMessages = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-background">
+      <div className={`flex-1 flex flex-col bg-background ${isMobile && showConversations ? 'hidden' : ''}`}>
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+            <div className={`p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${isMobile ? 'sticky top-0 z-10' : 'sticky top-0 z-10'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="relative flex-shrink-0">
@@ -524,7 +545,7 @@ const VendorMessages = () => {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-base truncate">{otherParticipant?.name || 'Unknown User'}</h3>
+                    <h3 className={`font-semibold truncate ${isMobile ? 'text-lg' : 'text-base'}`}>{otherParticipant?.name || 'Unknown User'}</h3>
                     {/* Online status text */}
                     {userStatuses[otherParticipant?._id] && (
                       <p className="text-xs text-muted-foreground">
@@ -545,26 +566,26 @@ const VendorMessages = () => {
                 <div className="flex items-center space-x-2">
                   {otherParticipant?.phone ? (
                     isMobile ? (
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-9 w-9 p-0" 
-                        title="Call"
-                        onClick={() => window.location.href = `tel:${otherParticipant.phone}`}
-                      >
-                        <Phone className="w-4 h-4" />
-                      </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={`${isMobile ? 'h-11 w-11' : 'h-9 w-9'} p-0`}
+                    title="Call"
+                    onClick={() => window.location.href = `tel:${otherParticipant.phone}`}
+                  >
+                    <Phone className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                  </Button>
                     ) : (
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-9 w-9 p-0" 
-                            title="View phone number"
-                          >
-                            <Phone className="w-4 h-4" />
-                          </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={`${isMobile ? 'h-11 w-11' : 'h-9 w-9'} p-0`}
+                    title="View phone number"
+                  >
+                    <Phone className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                  </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-3">
                           <div className="space-y-2">
@@ -602,9 +623,9 @@ const VendorMessages = () => {
                   )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="ghost" className="h-9 w-9 p-0">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
+                  <Button size="sm" variant="ghost" className={`${isMobile ? 'h-11 w-11' : 'h-9 w-9'} p-0`}>
+                    <MoreVertical className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                  </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem>
@@ -666,7 +687,7 @@ const VendorMessages = () => {
                               : 'bg-background border border-border rounded-bl-sm'
                           }`}
                         >
-                        <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{message.message}</p>
+                        <p className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${isMobile ? 'text-base' : ''}`}>{message.message}</p>
                         
                         {/* Attachments */}
                         {message.attachments && message.attachments.length > 0 && (
@@ -763,7 +784,7 @@ const VendorMessages = () => {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-border bg-background">
+            <div className={`p-4 border-t border-border bg-background ${isMobile ? 'pb-safe' : ''}`}>
               {/* Selected Files Preview */}
               {selectedFiles.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -773,7 +794,7 @@ const VendorMessages = () => {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-5 w-5 p-0 hover:bg-destructive/10"
+                        className={`${isMobile ? 'h-6 w-6' : 'h-5 w-5'} p-0 hover:bg-destructive/10`}
                         onClick={() => removeFile(index)}
                       >
                         ×
@@ -801,25 +822,25 @@ const VendorMessages = () => {
                     onChange={(e) => handleFileSelect(e, 'image')}
                     multiple
                   />
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="ghost"
-                    className="h-10 w-10 p-0"
+                    className={`${isMobile ? 'h-12 w-12' : 'h-10 w-10'} p-0`}
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
                     title="Attach document"
                   >
-                    <Paperclip className="w-5 h-5" />
+                    <Paperclip className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="ghost"
-                    className="h-10 w-10 p-0"
+                    className={`${isMobile ? 'h-12 w-12' : 'h-10 w-10'} p-0`}
                     onClick={() => imageInputRef.current?.click()}
                     disabled={isUploading}
                     title="Attach image"
                   >
-                    <Image className="w-5 h-5" />
+                    <Image className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                   </Button>
                 </div>
                 
@@ -828,7 +849,7 @@ const VendorMessages = () => {
                     placeholder="Type your message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="min-h-[56px] max-h-[120px] resize-none rounded-xl"
+                    className={`min-h-[56px] max-h-[120px] resize-none rounded-xl ${isMobile ? 'text-base' : ''}`}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -839,13 +860,13 @@ const VendorMessages = () => {
                   />
                 </div>
                 
-                <Button 
+                <Button
                   onClick={handleSendMessage}
                   disabled={(!newMessage.trim() && selectedFiles.length === 0) || isUploading}
-                  className="h-10 w-10 p-0 rounded-full"
+                  className={`${isMobile ? 'h-12 w-12' : 'h-10 w-10'} p-0 rounded-full`}
                   title="Send message"
                 >
-                  {isUploading ? <Clock className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                  {isUploading ? <Clock className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} animate-spin`} /> : <Send className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />}
                 </Button>
               </div>
             </div>

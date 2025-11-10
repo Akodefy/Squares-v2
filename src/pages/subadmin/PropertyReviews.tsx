@@ -255,55 +255,55 @@ const PropertyReviews = () => {
           </Card>
         ) : (
           properties.map((property) => (
-            <Card key={property._id}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
+            <Card key={property._id} className="overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   {/* Property Thumbnail */}
                   {property.images && property.images.length > 0 && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 mx-auto sm:mx-0">
                       <img
                         src={getImageUrl(property.images[0])}
                         alt={property.title}
-                        className="w-24 h-24 object-cover rounded"
+                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg shadow-sm"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = DEFAULT_PROPERTY_IMAGE;
                         }}
                       />
                     </div>
                   )}
-                  
-                  <div className="flex-1 space-y-2">
-                    <CardTitle className="text-xl">{property.title}</CardTitle>
+
+                  <div className="flex-1 space-y-2 text-center sm:text-left">
+                    <CardTitle className="text-lg sm:text-xl leading-tight">{property.title}</CardTitle>
                     <CardDescription className="space-y-1">
-                      <div className="flex items-center gap-4 text-sm">
+                      <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                         <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {property.address.city}, {property.address.state}
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{property.address.city}, {property.address.state}</span>
                         </span>
                         <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
+                          <Calendar className="h-3 w-3 flex-shrink-0" />
                           {new Date(property.createdAt).toLocaleDateString()}
                         </span>
                         <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {property.owner.email}
+                          <User className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{property.owner.email}</span>
                         </span>
                       </div>
                     </CardDescription>
                   </div>
-                  
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-2xl font-bold text-primary">
+
+                  <div className="text-center sm:text-right flex-shrink-0">
+                    <div className="text-xl sm:text-2xl font-bold text-primary">
                       {formatPrice(property.price)}
                     </div>
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="mt-1 text-xs">
                       {property.type} • {property.listingType}
                     </Badge>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex gap-2">
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -311,6 +311,7 @@ const PropertyReviews = () => {
                       setSelectedProperty(property);
                       setViewDialogOpen(true);
                     }}
+                    className="flex-1 min-w-[120px] touch-manipulation"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Details
@@ -319,7 +320,7 @@ const PropertyReviews = () => {
                     size="sm"
                     onClick={() => handleApprove(property._id)}
                     disabled={actionLoading[property._id]}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700 touch-manipulation"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Approve
@@ -332,6 +333,7 @@ const PropertyReviews = () => {
                       setRejectDialogOpen(true);
                     }}
                     disabled={actionLoading[property._id]}
+                    className="flex-1 min-w-[120px] touch-manipulation"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Reject

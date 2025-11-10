@@ -28,9 +28,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  MessageSquare, 
-  Send, 
+import {
+  MessageSquare,
+  Send,
   Search,
   Filter,
   MoreVertical,
@@ -54,7 +54,8 @@ import {
   Loader2,
   RefreshCw,
   Circle,
-  Check
+  Check,
+  ArrowLeft
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { 
@@ -344,15 +345,15 @@ const AdminMessages = () => {
       </div>
 
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col space-y-3 md:flex-row md:justify-between md:items-center md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Messages</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Messages</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Manage and respond to user messages and inquiries
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => loadMessages()}>
+          <Button variant="outline" size="sm" onClick={() => loadMessages()}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
@@ -361,70 +362,70 @@ const AdminMessages = () => {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4">
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
+            <CardContent className="p-3 md:p-4 text-center">
+              <div className="text-lg md:text-2xl font-bold text-blue-600">
                 {stats.totalMessages}
               </div>
-              <div className="text-sm text-muted-foreground">Total Messages</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Total Messages</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-orange-600">
+            <CardContent className="p-3 md:p-4 text-center">
+              <div className="text-lg md:text-2xl font-bold text-orange-600">
                 {stats.unreadMessages}
               </div>
-              <div className="text-sm text-muted-foreground">Unread</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Unread</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">
+            <CardContent className="p-3 md:p-4 text-center">
+              <div className="text-lg md:text-2xl font-bold text-green-600">
                 {stats.repliedMessages}
               </div>
-              <div className="text-sm text-muted-foreground">Replied</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Replied</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-red-600">
+            <CardContent className="p-3 md:p-4 text-center">
+              <div className="text-lg md:text-2xl font-bold text-red-600">
                 {stats.flaggedMessages}
               </div>
-              <div className="text-sm text-muted-foreground">Flagged</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Flagged</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">
+            <CardContent className="p-3 md:p-4 text-center">
+              <div className="text-lg md:text-2xl font-bold text-purple-600">
                 {stats.todayMessages}
               </div>
-              <div className="text-sm text-muted-foreground">Today</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Today</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-teal-600">
+            <CardContent className="p-3 md:p-4 text-center">
+              <div className="text-lg md:text-2xl font-bold text-teal-600">
                 {stats.responseRate}%
               </div>
-              <div className="text-sm text-muted-foreground">Response Rate</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Response Rate</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">
+            <CardContent className="p-3 md:p-4 text-center">
+              <div className="text-lg md:text-2xl font-bold text-indigo-600">
                 {stats.avgResponseTime}
               </div>
-              <div className="text-sm text-muted-foreground">Avg Response</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Avg Response</div>
             </CardContent>
           </Card>
         </div>
       )}
 
       {/* Chat Interface */}
-      <div className="h-[calc(100vh-16rem)] flex gap-6">
-        {/* Conversations List */}
-        <div className="w-1/3 border-r border-border">
+      <div className="h-[calc(100vh-16rem)] md:h-[calc(100vh-18rem)] flex gap-4 md:gap-6">
+        {/* Conversations List - Hidden on mobile when message is selected */}
+        <div className={`w-full md:w-1/3 border-r-0 md:border-r border-border ${selectedMessage ? 'hidden md:block' : 'block'}`}>
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full grid grid-cols-3">
@@ -447,18 +448,18 @@ const AdminMessages = () => {
           </Tabs>
 
           {/* Search and Filters */}
-          <div className="p-4 border-b border-border space-y-3">
+          <div className="p-3 md:p-4 border-b border-border space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search conversations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 text-sm"
               />
             </div>
-            
-            <div className="flex gap-2">
+
+            <div className="flex flex-col sm:flex-row gap-2">
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Type" />
@@ -470,7 +471,7 @@ const AdminMessages = () => {
                   <SelectItem value="support">Support</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Priority" />
@@ -487,7 +488,7 @@ const AdminMessages = () => {
           </div>
 
           {/* Messages List */}
-          <ScrollArea className="h-[calc(100%-12rem)]">
+          <ScrollArea className="h-[calc(100%-10rem)] md:h-[calc(100%-12rem)]">
             <div className="p-2 space-y-1">
               {filteredMessages.map((message) => (
                 <div
@@ -503,8 +504,8 @@ const AdminMessages = () => {
                   }}
                 >
                   <div className="flex items-start space-x-3">
-                    <div className="relative">
-                      <Avatar className="w-10 h-10">
+                    <div className="relative flex-shrink-0">
+                      <Avatar className="w-8 h-8 md:w-10 md:h-10">
                         <AvatarImage src={message.sender.profile?.avatar} />
                         <AvatarFallback>
                           {getSenderName(message).charAt(0).toUpperCase()}
@@ -512,20 +513,20 @@ const AdminMessages = () => {
                       </Avatar>
                       {userStatuses[message.sender._id]?.isOnline ? (
                         <div title="Online">
-                          <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-green-500 text-green-500 border-2 border-background rounded-full" />
+                          <Circle className="absolute -bottom-1 -right-1 w-2 h-2 md:w-3 md:h-3 fill-green-500 text-green-500 border-2 border-background rounded-full" />
                         </div>
                       ) : (
                         <div title={`Last seen ${userStatuses[message.sender._id]?.lastSeen ? messageService.formatTime(userStatuses[message.sender._id].lastSeen) : 'recently'}`}>
-                          <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-gray-400 text-gray-400 border-2 border-background rounded-full" />
+                          <Circle className="absolute -bottom-1 -right-1 w-2 h-2 md:w-3 md:h-3 fill-gray-400 text-gray-400 border-2 border-background rounded-full" />
                         </div>
                       )}
                       {message.status === 'unread' && (
-                        <div className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-red-500" />
+                        <div className="absolute -top-1 -left-1 w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500" />
                       )}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-1">
                         <span className="font-medium text-sm truncate">
                           {getSenderName(message)}
                         </span>
@@ -533,19 +534,19 @@ const AdminMessages = () => {
                           {formatDate(message.createdAt)}
                         </span>
                       </div>
-                      
+
                       {message.subject && (
                         <p className="text-xs font-medium text-primary mb-1 truncate">
                           {message.subject}
                         </p>
                       )}
-                      
+
                       <p className="text-xs text-muted-foreground truncate">
                         {message.content}
                       </p>
-                      
+
                       <div className="flex items-center justify-between mt-2">
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           <Badge className={`text-xs ${getPriorityColor(message.priority)}`}>
                             {message.priority}
                           </Badge>
@@ -553,7 +554,7 @@ const AdminMessages = () => {
                             {message.status}
                           </Badge>
                         </div>
-                        
+
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
@@ -565,7 +566,7 @@ const AdminMessages = () => {
                               <AlertTriangle className="w-4 h-4 mr-2" />
                               Flag
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="text-red-600"
                               onSelect={(e) => {
                                 e.preventDefault();
@@ -586,16 +587,29 @@ const AdminMessages = () => {
           </ScrollArea>
         </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        {/* Chat Area - Full width on mobile when message is selected */}
+        <div className={`flex-1 flex flex-col min-h-0 ${selectedMessage ? 'block md:flex-1' : 'hidden md:flex'}`}>
           {selectedMessage ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between">
+              <div className="p-3 md:p-4 border-b border-border">
+                {/* Back button for mobile */}
+                <div className="md:hidden mb-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedMessage(null)}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Messages
+                  </Button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      <Avatar className="w-10 h-10">
+                    <div className="relative flex-shrink-0">
+                      <Avatar className="w-8 h-8 md:w-10 md:h-10">
                         <AvatarImage src={selectedMessage.sender.profile?.avatar} />
                         <AvatarFallback>
                           {getSenderName(selectedMessage).charAt(0).toUpperCase()}
@@ -603,70 +617,70 @@ const AdminMessages = () => {
                       </Avatar>
                       {userStatuses[selectedMessage.sender._id]?.isOnline ? (
                         <div title="Online">
-                          <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-green-500 text-green-500 border-2 border-background rounded-full" />
+                          <Circle className="absolute -bottom-1 -right-1 w-2 h-2 md:w-3 md:h-3 fill-green-500 text-green-500 border-2 border-background rounded-full" />
                         </div>
                       ) : (
                         <div title={`Last seen ${userStatuses[selectedMessage.sender._id]?.lastSeen ? messageService.formatTime(userStatuses[selectedMessage.sender._id].lastSeen) : 'recently'}`}>
-                          <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-gray-400 text-gray-400 border-2 border-background rounded-full" />
+                          <Circle className="absolute -bottom-1 -right-1 w-2 h-2 md:w-3 md:h-3 fill-gray-400 text-gray-400 border-2 border-background rounded-full" />
                         </div>
                       )}
                     </div>
-                    <div>
-                      <h3 className="font-semibold">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-sm md:text-base truncate">
                         {getSenderName(selectedMessage)}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {userStatuses[selectedMessage.sender._id]?.isOnline 
-                          ? 'Online' 
+                      <p className="text-xs md:text-sm text-muted-foreground">
+                        {userStatuses[selectedMessage.sender._id]?.isOnline
+                          ? 'Online'
                           : `Last seen ${userStatuses[selectedMessage.sender._id]?.lastSeen ? messageService.formatTime(userStatuses[selectedMessage.sender._id].lastSeen) : 'recently'}`
                         }
                       </p>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Badge className={getPriorityColor(selectedMessage.priority)}>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge className={`text-xs ${getPriorityColor(selectedMessage.priority)}`}>
                       {selectedMessage.priority}
                     </Badge>
-                    <Badge className={getStatusColor(selectedMessage.status)}>
+                    <Badge className={`text-xs ${getStatusColor(selectedMessage.status)}`}>
                       {selectedMessage.status}
                     </Badge>
                   </div>
                 </div>
-                
+
                 {/* Property Info */}
                 {selectedMessage.property && (
                   <div className="mt-3 p-3 bg-muted rounded-lg">
                     <p className="text-sm font-medium">Related Property:</p>
-                    <p className="text-xs text-muted-foreground">{selectedMessage.property.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{selectedMessage.property.title}</p>
                   </div>
                 )}
               </div>
 
               {/* Chat Messages */}
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 p-3 md:p-4">
                 <div className="space-y-4">
                   {/* Original Message */}
                   <div className="flex justify-start">
-                    <div className="max-w-[70%] bg-muted p-3 rounded-lg">
+                    <div className="max-w-[85%] md:max-w-[70%] bg-muted p-3 rounded-lg">
                       {selectedMessage.subject && (
                         <p className="font-medium text-sm mb-2">{selectedMessage.subject}</p>
                       )}
-                      <p className="text-sm whitespace-pre-wrap">{selectedMessage.content}</p>
-                      <div className="flex items-center justify-between mt-2">
+                      <p className="text-sm whitespace-pre-wrap break-words">{selectedMessage.content}</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-2">
                         <span className="text-xs text-muted-foreground">
                           {formatDate(selectedMessage.createdAt)}
                         </span>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs w-fit">
                           {selectedMessage.type?.replace('_', ' ') || 'general'}
                         </Badge>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Admin replies would go here */}
                   {/* TODO: Load and display conversation replies */}
-                  
+
                   {/* Typing Indicator */}
                   {otherUserTyping && (
                     <div className="flex justify-start animate-fadeIn">
@@ -684,31 +698,32 @@ const AdminMessages = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
 
               {/* Reply Input */}
-              <div className="p-4 border-t border-border">
+              <div className="p-3 md:p-4 border-t border-border">
                 <div className="space-y-3">
                   <Textarea
                     placeholder="Type your reply..."
                     value={replyText}
                     onChange={(e) => handleTypingChange(e.target.value)}
                     rows={3}
-                    className="resize-none"
+                    className="resize-none text-sm"
                   />
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={sendReply} 
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      onClick={sendReply}
                       disabled={!replyText.trim()}
                       className="flex-1"
+                      size="sm"
                     >
                       <Send className="w-4 h-4 mr-2" />
                       Send Reply
                     </Button>
-                    <Button variant="outline" onClick={() => setReplyText("")}>
+                    <Button variant="outline" onClick={() => setReplyText("")} size="sm">
                       Clear
                     </Button>
                   </div>
@@ -716,11 +731,11 @@ const AdminMessages = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center p-4">
               <div className="text-center">
-                <MessageSquare className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Select a Conversation</h3>
-                <p className="text-muted-foreground">
+                <MessageSquare className="w-12 h-12 md:w-16 md:h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg md:text-xl font-semibold mb-2">Select a Conversation</h3>
+                <p className="text-sm md:text-base text-muted-foreground">
                   Choose a message from the list to start chatting
                 </p>
               </div>
@@ -730,34 +745,35 @@ const AdminMessages = () => {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog 
-        open={!!messageToDelete} 
+      <AlertDialog
+        open={!!messageToDelete}
         onOpenChange={(open) => {
           if (!open) {
             setMessageToDelete(null);
           }
         }}
       >
-        <AlertDialogContent className="sm:max-w-[425px]">
+        <AlertDialogContent className="sm:max-w-[425px] mx-4">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Message</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-base md:text-lg">Delete Message</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm md:text-base">
               Are you sure you want to delete this message? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel 
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel
               onClick={() => setMessageToDelete(null)}
+              className="w-full sm:w-auto"
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => {
                 if (messageToDelete) {
                   deleteMessage(messageToDelete);
                 }
               }}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600 w-full sm:w-auto"
             >
               Delete Message
             </AlertDialogAction>

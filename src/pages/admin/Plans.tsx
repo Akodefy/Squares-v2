@@ -134,77 +134,82 @@ const Plans = () => {
   }
 
   return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-4 md:space-y-6">
+        <div className="dashboard-header-responsive">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Plan Management</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="dashboard-title-responsive">Plan Management</h1>
+            <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
               Manage subscription plans and pricing
             </p>
           </div>
-          <Button onClick={() => navigate("/admin/plans/create")}>
+          <Button onClick={() => navigate("/admin/plans/create")} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
-            Create Plan
+            <span className="hidden sm:inline">Create Plan</span>
+            <span className="sm:hidden">Create</span>
           </Button>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>All Plans</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg md:text-xl">All Plans</CardTitle>
+            <CardDescription className="text-sm md:text-base">
               {filteredPlans.length} plan{filteredPlans.length !== 1 ? "s" : ""} found
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SearchFilter
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              filterValue={billingFilter}
-              onFilterChange={setBillingFilter}
-              filterOptions={[
-                { label: "Monthly", value: "monthly" },
-                { label: "Yearly", value: "yearly" },
-              ]}
-              filterPlaceholder="Filter by billing"
-            />
+            <div className="space-y-4">
+              <SearchFilter
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                filterValue={billingFilter}
+                onFilterChange={setBillingFilter}
+                filterOptions={[
+                  { label: "Monthly", value: "monthly" },
+                  { label: "Yearly", value: "yearly" },
+                ]}
+                filterPlaceholder="Filter by billing"
+              />
 
-            <DataTable
-              columns={columns}
-              data={paginatedItems.map(plan => ({ ...plan, id: plan._id }))}
-              editPath={(plan) => `/admin/plans/edit/${plan._id}`}
-            />
-
-            {totalPages > 1 && (
-              <div className="mt-6">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={previousPage}
-                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          onClick={() => goToPage(page)}
-                          isActive={currentPage === page}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={nextPage}
-                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+              <div className="table-responsive-wrapper">
+                <DataTable
+                  columns={columns}
+                  data={paginatedItems.map(plan => ({ ...plan, id: plan._id }))}
+                  editPath={(plan) => `/admin/plans/edit/${plan._id}`}
+                />
               </div>
-            )}
+
+              {totalPages > 1 && (
+                <div className="mt-4 md:mt-6">
+                  <Pagination>
+                    <PaginationContent className="pagination-responsive">
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={previousPage}
+                          className={`pagination-button-responsive ${currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => goToPage(page)}
+                            isActive={currentPage === page}
+                            className="pagination-button-responsive cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={nextPage}
+                          className={`pagination-button-responsive ${currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -45,6 +45,7 @@ import { PincodeAutocomplete } from "@/components/PincodeAutocomplete";
 import { PasswordChangeDialog } from "@/components/PasswordChangeDialog";
 import { VendorNotificationSettings, type VendorBusinessPreferences } from "@/components/settings/VendorNotificationSettings";
 import { uploadService } from "@/services/uploadService";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Vendor Settings Configuration
 interface VendorSettingsConfig {
@@ -71,6 +72,7 @@ interface BusinessSettings {
 }
 
 const VendorProfilePage: React.FC = () => {
+  const isMobile = useIsMobile();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -841,9 +843,9 @@ const VendorProfilePage: React.FC = () => {
 
 
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'justify-between items-center'}`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight flex items-center gap-2`}>
             <User className="w-8 h-8 text-primary" />
             My Profile
           </h1>
@@ -851,14 +853,14 @@ const VendorProfilePage: React.FC = () => {
             Manage your profile information and preferences.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+              <Button variant="outline" onClick={handleCancel} disabled={isSaving} className={isMobile ? 'flex-1' : ''}>
                 <X className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
+              <Button onClick={handleSave} disabled={isSaving} className={isMobile ? 'flex-1' : ''}>
                 {isSaving ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
@@ -868,7 +870,7 @@ const VendorProfilePage: React.FC = () => {
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)}>
+            <Button onClick={() => setIsEditing(true)} className={isMobile ? 'w-full' : ''}>
               <Edit className="w-4 h-4 mr-2" />
               Edit Profile
             </Button>
@@ -879,11 +881,11 @@ const VendorProfilePage: React.FC = () => {
       {/* Profile Overview */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-start space-x-6">
+          <div className={`flex items-start ${isMobile ? 'flex-col space-y-4' : 'space-x-6'}`}>
             <div className="relative">
-              <Avatar className="h-24 w-24">
+              <Avatar className={`${isMobile ? 'h-20 w-20' : 'h-24 w-24'} ${isMobile ? 'mx-auto' : ''}`}>
                 <AvatarImage src={formData.profile.avatar || ""} />
-                <AvatarFallback className="text-lg">
+                <AvatarFallback className={`${isMobile ? 'text-base' : 'text-lg'}`}>
                   {formData.profile.firstName.charAt(0)}
                   {formData.profile.lastName.charAt(0)}
                 </AvatarFallback>
@@ -898,7 +900,7 @@ const VendorProfilePage: React.FC = () => {
               <Button
                 size="sm"
                 variant="outline"
-                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                className={`absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0 ${isMobile ? 'right-1/2 translate-x-1/2' : ''}`}
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAvatar}
               >
@@ -911,7 +913,7 @@ const VendorProfilePage: React.FC = () => {
             </div>
 
             <div className="flex-1 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:'}grid-cols-2 gap-4`}>
                 <div>
                   <Label htmlFor="firstName">First Name</Label>
                   {isEditing ? (
@@ -923,7 +925,7 @@ const VendorProfilePage: React.FC = () => {
                       }
                     />
                   ) : (
-                    <p className="text-lg font-semibold">
+                    <p className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
                       {formData.profile.firstName}
                     </p>
                   )}
@@ -940,14 +942,14 @@ const VendorProfilePage: React.FC = () => {
                       }
                     />
                   ) : (
-                    <p className="text-lg font-semibold">
+                    <p className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
                       {formData.profile.lastName}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+              <div className={`flex items-center ${isMobile ? 'flex-col space-y-2' : 'space-x-4'} text-sm text-muted-foreground`}>
                 <div className="flex items-center">
                   <Mail className="w-4 h-4 mr-1" />
                   {formData.email}
@@ -972,7 +974,7 @@ const VendorProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-4">
+              <div className={`flex items-center ${isMobile ? 'flex-col space-y-2' : 'space-x-4'}`}>
                 <div className="flex items-center">
                   <Star className="w-4 h-4 text-yellow-400 mr-1" />
                   <span className="font-medium">
@@ -994,11 +996,11 @@ const VendorProfilePage: React.FC = () => {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="profile">Personal Info</TabsTrigger>
-          <TabsTrigger value="company">Company Details</TabsTrigger>
-          <TabsTrigger value="specializations">Specializations</TabsTrigger>
-          <TabsTrigger value="notifications">Settings</TabsTrigger>
+        <TabsList className={`${isMobile ? 'flex flex-col h-auto gap-2' : 'grid w-full grid-cols-4'}`}>
+          <TabsTrigger value="profile" className={isMobile ? 'w-full justify-start' : ''}>Personal Info</TabsTrigger>
+          <TabsTrigger value="company" className={isMobile ? 'w-full justify-start' : ''}>Company Details</TabsTrigger>
+          <TabsTrigger value="specializations" className={isMobile ? 'w-full justify-start' : ''}>Specializations</TabsTrigger>
+          <TabsTrigger value="notifications" className={isMobile ? 'w-full justify-start' : ''}>Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
@@ -1658,9 +1660,9 @@ const VendorProfilePage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-4`}>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-blue-600`}>
                   {vendorData.statistics.totalProperties}
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -1669,14 +1671,14 @@ const VendorProfilePage: React.FC = () => {
               </div>
 
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
+                <div className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-green-600`}>
                   {vendorData.statistics.totalValue || "???0"}
                 </div>
                 <div className="text-sm text-muted-foreground">Total Value</div>
               </div>
 
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-purple-600`}>
                   {(formData.profile.vendorInfo?.rating?.average || 0).toFixed(1)}
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -1685,7 +1687,7 @@ const VendorProfilePage: React.FC = () => {
               </div>
 
               <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">
+                <div className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-orange-600`}>
                   {vendorData.statistics.totalMessages}
                 </div>
                 <div className="text-sm text-muted-foreground">

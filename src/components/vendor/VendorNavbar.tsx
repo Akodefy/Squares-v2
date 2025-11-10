@@ -179,9 +179,9 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
   return (
     <>
       {/* Logo - Responsive positioning */}
-      <Link 
-        to="/" 
-        className="fixed -top-7 left-2 xs:left-3 sm:left-4 md:-top-6 md:left-4 lg:left-6 z-[60] transition-transform hover:scale-105 duration-300"
+      <Link
+        to="/"
+        className="fixed -top-4 left-2 xs:left-3 sm:left-4 md:-top-6 md:left-4 lg:left-6 z-[60] transition-transform hover:scale-105 duration-300"
       >
         <img
           src={theme === "dark" ? logoDark : logoLight}
@@ -194,15 +194,6 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
         <div className="container mx-auto px-2 xs:px-3 sm:px-4 lg:px-6">
           <div className="flex h-14 xs:h-15 sm:h-16 items-center justify-between">
             <div className="flex items-center gap-2 xs:gap-3 sm:gap-4 flex-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden h-8 w-8 xs:h-9 xs:w-9 sm:h-10 sm:w-10 touch-manipulation"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu className="h-4 w-4 xs:h-5 xs:w-5" />
-              </Button>
-              
               {/* Spacer for logo - Responsive */}
               <div className="ml-[130px] xs:ml-[150px] sm:ml-[170px] md:ml-[190px] lg:ml-[210px]">
                 {/* Vendor portal specific content can go here */}
@@ -265,8 +256,16 @@ const VendorNavbar = ({ setSidebarOpen }: VendorNavbarProps) => {
 
             <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 mr-2 xs:mr-0">
               <ThemeToggle />
-              
+
               <VendorNotificationCenter />
+
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-1.5 xs:p-2 hover:bg-accent/10 rounded-lg transition-colors touch-manipulation"
+                aria-label="Toggle menu"
+              >
+                <Menu className="w-4 h-4 xs:w-5 xs:h-5" />
+              </button>
 
               <UnifiedProfileDropdown />
             </div>

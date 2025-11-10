@@ -28,9 +28,11 @@ import {
   BarChart3
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { billingService, VendorSubscription, Payment, BillingStats, Invoice } from "@/services/billingService";
 
 const VendorBilling: React.FC = () => {
+  const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState(true);
   const [subscription, setSubscription] = useState<VendorSubscription | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -156,11 +158,11 @@ const VendorBilling: React.FC = () => {
     if (payment.status === 'failed' && payment.failureReason) {
       return payment.failureReason;
     }
-    if (payment.status === 'cancelled') {
+    if (payment.status === 'refunded') {
       if (payment.failureReason?.includes('timeout') || payment.failureReason?.includes('exceeded')) {
-        return 'Payment cancelled - exceeded 15-minute Razorpay time limit';
+        return 'Payment refunded - exceeded 15-minute Razorpay time limit';
       }
-      return payment.failureReason || 'Payment cancelled';
+      return payment.failureReason || 'Payment refunded';
     }
     if (payment.status === 'pending') {
       const createdAt = new Date(payment.createdAt);
@@ -453,16 +455,16 @@ const VendorBilling: React.FC = () => {
         </DialogContent>
       </Dialog>
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'justify-between items-center'}`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Billing & Payments</h1>
+          <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight`}>Billing & Payments</h1>
           <p className="text-muted-foreground">
             Manage your subscription and payment history
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className={`${isMobile ? 'w-full' : 'w-40'}`}>
               <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
@@ -472,7 +474,7 @@ const VendorBilling: React.FC = () => {
               <SelectItem value="last_year">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport} className={`${isMobile ? 'w-full h-11' : 'h-9'}`}>
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
@@ -481,37 +483,37 @@ const VendorBilling: React.FC = () => {
 
       {/* Stats Cards */}
       {billingStats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
+            <CardContent className={`${isMobile ? 'p-3' : 'p-4'} text-center`}>
+              <div className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-blue-600`}>
                 {formatAmount(billingStats.totalRevenue)}
               </div>
-              <div className="text-sm text-muted-foreground">Total Revenue</div>
+              <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Total Revenue</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">
+            <CardContent className={`${isMobile ? 'p-3' : 'p-4'} text-center`}>
+              <div className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-green-600`}>
                 {formatAmount(billingStats.nextBillingAmount)}
               </div>
-              <div className="text-sm text-muted-foreground">Next Payment</div>
+              <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Next Payment</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">
+            <CardContent className={`${isMobile ? 'p-3' : 'p-4'} text-center`}>
+              <div className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-purple-600`}>
                 {billingStats.totalInvoices}
               </div>
-              <div className="text-sm text-muted-foreground">Total Invoices</div>
+              <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Total Invoices</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-orange-600">
+            <CardContent className={`${isMobile ? 'p-3' : 'p-4'} text-center`}>
+              <div className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-orange-600`}>
                 {subscription ? formatAmount(subscription.amount) : '₹0'}
               </div>
-              <div className="text-sm text-muted-foreground">Monthly Cost</div>
+              <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Monthly Cost</div>
             </CardContent>
           </Card>
         </div>
@@ -552,33 +554,33 @@ const VendorBilling: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'}`}>
                     <div>
-                      <p className="text-sm text-muted-foreground">Monthly Cost</p>
-                      <p className="text-lg font-semibold">
+                      <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Monthly Cost</p>
+                      <p className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
                         {formatAmount(subscription.amount, subscription.currency)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Next Billing Date</p>
-                      <p className="text-lg font-semibold">
+                      <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Next Billing Date</p>
+                      <p className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
                         {formatDate(subscription.nextBillingDate)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Auto Renewal</p>
-                      <p className="text-lg font-semibold">
+                      <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Auto Renewal</p>
+                      <p className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold`}>
                         {subscription.autoRenew ? 'Enabled' : 'Disabled'}
                       </p>
                     </div>
                   </div>
 
                   <div className="pt-4 border-t">
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-plans'}>
+                    <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
+                      <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-plans'} className={`${isMobile ? 'w-full h-11' : ''}`}>
                         Change Plan
                       </Button>
-                      <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-manager'}>
+                      <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>
                         Manage Subscription
                       </Button>
                     </div>
@@ -614,25 +616,25 @@ const VendorBilling: React.FC = () => {
                   {payments.slice(0, 5).map((payment, index) => (
                     <div
                       key={payment?._id || `payment-${index}`}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className={`flex ${isMobile ? 'flex-col space-y-3' : 'items-center justify-between'} p-4 border rounded-lg`}
                     >
-                      <div className="flex items-center space-x-4">
+                      <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center space-x-4'}`}>
                         <div className="p-2 bg-muted rounded-full">
                           <DollarSign className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="font-medium">
+                          <p className={`${isMobile ? 'text-sm' : 'font-medium'}`}>
                             {payment?.description || 'Subscription Payment'}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                             {payment?.paymentMethod || 'Credit Card'} • {payment?.createdAt ? formatDate(payment.createdAt) : 'N/A'}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="flex items-center space-x-2">
+                      <div className={`${isMobile ? 'text-left' : 'text-right'}`}>
+                        <div className={`flex ${isMobile ? 'justify-between items-center' : 'items-center space-x-2'}`}>
                           {getStatusIcon(payment?.status || 'pending')}
-                          <span className="font-semibold">
+                          <span className={`${isMobile ? 'text-sm' : 'font-semibold'}`}>
                             {formatAmount(payment?.amount || 0, payment?.currency || 'INR')}
                           </span>
                         </div>
@@ -664,24 +666,24 @@ const VendorBilling: React.FC = () => {
                   {payments.map((payment, index) => (
                     <div
                       key={payment?._id || `payment-full-${index}`}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow"
+                      className={`flex ${isMobile ? 'flex-col space-y-3' : 'items-center justify-between'} p-4 border rounded-lg hover:shadow-sm transition-shadow`}
                     >
-                      <div className="flex items-center space-x-4">
+                      <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center space-x-4'}`}>
                         <div className="p-2 bg-muted rounded-full">
                           <DollarSign className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="font-medium">
+                          <p className={`${isMobile ? 'text-sm' : 'font-medium'}`}>
                             {payment?.description || 'Subscription Payment'}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                             Payment ID: {payment?._id?.slice(-8) || 'N/A'}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                             {payment?.createdAt ? formatDate(payment.createdAt) : 'N/A'}
                           </p>
-                          {(payment.status === 'failed' || payment.status === 'cancelled') && payment.failureReason && (
-                            <p className="text-xs text-red-600 mt-1 max-w-md">
+                          {(payment.status === 'failed' || payment.status === 'refunded') && payment.failureReason && (
+                            <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-red-600 mt-1 max-w-md`}>
                               {payment.failureReason.includes('timeout') || payment.failureReason.includes('exceeded')
                                 ? '⏱️ Payment expired - exceeded 15-minute time limit'
                                 : `❌ ${payment.failureReason}`}
@@ -689,22 +691,22 @@ const VendorBilling: React.FC = () => {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="flex items-center space-x-2 mb-1">
+                      <div className={`${isMobile ? 'text-left' : 'text-right'}`}>
+                        <div className={`flex ${isMobile ? 'justify-between items-center' : 'items-center space-x-2'} mb-1`}>
                           {getStatusIcon(payment.status)}
-                          <span className="font-semibold">
+                          <span className={`${isMobile ? 'text-sm' : 'font-semibold'}`}>
                             {formatAmount(payment.amount, payment.currency)}
                           </span>
                         </div>
                         <Badge className={`text-xs ${getStatusColor(payment.status)}`}>
                           {payment.status}
                         </Badge>
-                        <div className="flex space-x-2 mt-2">
-                          <Button size="sm" variant="outline" onClick={() => handleViewPayment(payment._id)}>
+                        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'space-x-2'} mt-2`}>
+                          <Button size="sm" variant="outline" onClick={() => handleViewPayment(payment._id)} className={`${isMobile ? 'w-full h-9' : ''}`}>
                             <Eye className="w-4 h-4 mr-1" />
                             View
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDownloadReceipt(payment)}>
+                          <Button size="sm" variant="outline" onClick={() => handleDownloadReceipt(payment)} className={`${isMobile ? 'w-full h-9' : ''}`}>
                             <Download className="w-4 h-4 mr-1" />
                             Receipt
                           </Button>
@@ -727,12 +729,12 @@ const VendorBilling: React.FC = () => {
         <TabsContent value="invoices" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center justify-between'}`}>
                 <span className="flex items-center">
                   <FileText className="w-5 h-5 mr-2" />
                   Invoices
                 </span>
-                <Button variant="outline" size="sm" onClick={handleDownloadAllInvoices}>
+                <Button variant="outline" size="sm" onClick={handleDownloadAllInvoices} className={`${isMobile ? 'w-full h-9' : ''}`}>
                   <Download className="w-4 h-4 mr-2" />
                   Download All
                 </Button>
@@ -744,38 +746,38 @@ const VendorBilling: React.FC = () => {
                   {invoices.map((invoice, index) => (
                     <div
                       key={invoice?._id || `invoice-${index}`}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow"
+                      className={`flex ${isMobile ? 'flex-col space-y-3' : 'items-center justify-between'} p-4 border rounded-lg hover:shadow-sm transition-shadow`}
                     >
-                      <div className="flex items-center space-x-4">
+                      <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center space-x-4'}`}>
                         <div className="p-2 bg-muted rounded-full">
                           <FileText className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="font-medium">Invoice #{invoice?.invoiceNumber || 'N/A'}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className={`${isMobile ? 'text-sm' : 'font-medium'}`}>Invoice #{invoice?.invoiceNumber || 'N/A'}</p>
+                          <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                             Issued: {invoice?.issueDate ? formatDate(invoice.issueDate) : 'N/A'}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                             Due: {formatDate(invoice.dueDate)}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="flex items-center space-x-2 mb-1">
+                      <div className={`${isMobile ? 'text-left' : 'text-right'}`}>
+                        <div className={`flex ${isMobile ? 'justify-between items-center' : 'items-center space-x-2'} mb-1`}>
                           {getStatusIcon(invoice.status)}
-                          <span className="font-semibold">
+                          <span className={`${isMobile ? 'text-sm' : 'font-semibold'}`}>
                             {formatAmount(invoice.total, invoice.currency)}
                           </span>
                         </div>
                         <Badge className={`text-xs ${getStatusColor(invoice.status)}`}>
                           {invoice.status}
                         </Badge>
-                        <div className="flex space-x-2 mt-2">
-                          <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice._id)}>
+                        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'space-x-2'} mt-2`}>
+                          <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice._id)} className={`${isMobile ? 'w-full h-9' : ''}`}>
                             <Eye className="w-4 h-4 mr-1" />
                             View
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDownloadInvoice(invoice)}>
+                          <Button size="sm" variant="outline" onClick={() => handleDownloadInvoice(invoice)} className={`${isMobile ? 'w-full h-9' : ''}`}>
                             <Download className="w-4 h-4 mr-1" />
                             Download
                           </Button>
@@ -806,53 +808,53 @@ const VendorBilling: React.FC = () => {
             <CardContent>
               {billingStats?.usageStats ? (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 border rounded-lg">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'}`}>
+                    <div className={`${isMobile ? 'p-3' : 'p-4'} border rounded-lg`}>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium">Properties</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>Properties</p>
+                        <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                           {billingStats?.usageStats?.properties?.used || 0} / {billingStats?.usageStats?.properties?.limit || 0}
                         </p>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
-                          style={{ 
-                            width: `${Math.min(((billingStats?.usageStats?.properties?.used || 0) / (billingStats?.usageStats?.properties?.limit || 1)) * 100, 100)}%` 
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{
+                            width: `${Math.min(((billingStats?.usageStats?.properties?.used || 0) / (billingStats?.usageStats?.properties?.limit || 1)) * 100, 100)}%`
                           }}
                         ></div>
                       </div>
                     </div>
 
-                    <div className="p-4 border rounded-lg">
+                    <div className={`${isMobile ? 'p-3' : 'p-4'} border rounded-lg`}>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium">Leads</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>Leads</p>
+                        <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                           {billingStats?.usageStats?.leads?.used || 0} / {billingStats?.usageStats?.leads?.limit || 0}
                         </p>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-green-600 h-2 rounded-full" 
-                          style={{ 
-                            width: `${Math.min(((billingStats?.usageStats?.leads?.used || 0) / (billingStats?.usageStats?.leads?.limit || 1)) * 100, 100)}%` 
+                        <div
+                          className="bg-green-600 h-2 rounded-full"
+                          style={{
+                            width: `${Math.min(((billingStats?.usageStats?.leads?.used || 0) / (billingStats?.usageStats?.leads?.limit || 1)) * 100, 100)}%`
                           }}
                         ></div>
                       </div>
                     </div>
 
-                    <div className="p-4 border rounded-lg">
+                    <div className={`${isMobile ? 'p-3' : 'p-4'} border rounded-lg`}>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium">Messages</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>Messages</p>
+                        <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                           {billingStats?.usageStats?.messages?.used || 0} / {billingStats?.usageStats?.messages?.limit || 0}
                         </p>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-purple-600 h-2 rounded-full" 
-                          style={{ 
-                            width: `${Math.min(((billingStats?.usageStats?.messages?.used || 0) / (billingStats?.usageStats?.messages?.limit || 1)) * 100, 100)}%` 
+                        <div
+                          className="bg-purple-600 h-2 rounded-full"
+                          style={{
+                            width: `${Math.min(((billingStats?.usageStats?.messages?.used || 0) / (billingStats?.usageStats?.messages?.limit || 1)) * 100, 100)}%`
                           }}
                         ></div>
                       </div>
@@ -860,10 +862,10 @@ const VendorBilling: React.FC = () => {
                   </div>
 
                   <div className="pt-4 border-t">
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mb-4`}>
                       Usage resets on your billing cycle date: {billingStats.nextBillingDate}
                     </p>
-                    <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-manager'}>
+                    <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>
                       Upgrade Plan
                     </Button>
                   </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, Trash2, Loader2, User as UserIcon, Mail, Phone, MapPin, Calendar, Shield, Activity, ArrowUpCircle } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -53,6 +54,7 @@ interface UserTableProps {
 
 const UserTable = ({ searchQuery }: UserTableProps) => {
   const { isSuperAdmin } = useAuth();
+  const isMobile = useIsMobile();
   const [currentPage, setCurrentPage] = useState(1);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,16 +168,16 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
   return (
     <>
       <div className="rounded-md border overflow-x-auto">
-        <Table>
+        <Table className={isMobile ? 'min-w-[450px]' : ''}>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="hidden md:table-cell">Phone</TableHead>
-              <TableHead className="hidden sm:table-cell">Role</TableHead>
-              <TableHead className="hidden lg:table-cell">Status</TableHead>
-              <TableHead className="hidden lg:table-cell">Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className={isMobile ? 'text-xs' : ''}>Name</TableHead>
+              <TableHead className={isMobile ? 'text-xs' : ''}>Email</TableHead>
+              <TableHead className={`hidden md:table-cell ${isMobile ? 'text-xs' : ''}`}>Phone</TableHead>
+              <TableHead className={`hidden sm:table-cell ${isMobile ? 'text-xs' : ''}`}>Role</TableHead>
+              <TableHead className={`hidden lg:table-cell ${isMobile ? 'text-xs' : ''}`}>Status</TableHead>
+              <TableHead className={`hidden lg:table-cell ${isMobile ? 'text-xs' : ''}`}>Created</TableHead>
+              <TableHead className={`text-right ${isMobile ? 'text-xs' : ''}`}>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -188,19 +190,19 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
             ) : (
               users.map((user) => (
                 <TableRow key={user._id}>
-                  <TableCell className="font-medium">
+                  <TableCell className={`font-medium ${isMobile ? 'text-xs' : ''}`}>
                     {userService.getFullName(user)}
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className={isMobile ? 'text-xs' : ''}>{user.email}</TableCell>
+                  <TableCell className={`hidden md:table-cell ${isMobile ? 'text-xs' : ''}`}>
                     {user.profile.phone || "-"}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                  <TableCell className={`hidden sm:table-cell ${isMobile ? 'text-xs' : ''}`}>
+                    <Badge variant={user.role === "admin" ? "default" : "secondary"} className={isMobile ? 'text-xs px-1 py-0' : ''}>
                       {user.role}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell className={`hidden lg:table-cell ${isMobile ? 'text-xs' : ''}`}>
                     <Badge
                       variant={
                         user.status === "active"
@@ -209,37 +211,40 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                           ? "secondary"
                           : "destructive"
                       }
+                      className={isMobile ? 'text-xs px-1 py-0' : ''}
                     >
                       {user.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell className={`hidden lg:table-cell ${isMobile ? 'text-xs' : ''}`}>
                     {userService.formatCreationDate(user.createdAt)}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                  <TableCell className={`text-right ${isMobile ? 'text-xs' : ''}`}>
+                    <div className={`flex justify-end gap-1 ${isMobile ? 'gap-0.5' : 'gap-2'}`}>
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size={isMobile ? "sm" : "icon"}
                         onClick={() => handleViewUser(user)}
                         title="View User Details"
+                        className={isMobile ? 'h-6 w-6 p-1' : ''}
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className={isMobile ? 'h-3 w-3' : 'h-4 w-4'} />
                       </Button>
                       {isSuperAdmin && (
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size={isMobile ? "sm" : "icon"}
                           onClick={() => handlePromoteUser(user)}
                           title="Promote User"
+                          className={isMobile ? 'h-6 w-6 p-1' : ''}
                         >
-                          <ArrowUpCircle className="h-4 w-4" />
+                          <ArrowUpCircle className={isMobile ? 'h-3 w-3' : 'h-4 w-4'} />
                         </Button>
                       )}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4" />
+                          <Button variant="ghost" size={isMobile ? "sm" : "icon"} className={isMobile ? 'h-6 w-6 p-1' : ''}>
+                            <Trash2 className={isMobile ? 'h-3 w-3' : 'h-4 w-4'} />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -317,7 +322,7 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
 
       {/* User Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`${isMobile ? 'max-w-[95vw] max-h-[95vh]' : 'max-w-4xl max-h-[90vh]'} overflow-y-auto`}>
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
             <DialogDescription>
@@ -336,7 +341,7 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Full Name</p>
                       <p className="text-base">{userService.getFullName(selectedUser)}</p>
@@ -366,7 +371,7 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Role</p>
                       <Badge variant={selectedUser.role === "admin" ? "default" : "secondary"} className="mt-1">
@@ -414,7 +419,7 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                       {selectedUser.profile?.address?.street && (
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">Street</p>
@@ -453,7 +458,7 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Language</p>
                       <p className="text-base">Not available</p>
@@ -492,7 +497,7 @@ const UserTable = ({ searchQuery }: UserTableProps) => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Created At</p>
                       <p className="text-base">{userService.formatCreationDate(selectedUser.createdAt)}</p>

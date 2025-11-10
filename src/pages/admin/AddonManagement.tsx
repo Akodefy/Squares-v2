@@ -198,55 +198,56 @@ const AddonManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div className="dashboard-header-responsive">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Addon Management</h1>
-          <p className="text-muted-foreground mt-2">Manage vendor addon services and pricing</p>
+          <h1 className="dashboard-title-responsive">Addon Management</h1>
+          <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">Manage vendor addon services and pricing</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="self-start sm:self-auto">
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
-          Add Addon Service
+          <span className="hidden sm:inline">Add Addon Service</span>
+          <span className="sm:hidden">Add Service</span>
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card>
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Card className="stats-card-responsive">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-medium text-gray-600">Total Addons</CardTitle>
+            <CardTitle className="stats-label-responsive">Total Addons</CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
-            <div className="text-lg sm:text-xl font-bold">{total}</div>
+            <div className="stats-value-responsive">{total}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="stats-card-responsive">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-medium text-gray-600">Active Addons</CardTitle>
+            <CardTitle className="stats-label-responsive">Active Addons</CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
-            <div className="text-lg sm:text-xl font-bold text-green-600">
+            <div className="stats-value-responsive text-green-600">
               {addons.filter(addon => addon.isActive).length}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="stats-card-responsive">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-medium text-gray-600">Categories</CardTitle>
+            <CardTitle className="stats-label-responsive">Categories</CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
-            <div className="text-lg sm:text-xl font-bold">
+            <div className="stats-value-responsive">
               {new Set(addons.map(addon => addon.category)).size}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="stats-card-responsive">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-medium text-gray-600">Average Price</CardTitle>
+            <CardTitle className="stats-label-responsive">Average Price</CardTitle>
           </CardHeader>
           <CardContent className="pt-1">
-            <div className="text-lg sm:text-xl font-bold">
+            <div className="stats-value-responsive">
               ₹{addons.length > 0 ? Math.round(addons.reduce((sum, addon) => sum + addon.price, 0) / addons.length).toLocaleString() : 0}
             </div>
           </CardContent>
@@ -259,7 +260,7 @@ const AddonManagement: React.FC = () => {
           <CardTitle className="text-base">Filters</CardTitle>
         </CardHeader>
         <CardContent className="pt-2">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="search-container-responsive">
             <div className="flex-1 min-w-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -274,10 +275,10 @@ const AddonManagement: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-2">
               <Select
                 value={filters.category || 'all'}
-                onValueChange={(value) => setFilters(prev => ({ 
-                  ...prev, 
+                onValueChange={(value) => setFilters(prev => ({
+                  ...prev,
                   category: value === 'all' ? undefined : value,
-                  page: 1 
+                  page: 1
                 }))}
               >
                 <SelectTrigger className="w-full sm:w-36 h-9">
@@ -294,10 +295,10 @@ const AddonManagement: React.FC = () => {
               </Select>
               <Select
                 value={filters.isActive === undefined ? 'all' : filters.isActive.toString()}
-                onValueChange={(value) => setFilters(prev => ({ 
-                  ...prev, 
+                onValueChange={(value) => setFilters(prev => ({
+                  ...prev,
                   isActive: value === 'all' ? undefined : value === 'true',
-                  page: 1 
+                  page: 1
                 }))}
               >
                 <SelectTrigger className="w-full sm:w-28 h-9">
@@ -317,7 +318,7 @@ const AddonManagement: React.FC = () => {
       {/* Addons Table */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Addon Services</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Addon Services</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -326,7 +327,7 @@ const AddonManagement: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="overflow-x-auto">
+              <div className="table-responsive-wrapper">
                 <Table>
                   <TableHeader>
                     <TableRow className="h-10">
@@ -402,7 +403,7 @@ const AddonManagement: React.FC = () => {
                                 )}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => openDeleteDialog(addon)}
                                 className="text-red-600"
                               >
@@ -577,10 +578,10 @@ const AddonManagement: React.FC = () => {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="w-full sm:w-auto order-2 sm:order-1">
               Cancel
             </Button>
-            <Button onClick={handleCreateAddon} disabled={submitting} className="w-full sm:w-auto">
+            <Button onClick={handleCreateAddon} disabled={submitting} className="w-full sm:w-auto order-1 sm:order-2">
               {submitting ? 'Creating...' : 'Create Addon'}
             </Button>
           </DialogFooter>
@@ -715,10 +716,10 @@ const AddonManagement: React.FC = () => {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto order-2 sm:order-1">
               Cancel
             </Button>
-            <Button onClick={handleEditAddon} disabled={submitting} className="w-full sm:w-auto">
+            <Button onClick={handleEditAddon} disabled={submitting} className="w-full sm:w-auto order-1 sm:order-2">
               {submitting ? 'Updating...' : 'Update Addon'}
             </Button>
           </DialogFooter>

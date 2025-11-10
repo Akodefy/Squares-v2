@@ -6,10 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  MessageSquare, 
-  Send, 
-  Phone, 
+import {
+  MessageSquare,
+  Send,
+  Phone,
   MapPin,
   Clock,
   CheckCheck,
@@ -25,7 +25,8 @@ import {
   Trash2,
   Star,
   Archive,
-  Circle
+  Circle,
+  ArrowLeft
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -55,6 +56,7 @@ const Messages = () => {
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
   const [typingStatuses, setTypingStatuses] = useState<Record<string, boolean>>({});
+  const [showConversationList, setShowConversationList] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -144,6 +146,9 @@ const Messages = () => {
   useEffect(() => {
     if (selectedConversation) {
       loadMessages(selectedConversation);
+      if (isMobile) {
+        setShowConversationList(false);
+      }
     } else {
       setMessages([]);
     }
@@ -423,9 +428,9 @@ const Messages = () => {
       </div>
 
       {/* Messages Interface */}
-      <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+      <div className={`grid gap-6 h-[calc(100vh-12rem)] ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-3'}`}>
         {/* Conversations List */}
-        <Card className="lg:col-span-1">
+        <Card className={`${isMobile ? (showConversationList ? 'block' : 'hidden') : 'lg:col-span-1'}`}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Conversations</CardTitle>
@@ -574,11 +579,24 @@ const Messages = () => {
         </Card>
 
         {/* Chat Area */}
-        <Card className="lg:col-span-2">
+        <Card className={`${isMobile ? (!showConversationList ? 'block' : 'hidden') : 'lg:col-span-2'}`}>
           {activeConversation ? (
             <>
               {/* Chat Header */}
               <CardHeader className="pb-3 border-b">
+                {isMobile && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowConversationList(true)}
+                      className="p-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm font-medium">Back to Conversations</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="relative">

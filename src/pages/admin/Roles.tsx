@@ -335,16 +335,17 @@ const Roles = () => {
 
   return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Role Management</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">
               Manage user roles and permissions
             </p>
           </div>
           <Button
             onClick={() => navigate('/admin/roles/add')}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-full md:w-auto"
+            size="sm"
           >
             <Plus className="h-4 w-4" />
             Add New Role
@@ -352,54 +353,54 @@ const Roles = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
           <Card>
-            <CardHeader className="pb-1">
+            <CardHeader className="pb-1 px-2 md:px-6">
               <CardTitle className="text-xs font-medium text-muted-foreground">Total Roles</CardTitle>
             </CardHeader>
-            <CardContent className="pt-1">
-              <div className="text-lg sm:text-xl font-bold">{totalRoles}</div>
+            <CardContent className="pt-1 px-2 md:px-6">
+              <div className="text-base md:text-lg lg:text-xl font-bold">{totalRoles}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-1">
+            <CardHeader className="pb-1 px-2 md:px-6">
               <CardTitle className="text-xs font-medium text-muted-foreground">Active Roles</CardTitle>
             </CardHeader>
-            <CardContent className="pt-1">
-              <div className="text-lg sm:text-xl font-bold text-green-500">
+            <CardContent className="pt-1 px-2 md:px-6">
+              <div className="text-base md:text-lg lg:text-xl font-bold text-green-500">
                 {roles.filter(role => role.isActive).length}
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-1">
+            <CardHeader className="pb-1 px-2 md:px-6">
               <CardTitle className="text-xs font-medium text-muted-foreground">System Roles</CardTitle>
             </CardHeader>
-            <CardContent className="pt-1">
-              <div className="text-lg sm:text-xl font-bold text-blue-500">
+            <CardContent className="pt-1 px-2 md:px-6">
+              <div className="text-base md:text-lg lg:text-xl font-bold text-blue-500">
                 {roles.filter(role => role.isSystemRole).length}
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-1">
+            <CardHeader className="pb-1 px-2 md:px-6">
               <CardTitle className="text-xs font-medium text-muted-foreground">Custom Roles</CardTitle>
             </CardHeader>
-            <CardContent className="pt-1">
-              <div className="text-lg sm:text-xl font-bold text-purple-500">
+            <CardContent className="pt-1 px-2 md:px-6">
+              <div className="text-base md:text-lg lg:text-xl font-bold text-purple-500">
                 {roles.filter(role => !role.isSystemRole).length}
               </div>
             </CardContent>
           </Card>
           <Card className="border-destructive/20 bg-destructive/10">
-            <CardHeader className="pb-1">
+            <CardHeader className="pb-1 px-2 md:px-6">
               <CardTitle className="text-xs font-medium text-destructive flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 Super Admin
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-1">
-              <div className="text-lg sm:text-xl font-bold text-destructive">
+            <CardContent className="pt-1 px-2 md:px-6">
+              <div className="text-base md:text-lg lg:text-xl font-bold text-destructive">
                 {superAdminRole?.userCount || 0}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -408,14 +409,14 @@ const Roles = () => {
             </CardContent>
           </Card>
           <Card className="border-orange-500/20 bg-orange-500/10">
-            <CardHeader className="pb-1">
+            <CardHeader className="pb-1 px-2 md:px-6">
               <CardTitle className="text-xs font-medium text-orange-600 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 Sub Admin
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-1">
-              <div className="text-lg sm:text-xl font-bold text-orange-500">
+            <CardContent className="pt-1 px-2 md:px-6">
+              <div className="text-base md:text-lg lg:text-xl font-bold text-orange-500">
                 {subAdminRole?.userCount || 0}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -427,39 +428,34 @@ const Roles = () => {
 
         {/* Admin Roles Section */}
         {(superAdminRole || subAdminRole) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {superAdminRole && (
               <Card className="border-destructive/20 bg-gradient-to-br from-destructive/10 to-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-destructive">
-                    <Shield className="w-5 h-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-destructive text-base md:text-lg">
+                    <Shield className="w-4 h-4 md:w-5 md:h-5" />
                     Super Admin Role
                   </CardTitle>
-                  <CardDescription>{superAdminRole.description}</CardDescription>
+                  <CardDescription className="text-sm">{superAdminRole.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <CardContent className="space-y-3 md:space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-sm font-medium">Status:</span>
-                    <Badge variant={superAdminRole.isActive ? "default" : "secondary"}>
+                    <Badge variant={superAdminRole.isActive ? "default" : "secondary"} className="w-fit">
                       {superAdminRole.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-sm font-medium">Access Level:</span>
-                    <Badge variant="destructive">Level {superAdminRole.level}</Badge>
+                    <Badge variant="destructive" className="w-fit">Level {superAdminRole.level}</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-sm font-medium">Total Users:</span>
                     <div className="flex items-center gap-1">
                       <Users className="w-4 h-4 text-muted-foreground" />
                       <span className="font-bold">{superAdminRole.userCount || 0}</span>
                     </div>
                   </div>
-                  {/* Pages info removed */}
-                  {/* <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Pages:</span>
-                    <span className="font-bold text-red-600">{superAdminRole.pages?.length || 0}</span>
-                  </div> */}
                   <div className="pt-2">
                     <Button
                       variant="outline"
@@ -474,39 +470,34 @@ const Roles = () => {
                 </CardContent>
               </Card>
             )}
-            
+
             {subAdminRole && (
               <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-orange-600">
-                    <Shield className="w-5 h-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-orange-600 text-base md:text-lg">
+                    <Shield className="w-4 h-4 md:w-5 md:h-5" />
                     Sub Admin Role
                   </CardTitle>
-                  <CardDescription>{subAdminRole.description}</CardDescription>
+                  <CardDescription className="text-sm">{subAdminRole.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <CardContent className="space-y-3 md:space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-sm font-medium">Status:</span>
-                    <Badge variant={subAdminRole.isActive ? "default" : "secondary"}>
+                    <Badge variant={subAdminRole.isActive ? "default" : "secondary"} className="w-fit">
                       {subAdminRole.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-sm font-medium">Access Level:</span>
-                    <Badge variant="default" className="bg-orange-500 hover:bg-orange-500/80">Level {subAdminRole.level}</Badge>
+                    <Badge variant="default" className="bg-orange-500 hover:bg-orange-500/80 w-fit">Level {subAdminRole.level}</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-sm font-medium">Total Users:</span>
                     <div className="flex items-center gap-1">
                       <Users className="w-4 h-4 text-muted-foreground" />
                       <span className="font-bold">{subAdminRole.userCount || 0}</span>
                     </div>
                   </div>
-                  {/* Pages info removed */}
-                  {/* <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Pages:</span>
-                    <span className="font-bold text-orange-500">{subAdminRole.pages?.length || 0}</span>
-                  </div> */}
                   <div className="pt-2">
                     <Button
                       variant="outline"
@@ -525,13 +516,13 @@ const Roles = () => {
         )}
 
         <Card>
-          <CardHeader>
-            <CardTitle>All Roles</CardTitle>
-            <CardDescription>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg md:text-xl">All Roles</CardTitle>
+            <CardDescription className="text-sm md:text-base">
               {totalRoles} role{totalRoles !== 1 ? "s" : ""} found
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <SearchFilter
               searchTerm={searchTerm}
               onSearchChange={handleSearch}
@@ -544,20 +535,22 @@ const Roles = () => {
               filterPlaceholder="Filter by status"
             />
 
-            <DataTable
-              columns={columns}
-              data={roles.map(role => ({ ...role, id: role._id }))}
-              hideDefaultActions
-            />
+            <div className="overflow-x-auto">
+              <DataTable
+                columns={columns}
+                data={roles.map(role => ({ ...role, id: role._id }))}
+                hideDefaultActions
+              />
+            </div>
 
             {totalPages > 1 && (
-              <div className="mt-6">
+              <div className="mt-4 md:mt-6">
                 <Pagination>
-                  <PaginationContent>
+                  <PaginationContent className="flex-wrap gap-1">
                     <PaginationItem>
                       <PaginationPrevious
                         onClick={previousPage}
-                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        className={`text-xs md:text-sm ${currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
                       />
                     </PaginationItem>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -565,7 +558,7 @@ const Roles = () => {
                         <PaginationLink
                           onClick={() => goToPage(page)}
                           isActive={currentPage === page}
-                          className="cursor-pointer"
+                          className="cursor-pointer text-xs md:text-sm"
                         >
                           {page}
                         </PaginationLink>
@@ -574,7 +567,7 @@ const Roles = () => {
                     <PaginationItem>
                       <PaginationNext
                         onClick={nextPage}
-                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        className={`text-xs md:text-sm ${currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
                       />
                     </PaginationItem>
                   </PaginationContent>
@@ -586,19 +579,19 @@ const Roles = () => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px] mx-4">
             <DialogHeader>
-              <DialogTitle>Delete Role</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-base md:text-lg">Delete Role</DialogTitle>
+              <DialogDescription className="text-sm md:text-base">
                 Are you sure you want to delete the role "{selectedRole?.name}"? This action cannot be undone.
                 {selectedRole?.userCount && selectedRole.userCount > 0 && (
-                  <p className="text-destructive mt-2">
+                  <p className="text-destructive mt-2 text-sm">
                     Warning: This role is currently assigned to {selectedRole.userCount} user(s).
                   </p>
                 )}
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -606,6 +599,7 @@ const Roles = () => {
                   setSelectedRole(null);
                 }}
                 disabled={deleting}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -613,6 +607,7 @@ const Roles = () => {
                 variant="destructive"
                 onClick={handleDeleteRole}
                 disabled={deleting}
+                className="w-full sm:w-auto"
               >
                 {deleting ? (
                   <>

@@ -11,10 +11,12 @@ import { favoriteService, type Favorite, type FavoriteStats } from '@/services/f
 import { toast } from '@/hooks/use-toast';
 import { useRealtime, useRealtimeEvent } from '@/contexts/RealtimeContext';
 import { getPropertyListingLabel } from '@/utils/propertyUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MyFavorites: React.FC = () => {
   const { isConnected } = useRealtime();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [stats, setStats] = useState<FavoriteStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -172,7 +174,7 @@ const MyFavorites: React.FC = () => {
     <div className="min-h-screen bg-background p-6 pt-24">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col gap-4">
           <div>
             <h1 className="text-3xl font-bold">My Favorites</h1>
             <p className="text-muted-foreground">
@@ -180,20 +182,20 @@ const MyFavorites: React.FC = () => {
             </p>
           </div>
           {selectedProperties.length > 0 && (
-            <div className="flex gap-2">
+            <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-row'}`}>
               <Button
                 variant="outline"
                 onClick={compareSelectedProperties}
                 disabled={selectedProperties.length < 1}
-                className="w-fit"
+                className="w-full sm:w-fit"
               >
                 <GitCompare className="w-4 h-4 mr-2" />
                 Compare ({selectedProperties.length})
               </Button>
-                            <Button
+              <Button
                 variant="destructive"
                 onClick={removeSelectedFavorites}
-                className="w-fit"
+                className="w-full sm:w-fit"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Remove Selected ({selectedProperties.length})
@@ -203,7 +205,7 @@ const MyFavorites: React.FC = () => {
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className={`flex gap-4 ${isMobile ? 'flex-col' : 'flex-row'}`}>
           <div className="flex-1">
             <Input
               placeholder="Search favorites..."
@@ -212,7 +214,7 @@ const MyFavorites: React.FC = () => {
               className="w-full"
             />
           </div>
-          <div className="flex gap-2">
+          <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-row'}`}>
             {filteredFavorites.length > 0 && (
               <Button
                 variant="outline"
@@ -224,12 +226,13 @@ const MyFavorites: React.FC = () => {
                     setSelectedProperties(filteredFavorites.map(f => f.property!._id));
                   }
                 }}
+                className="w-full sm:w-auto"
               >
                 {selectedProperties.length === filteredFavorites.length ? 'Deselect All' : 'Select All'}
               </Button>
             )}
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className={`w-full ${isMobile ? 'w-full' : 'md:w-48'}`}>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -245,7 +248,7 @@ const MyFavorites: React.FC = () => {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'}`}>
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -348,9 +351,9 @@ const MyFavorites: React.FC = () => {
                     : ''
                 }`}>
                   <CardContent className="p-0">
-                    <div className="flex flex-col md:flex-row">
+                    <div className={`flex ${isMobile ? 'flex-col' : 'flex-col md:flex-row'}`}>
                       {/* Property Image */}
-                      <div className="md:w-80 h-64 md:h-48 bg-muted flex items-center justify-center relative">
+                      <div className={`${isMobile ? 'w-full h-64' : 'md:w-80 h-64 md:h-48'} bg-muted flex items-center justify-center relative`}>
                         {firstImage ? (
                           <img 
                             src={firstImage} 
@@ -382,19 +385,19 @@ const MyFavorites: React.FC = () => {
 
                       {/* Property Details */}
                       <div className="flex-1 p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-xl font-semibold mb-2">{property.title}</h3>
+                        <div className={`flex justify-between items-start mb-4 ${isMobile ? 'flex-col gap-2' : 'items-start'}`}>
+                          <div className="flex-1">
+                            <h3 className={`font-semibold mb-2 ${isMobile ? 'text-lg' : 'text-xl'}`}>{property.title}</h3>
                             <div className="flex items-center text-muted-foreground mb-2">
                               <MapPin className="w-4 h-4 mr-1" />
                               <span className="text-sm">
-                                {typeof property.address === 'string' 
-                                  ? property.address 
+                                {typeof property.address === 'string'
+                                  ? property.address
                                   : `${property.address.street || ''}, ${property.address.city || ''}, ${property.address.state || ''}`}
                               </span>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className={`text-right ${isMobile ? 'text-left' : ''}`}>
                             <p className="text-2xl font-bold text-primary">
                               {favoriteService.formatPrice(property.price)}
                             </p>
@@ -490,8 +493,8 @@ const MyFavorites: React.FC = () => {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex justify-between items-center">
-                          <div className="flex gap-2">
+                        <div className={`flex justify-between items-center ${isMobile ? 'flex-col gap-3' : ''}`}>
+                          <div className={`flex gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
                             <Button
                               size="sm"
                               variant="outline"
@@ -512,27 +515,35 @@ const MyFavorites: React.FC = () => {
                                   });
                                 }
                               }}
+                              className="flex-1 sm:flex-none"
                             >
                               <Share className="w-4 h-4" />
+                              {!isMobile && <span className="ml-1">Share</span>}
                             </Button>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="outline"
                               onClick={() => {
                                 const selected = [property._id];
                                 navigate(`/customer/compare?properties=${selected.join(',')}`);
                               }}
+                              className="flex-1 sm:flex-none"
                             >
                               <GitCompare className="w-4 h-4 mr-1" />
                               Compare
                             </Button>
-                            <Link to={`/property/${property._id}`}>
-                              <Button size="sm" variant="outline">
+                            <Link to={`/property/${property._id}`} className="flex-1 sm:flex-none">
+                              <Button size="sm" variant="outline" className="w-full">
                                 View Details
                               </Button>
                             </Link>
                           </div>
-                          <Button size="sm" variant="destructive" onClick={() => removeFavorite(property._id)}>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => removeFavorite(property._id)}
+                            className={`w-full sm:w-auto ${isMobile ? 'mt-2' : ''}`}
+                          >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Remove
                           </Button>

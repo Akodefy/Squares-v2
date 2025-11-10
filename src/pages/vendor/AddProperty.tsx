@@ -69,7 +69,7 @@ const uploadToCloudinary = async (file: File, folder: string): Promise<string> =
 
 const AddProperty = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const [hasAddPropertySubscription, setHasAddPropertySubscription] = useState(false);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
   const [subscriptionLimits, setSubscriptionLimits] = useState({
@@ -637,27 +637,28 @@ const AddProperty = () => {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
-                <Label htmlFor="title">Property Title *</Label>
+                <Label htmlFor="title" className="text-sm md:text-base">Property Title *</Label>
                 <Input
                   id="title"
                   placeholder="e.g., Luxury 3BHK Apartment in Bandra"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  className="text-sm md:text-base"
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="propertyType">Property Type *</Label>
+                <Label htmlFor="propertyType" className="text-sm md:text-base">Property Type *</Label>
                 <Select value={formData.propertyType} onValueChange={(value) => setFormData(prev => ({ ...prev, propertyType: value }))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm md:text-base">
                     <SelectValue placeholder="Select property type" />
                   </SelectTrigger>
                   <SelectContent>
                     {propertyTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
+                      <SelectItem key={type.value} value={type.value} className="text-sm md:text-base">
                         {type.label}
                       </SelectItem>
                     ))}
@@ -667,31 +668,34 @@ const AddProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Listing Type *</Label>
+              <Label className="text-sm md:text-base">Listing Type *</Label>
               <RadioGroup value={formData.listingType} onValueChange={(value) => setFormData(prev => ({ ...prev, listingType: value }))}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="sale" id="sale" />
-                  <Label htmlFor="sale">For Sale</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="rent" id="rent" />
-                  <Label htmlFor="rent">For Rent</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="lease" id="lease" />
-                  <Label htmlFor="lease">For Lease</Label>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sale" id="sale" />
+                    <Label htmlFor="sale" className="text-sm md:text-base">For Sale</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="rent" id="rent" />
+                    <Label htmlFor="rent" className="text-sm md:text-base">For Rent</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="lease" id="lease" />
+                    <Label htmlFor="lease" className="text-sm md:text-base">For Lease</Label>
+                  </div>
                 </div>
               </RadioGroup>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Property Description</Label>
+              <Label htmlFor="description" className="text-sm md:text-base">Property Description</Label>
               <Textarea
                 id="description"
                 placeholder="Describe your property in detail..."
-                rows={4}
+                rows={3}
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                className="text-sm md:text-base resize-none"
               />
             </div>
           </div>
@@ -699,35 +703,35 @@ const AddProperty = () => {
 
       case 2:
         return (
-          <div className="space-y-6">
-            <div className="border border-primary/20 rounded-lg p-6 bg-transparent">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-primary" />
+          <div className="space-y-4 md:space-y-6">
+            <div className="border border-primary/20 rounded-lg p-4 md:p-6 bg-transparent">
+              <div className="mb-3 md:mb-4">
+                <h3 className="text-base md:text-lg font-semibold text-foreground flex items-center gap-2">
+                  <MapPin className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                   Property Location
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">
                   Select your property location and pincode
                 </p>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {/* State Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="state">State *</Label>
-                  <Select 
-                    value={formData.state} 
+                  <Label htmlFor="state" className="text-sm md:text-base">State *</Label>
+                  <Select
+                    value={formData.state}
                     onValueChange={(value) => {
                       setFormData(prev => ({ ...prev, state: value, stateCode: value }));
                     }}
                     disabled={locationLoading.states}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm md:text-base">
                       <SelectValue placeholder={locationLoading.states ? "Loading states..." : "Select state"} />
                     </SelectTrigger>
                     <SelectContent>
                       {states.map((state) => (
-                        <SelectItem key={state} value={state}>
+                        <SelectItem key={state} value={state} className="text-sm md:text-base">
                           {state}
                         </SelectItem>
                       ))}
@@ -737,26 +741,26 @@ const AddProperty = () => {
 
                 {/* District Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="district">District *</Label>
-                  <Select 
-                    value={formData.district} 
+                  <Label htmlFor="district" className="text-sm md:text-base">District *</Label>
+                  <Select
+                    value={formData.district}
                     onValueChange={(value) => {
                       setFormData(prev => ({ ...prev, district: value, districtCode: value }));
                     }}
                     disabled={!formData.state || locationLoading.districts}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm md:text-base">
                       <SelectValue placeholder={
-                        !formData.state 
-                          ? "Select state first" 
-                          : locationLoading.districts 
-                            ? "Loading districts..." 
+                        !formData.state
+                          ? "Select state first"
+                          : locationLoading.districts
+                            ? "Loading districts..."
                             : "Select district"
                       } />
                     </SelectTrigger>
                     <SelectContent>
                       {districts.map((district) => (
-                        <SelectItem key={district} value={district}>
+                        <SelectItem key={district} value={district} className="text-sm md:text-base">
                           {district}
                         </SelectItem>
                       ))}
@@ -765,27 +769,27 @@ const AddProperty = () => {
                 </div>
 
                 {/* City Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
-                  <Select 
-                    value={formData.city} 
+                <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                  <Label htmlFor="city" className="text-sm md:text-base">City *</Label>
+                  <Select
+                    value={formData.city}
                     onValueChange={(value) => {
                       setFormData(prev => ({ ...prev, city: value, cityCode: value }));
                     }}
                     disabled={!formData.district || locationLoading.cities}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm md:text-base">
                       <SelectValue placeholder={
-                        !formData.district 
-                          ? "Select district first" 
-                          : locationLoading.cities 
-                            ? "Loading cities..." 
+                        !formData.district
+                          ? "Select district first"
+                          : locationLoading.cities
+                            ? "Loading cities..."
                             : "Select city"
                       } />
                     </SelectTrigger>
                     <SelectContent>
                       {cities.map((city) => (
-                        <SelectItem key={city} value={city}>
+                        <SelectItem key={city} value={city} className="text-sm md:text-base">
                           {city}
                         </SelectItem>
                       ))}
@@ -796,17 +800,17 @@ const AddProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pincode">PIN Code *</Label>
+              <Label htmlFor="pincode" className="text-sm md:text-base">PIN Code *</Label>
               <PincodeAutocomplete
                 value={formData.pincode}
                 onChange={(pincode, locationData) => {
                   console.log('Pincode selected:', pincode, locationData);
                   setFormData(prev => ({ ...prev, pincode }));
-                  
+
                   // Auto-fill location fields if suggestion provides data
                   if (locationData) {
                     console.log('Auto-filling location from pincode:', locationData);
-                    
+
                     // Set state if available
                     if (locationData.state && states.includes(locationData.state.toUpperCase())) {
                       setFormData(prev => ({
@@ -814,35 +818,35 @@ const AddProperty = () => {
                         state: locationData.state.toUpperCase(),
                         stateCode: locationData.state.toUpperCase()
                       }));
-                      
+
                       // Load districts for the selected state
                       setTimeout(() => {
                         // Set district if available
                         if (locationData.district) {
                           const districtsForState = locaService.getDistricts(locationData.state.toUpperCase());
-                          const matchingDistrict = districtsForState.find(d => 
+                          const matchingDistrict = districtsForState.find(d =>
                             d.toUpperCase() === locationData.district.toUpperCase()
                           );
-                          
+
                           if (matchingDistrict) {
                             setFormData(prev => ({
                               ...prev,
                               district: matchingDistrict,
                               districtCode: matchingDistrict
                             }));
-                            
+
                             // Load cities for the selected district
                             setTimeout(() => {
                               // Set city if available
                               if (locationData.city) {
                                 const citiesForDistrict = locaService.getCities(
-                                  locationData.state.toUpperCase(), 
+                                  locationData.state.toUpperCase(),
                                   matchingDistrict
                                 );
-                                const matchingCity = citiesForDistrict.find(c => 
+                                const matchingCity = citiesForDistrict.find(c =>
                                   c.toUpperCase() === locationData.city.toUpperCase()
                                 );
-                                
+
                                 if (matchingCity) {
                                   setFormData(prev => ({
                                     ...prev,
@@ -856,7 +860,7 @@ const AddProperty = () => {
                         }
                       }, 100);
                     }
-                    
+
                     toast({
                       title: "Location Auto-filled ✓",
                       description: `${locationData.city}, ${locationData.district}, ${locationData.state}`,
@@ -867,7 +871,7 @@ const AddProperty = () => {
                 district={formData.district}
                 city={formData.city}
                 placeholder="Enter or select 6-digit PIN code"
-                className="w-full"
+                className="w-full text-sm md:text-base"
               />
               <p className="text-xs text-muted-foreground">
                 Select state, district, and city above to see matching pincodes, or type to search
@@ -875,13 +879,14 @@ const AddProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Complete Address</Label>
+              <Label htmlFor="address" className="text-sm md:text-base">Complete Address</Label>
               <Textarea
                 id="address"
                 placeholder="Enter complete address with landmark"
-                rows={3}
+                rows={2}
                 value={formData.address}
                 onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                className="text-sm md:text-base resize-none"
               />
               <p className="text-xs text-muted-foreground">
                 This will be auto-filled from location details above
@@ -900,34 +905,34 @@ const AddProperty = () => {
         const isLand = ['plot', 'land'].includes(formData.propertyType);
         // PG specific
         const isPG = formData.propertyType === 'pg';
-        
+
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Residential Properties - Apartment, Villa, House, PG */}
             {isResidential && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="bedrooms">Bedrooms {!isPG && '*'}</Label>
+                    <Label htmlFor="bedrooms" className="text-sm md:text-base">Bedrooms {!isPG && '*'}</Label>
                     <Select value={formData.bedrooms} onValueChange={(value) => setFormData(prev => ({ ...prev, bedrooms: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
                         {isPG ? (
                           <>
-                            <SelectItem value="1">Single Sharing</SelectItem>
-                            <SelectItem value="2">Double Sharing</SelectItem>
-                            <SelectItem value="3">Triple Sharing</SelectItem>
-                            <SelectItem value="4">4+ Sharing</SelectItem>
+                            <SelectItem value="1" className="text-sm md:text-base">Single Sharing</SelectItem>
+                            <SelectItem value="2" className="text-sm md:text-base">Double Sharing</SelectItem>
+                            <SelectItem value="3" className="text-sm md:text-base">Triple Sharing</SelectItem>
+                            <SelectItem value="4" className="text-sm md:text-base">4+ Sharing</SelectItem>
                           </>
                         ) : (
                           <>
-                            <SelectItem value="1">1 BHK</SelectItem>
-                            <SelectItem value="2">2 BHK</SelectItem>
-                            <SelectItem value="3">3 BHK</SelectItem>
-                            <SelectItem value="4">4 BHK</SelectItem>
-                            <SelectItem value="5">5+ BHK</SelectItem>
+                            <SelectItem value="1" className="text-sm md:text-base">1 BHK</SelectItem>
+                            <SelectItem value="2" className="text-sm md:text-base">2 BHK</SelectItem>
+                            <SelectItem value="3" className="text-sm md:text-base">3 BHK</SelectItem>
+                            <SelectItem value="4" className="text-sm md:text-base">4 BHK</SelectItem>
+                            <SelectItem value="5" className="text-sm md:text-base">5+ BHK</SelectItem>
                           </>
                         )}
                       </SelectContent>
@@ -935,130 +940,135 @@ const AddProperty = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="bathrooms">Bathrooms</Label>
+                    <Label htmlFor="bathrooms" className="text-sm md:text-base">Bathrooms</Label>
                     <Select value={formData.bathrooms} onValueChange={(value) => setFormData(prev => ({ ...prev, bathrooms: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
                         {isPG ? (
                           <>
-                            <SelectItem value="1">Attached</SelectItem>
-                            <SelectItem value="0">Common</SelectItem>
+                            <SelectItem value="1" className="text-sm md:text-base">Attached</SelectItem>
+                            <SelectItem value="0" className="text-sm md:text-base">Common</SelectItem>
                           </>
                         ) : (
                           <>
-                            <SelectItem value="1">1</SelectItem>
-                            <SelectItem value="2">2</SelectItem>
-                            <SelectItem value="3">3</SelectItem>
-                            <SelectItem value="4">4+</SelectItem>
+                            <SelectItem value="1" className="text-sm md:text-base">1</SelectItem>
+                            <SelectItem value="2" className="text-sm md:text-base">2</SelectItem>
+                            <SelectItem value="3" className="text-sm md:text-base">3</SelectItem>
+                            <SelectItem value="4" className="text-sm md:text-base">4+</SelectItem>
                           </>
                         )}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="furnishing">Furnishing</Label>
+                  <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                    <Label htmlFor="furnishing" className="text-sm md:text-base">Furnishing</Label>
                     <Select value={formData.furnishing} onValueChange={(value) => setFormData(prev => ({ ...prev, furnishing: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fully-furnished">Fully Furnished</SelectItem>
-                        <SelectItem value="semi-furnished">Semi Furnished</SelectItem>
-                        <SelectItem value="unfurnished">Unfurnished</SelectItem>
+                        <SelectItem value="fully-furnished" className="text-sm md:text-base">Fully Furnished</SelectItem>
+                        <SelectItem value="semi-furnished" className="text-sm md:text-base">Semi Furnished</SelectItem>
+                        <SelectItem value="unfurnished" className="text-sm md:text-base">Unfurnished</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="builtUpArea">{isPG ? 'Room Area (sq ft)' : 'Built-up Area (sq ft)'} *</Label>
+                    <Label htmlFor="builtUpArea" className="text-sm md:text-base">{isPG ? 'Room Area (sq ft)' : 'Built-up Area (sq ft)'} *</Label>
                     <Input
                       id="builtUpArea"
                       placeholder={isPG ? "e.g., 150" : "e.g., 1200"}
                       value={formData.builtUpArea}
                       onChange={(e) => setFormData(prev => ({ ...prev, builtUpArea: e.target.value }))}
+                      className="text-sm md:text-base"
                     />
                   </div>
 
                   {!isPG && (
                     <div className="space-y-2">
-                      <Label htmlFor="carpetArea">Carpet Area (sq ft)</Label>
+                      <Label htmlFor="carpetArea" className="text-sm md:text-base">Carpet Area (sq ft)</Label>
                       <Input
                         id="carpetArea"
                         placeholder="e.g., 1000"
                         value={formData.carpetArea}
                         onChange={(e) => setFormData(prev => ({ ...prev, carpetArea: e.target.value }))}
+                        className="text-sm md:text-base"
                       />
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="age">Property Age</Label>
+                  <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                    <Label htmlFor="age" className="text-sm md:text-base">Property Age</Label>
                     <Select value={formData.age} onValueChange={(value) => setFormData(prev => ({ ...prev, age: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">New/Under Construction</SelectItem>
-                        <SelectItem value="1-3">1-3 Years</SelectItem>
-                        <SelectItem value="3-5">3-5 Years</SelectItem>
-                        <SelectItem value="5-10">5-10 Years</SelectItem>
-                        <SelectItem value="10+">10+ Years</SelectItem>
+                        <SelectItem value="new" className="text-sm md:text-base">New/Under Construction</SelectItem>
+                        <SelectItem value="1-3" className="text-sm md:text-base">1-3 Years</SelectItem>
+                        <SelectItem value="3-5" className="text-sm md:text-base">3-5 Years</SelectItem>
+                        <SelectItem value="5-10" className="text-sm md:text-base">5-10 Years</SelectItem>
+                        <SelectItem value="10+" className="text-sm md:text-base">10+ Years</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 {!isPG && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="floor">Floor</Label>
+                      <Label htmlFor="floor" className="text-sm md:text-base">Floor</Label>
                       <Input
                         id="floor"
                         placeholder="e.g., 5th"
                         value={formData.floor}
                         onChange={(e) => setFormData(prev => ({ ...prev, floor: e.target.value }))}
+                        className="text-sm md:text-base"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="totalFloors">Total Floors</Label>
+                      <Label htmlFor="totalFloors" className="text-sm md:text-base">Total Floors</Label>
                       <Input
                         id="totalFloors"
                         placeholder="e.g., 20"
                         value={formData.totalFloors}
                         onChange={(e) => setFormData(prev => ({ ...prev, totalFloors: e.target.value }))}
+                        className="text-sm md:text-base"
                       />
                     </div>
                   </div>
                 )}
 
                 {isPG && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="floor">Floor</Label>
+                      <Label htmlFor="floor" className="text-sm md:text-base">Floor</Label>
                       <Input
                         id="floor"
                         placeholder="e.g., Ground, 1st, 2nd"
                         value={formData.floor}
                         onChange={(e) => setFormData(prev => ({ ...prev, floor: e.target.value }))}
+                        className="text-sm md:text-base"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor="availability">Food Availability</Label>
+                      <Label htmlFor="availability" className="text-sm md:text-base">Food Availability</Label>
                       <Select value={formData.availability} onValueChange={(value) => setFormData(prev => ({ ...prev, availability: value }))}>
-                        <SelectTrigger>
+                        <SelectTrigger className="text-sm md:text-base">
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="meals-included">Meals Included</SelectItem>
-                          <SelectItem value="kitchen-available">Kitchen Available</SelectItem>
-                          <SelectItem value="no-meals">No Meals</SelectItem>
+                          <SelectItem value="meals-included" className="text-sm md:text-base">Meals Included</SelectItem>
+                          <SelectItem value="kitchen-available" className="text-sm md:text-base">Kitchen Available</SelectItem>
+                          <SelectItem value="no-meals" className="text-sm md:text-base">No Meals</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1070,107 +1080,111 @@ const AddProperty = () => {
             {/* Commercial Properties - Office, Commercial */}
             {isCommercial && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="builtUpArea">Built-up Area (sq ft) *</Label>
+                    <Label htmlFor="builtUpArea" className="text-sm md:text-base">Built-up Area (sq ft) *</Label>
                     <Input
                       id="builtUpArea"
                       placeholder="e.g., 2500"
                       value={formData.builtUpArea}
                       onChange={(e) => setFormData(prev => ({ ...prev, builtUpArea: e.target.value }))}
+                      className="text-sm md:text-base"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="carpetArea">Carpet Area (sq ft)</Label>
+                    <Label htmlFor="carpetArea" className="text-sm md:text-base">Carpet Area (sq ft)</Label>
                     <Input
                       id="carpetArea"
                       placeholder="e.g., 2000"
                       value={formData.carpetArea}
                       onChange={(e) => setFormData(prev => ({ ...prev, carpetArea: e.target.value }))}
+                      className="text-sm md:text-base"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="furnishing">Furnishing</Label>
+                  <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                    <Label htmlFor="furnishing" className="text-sm md:text-base">Furnishing</Label>
                     <Select value={formData.furnishing} onValueChange={(value) => setFormData(prev => ({ ...prev, furnishing: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fully-furnished">Fully Furnished</SelectItem>
-                        <SelectItem value="semi-furnished">Semi Furnished</SelectItem>
-                        <SelectItem value="unfurnished">Bare Shell</SelectItem>
+                        <SelectItem value="fully-furnished" className="text-sm md:text-base">Fully Furnished</SelectItem>
+                        <SelectItem value="semi-furnished" className="text-sm md:text-base">Semi Furnished</SelectItem>
+                        <SelectItem value="unfurnished" className="text-sm md:text-base">Bare Shell</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="floor">Floor</Label>
+                    <Label htmlFor="floor" className="text-sm md:text-base">Floor</Label>
                     <Input
                       id="floor"
                       placeholder="e.g., 3rd, Ground"
                       value={formData.floor}
                       onChange={(e) => setFormData(prev => ({ ...prev, floor: e.target.value }))}
+                      className="text-sm md:text-base"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="totalFloors">Total Floors in Building</Label>
+                    <Label htmlFor="totalFloors" className="text-sm md:text-base">Total Floors in Building</Label>
                     <Input
                       id="totalFloors"
                       placeholder="e.g., 10"
                       value={formData.totalFloors}
                       onChange={(e) => setFormData(prev => ({ ...prev, totalFloors: e.target.value }))}
+                      className="text-sm md:text-base"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="age">Property Age</Label>
+                  <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                    <Label htmlFor="age" className="text-sm md:text-base">Property Age</Label>
                     <Select value={formData.age} onValueChange={(value) => setFormData(prev => ({ ...prev, age: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">New/Under Construction</SelectItem>
-                        <SelectItem value="1-3">1-3 Years</SelectItem>
-                        <SelectItem value="3-5">3-5 Years</SelectItem>
-                        <SelectItem value="5-10">5-10 Years</SelectItem>
-                        <SelectItem value="10+">10+ Years</SelectItem>
+                        <SelectItem value="new" className="text-sm md:text-base">New/Under Construction</SelectItem>
+                        <SelectItem value="1-3" className="text-sm md:text-base">1-3 Years</SelectItem>
+                        <SelectItem value="3-5" className="text-sm md:text-base">3-5 Years</SelectItem>
+                        <SelectItem value="5-10" className="text-sm md:text-base">5-10 Years</SelectItem>
+                        <SelectItem value="10+" className="text-sm md:text-base">10+ Years</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="bathrooms">Washrooms</Label>
+                    <Label htmlFor="bathrooms" className="text-sm md:text-base">Washrooms</Label>
                     <Select value={formData.bathrooms} onValueChange={(value) => setFormData(prev => ({ ...prev, bathrooms: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
-                        <SelectItem value="4">4+</SelectItem>
+                        <SelectItem value="1" className="text-sm md:text-base">1</SelectItem>
+                        <SelectItem value="2" className="text-sm md:text-base">2</SelectItem>
+                        <SelectItem value="3" className="text-sm md:text-base">3</SelectItem>
+                        <SelectItem value="4" className="text-sm md:text-base">4+</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="availability">Possession Status</Label>
+                    <Label htmlFor="availability" className="text-sm md:text-base">Possession Status</Label>
                     <Select value={formData.availability} onValueChange={(value) => setFormData(prev => ({ ...prev, availability: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="immediate">Immediate</SelectItem>
-                        <SelectItem value="within-30-days">Within 30 Days</SelectItem>
-                        <SelectItem value="within-60-days">Within 60 Days</SelectItem>
-                        <SelectItem value="within-90-days">Within 90 Days</SelectItem>
+                        <SelectItem value="immediate" className="text-sm md:text-base">Immediate</SelectItem>
+                        <SelectItem value="within-30-days" className="text-sm md:text-base">Within 30 Days</SelectItem>
+                        <SelectItem value="within-60-days" className="text-sm md:text-base">Within 60 Days</SelectItem>
+                        <SelectItem value="within-90-days" className="text-sm md:text-base">Within 90 Days</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1181,98 +1195,101 @@ const AddProperty = () => {
             {/* Land/Plot Properties */}
             {isLand && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="plotArea">Plot Area (sq ft) *</Label>
+                    <Label htmlFor="plotArea" className="text-sm md:text-base">Plot Area (sq ft) *</Label>
                     <Input
                       id="plotArea"
                       placeholder="e.g., 5000"
                       value={formData.plotArea}
                       onChange={(e) => setFormData(prev => ({ ...prev, plotArea: e.target.value }))}
+                      className="text-sm md:text-base"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="builtUpArea">Total Area (sq ft) *</Label>
+                    <Label htmlFor="builtUpArea" className="text-sm md:text-base">Total Area (sq ft) *</Label>
                     <Input
                       id="builtUpArea"
                       placeholder="e.g., 5000"
                       value={formData.builtUpArea}
                       onChange={(e) => setFormData(prev => ({ ...prev, builtUpArea: e.target.value }))}
+                      className="text-sm md:text-base"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="facing">Plot Facing</Label>
+                  <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                    <Label htmlFor="facing" className="text-sm md:text-base">Plot Facing</Label>
                     <Select value={formData.facing} onValueChange={(value) => setFormData(prev => ({ ...prev, facing: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="north">North</SelectItem>
-                        <SelectItem value="south">South</SelectItem>
-                        <SelectItem value="east">East</SelectItem>
-                        <SelectItem value="west">West</SelectItem>
-                        <SelectItem value="north-east">North-East</SelectItem>
-                        <SelectItem value="north-west">North-West</SelectItem>
-                        <SelectItem value="south-east">South-East</SelectItem>
-                        <SelectItem value="south-west">South-West</SelectItem>
+                        <SelectItem value="north" className="text-sm md:text-base">North</SelectItem>
+                        <SelectItem value="south" className="text-sm md:text-base">South</SelectItem>
+                        <SelectItem value="east" className="text-sm md:text-base">East</SelectItem>
+                        <SelectItem value="west" className="text-sm md:text-base">West</SelectItem>
+                        <SelectItem value="north-east" className="text-sm md:text-base">North-East</SelectItem>
+                        <SelectItem value="north-west" className="text-sm md:text-base">North-West</SelectItem>
+                        <SelectItem value="south-east" className="text-sm md:text-base">South-East</SelectItem>
+                        <SelectItem value="south-west" className="text-sm md:text-base">South-West</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="availability">Land Type</Label>
+                    <Label htmlFor="availability" className="text-sm md:text-base">Land Type</Label>
                     <Select value={formData.availability} onValueChange={(value) => setFormData(prev => ({ ...prev, availability: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="residential">Residential</SelectItem>
-                        <SelectItem value="commercial">Commercial</SelectItem>
-                        <SelectItem value="agricultural">Agricultural</SelectItem>
-                        <SelectItem value="industrial">Industrial</SelectItem>
+                        <SelectItem value="residential" className="text-sm md:text-base">Residential</SelectItem>
+                        <SelectItem value="commercial" className="text-sm md:text-base">Commercial</SelectItem>
+                        <SelectItem value="agricultural" className="text-sm md:text-base">Agricultural</SelectItem>
+                        <SelectItem value="industrial" className="text-sm md:text-base">Industrial</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="possession">Boundary Wall</Label>
+                    <Label htmlFor="possession" className="text-sm md:text-base">Boundary Wall</Label>
                     <Select value={formData.possession} onValueChange={(value) => setFormData(prev => ({ ...prev, possession: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="yes">Yes</SelectItem>
-                        <SelectItem value="no">No</SelectItem>
-                        <SelectItem value="partial">Partial</SelectItem>
+                        <SelectItem value="yes" className="text-sm md:text-base">Yes</SelectItem>
+                        <SelectItem value="no" className="text-sm md:text-base">No</SelectItem>
+                        <SelectItem value="partial" className="text-sm md:text-base">Partial</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="roadWidth">Road Width (ft)</Label>
+                    <Label htmlFor="roadWidth" className="text-sm md:text-base">Road Width (ft)</Label>
                     <Input
                       id="roadWidth"
                       placeholder="e.g., 30"
                       value={formData.roadWidth}
                       onChange={(e) => setFormData(prev => ({ ...prev, roadWidth: e.target.value }))}
+                      className="text-sm md:text-base"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="cornerPlot">Corner Plot</Label>
+                    <Label htmlFor="cornerPlot" className="text-sm md:text-base">Corner Plot</Label>
                     <Select value={formData.cornerPlot} onValueChange={(value) => setFormData(prev => ({ ...prev, cornerPlot: value }))}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm md:text-base">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="yes">Yes</SelectItem>
-                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes" className="text-sm md:text-base">Yes</SelectItem>
+                        <SelectItem value="no" className="text-sm md:text-base">No</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1662,19 +1679,19 @@ const AddProperty = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/vendor/properties")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Home className="w-8 h-8 text-primary" />
+            <h1 className="text-xl md:text-3xl font-bold flex items-center gap-2">
+              <Home className="w-6 h-6 md:w-8 md:h-8 text-primary" />
               Add New Property
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               List your property and connect with potential buyers/tenants
             </p>
           </div>
@@ -1796,51 +1813,84 @@ const AddProperty = () => {
         <>
           {/* Progress Steps */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-8">
-                {steps.map((step, index) => (
-                  <div key={step.id} className="flex flex-col items-center flex-1">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 mb-2 ${
-                      currentStep >= step.id 
-                        ? 'bg-primary border-primary text-primary-foreground' 
-                        : 'border-muted-foreground text-muted-foreground'
-                    }`}>
-                      {currentStep > step.id ? (
-                        <Check className="w-5 h-5" />
-                      ) : (
-                        step.id
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium">{step.title}</p>
-                      <p className="text-xs text-muted-foreground">{step.description}</p>
-                    </div>
-                    {index < steps.length - 1 && (
-                      <div className={`hidden md:block absolute h-0.5 w-20 top-5 left-1/2 transform translate-x-8 ${
-                        currentStep > step.id ? 'bg-primary' : 'bg-muted-foreground'
-                      }`} />
-                    )}
+            <CardContent className="p-4 md:p-6">
+              <div className="relative mb-6 md:mb-8">
+                {/* Progress Line Background - Desktop Only */}
+                <div className="hidden md:block absolute top-4 md:top-5 left-0 right-0 h-0.5 bg-muted-foreground/30"></div>
+                {/* Active Progress Line - Desktop Only */}
+                <div
+                  className="hidden md:block absolute top-4 md:top-5 left-0 h-0.5 bg-primary transition-all duration-300"
+                  style={{
+                    width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`
+                  }}
+                ></div>
+
+                {/* Mobile: Horizontal Scroll Container */}
+                <div className="md:hidden overflow-x-auto pb-2">
+                  <div className="flex items-center gap-4 min-w-max px-2">
+                    {steps.map((step, index) => (
+                      <div key={step.id} className="flex flex-col items-center flex-shrink-0 w-16">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 mb-2 ${
+                          currentStep >= step.id
+                            ? 'bg-primary border-primary text-primary-foreground'
+                            : 'border-muted-foreground text-muted-foreground bg-background'
+                        }`}>
+                          {currentStep > step.id ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            step.id
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-medium leading-tight whitespace-nowrap">{step.title}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                {/* Desktop: Full Width Layout */}
+                <div className="hidden md:flex items-center justify-between relative">
+                  {steps.map((step, index) => (
+                    <div key={step.id} className="flex flex-col items-center flex-1 max-w-24 md:max-w-32">
+                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center border-2 mb-2 relative z-10 ${
+                        currentStep >= step.id
+                          ? 'bg-primary border-primary text-primary-foreground'
+                          : 'border-muted-foreground text-muted-foreground bg-background'
+                      }`}>
+                        {currentStep > step.id ? (
+                          <Check className="w-4 h-4 md:w-5 md:h-5" />
+                        ) : (
+                          step.id
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs md:text-sm font-medium">{step.title}</p>
+                        <p className="text-xs text-muted-foreground hidden md:block">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Step Content */}
-              <div className="min-h-96">
+              <div className="min-h-80 md:min-h-96">
                 {renderStepContent()}
               </div>
 
               {/* Navigation Buttons */}
-              <div className="flex justify-between mt-8">
-                <Button 
-                  variant="outline" 
+              <div className="flex justify-between mt-6 md:mt-8 gap-4">
+                <Button
+                  variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 1}
+                  className="flex-1 sm:flex-none"
                 >
                   Previous
                 </Button>
-                
+
                 {currentStep === steps.length ? (
-                  <Button onClick={handleSubmit} className="px-8" disabled={isSubmitting}>
+                  <Button onClick={handleSubmit} className="px-6 md:px-8 flex-1 sm:flex-none" disabled={isSubmitting}>
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1851,7 +1901,7 @@ const AddProperty = () => {
                     )}
                   </Button>
                 ) : (
-                  <Button onClick={nextStep}>
+                  <Button onClick={nextStep} className="flex-1 sm:flex-none">
                     Next
                   </Button>
                 )}

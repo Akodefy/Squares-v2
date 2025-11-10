@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Bell, 
   Lock, 
@@ -71,6 +72,7 @@ interface UserPreferences {
 const CustomerSettings = () => {
   const { theme, setTheme } = useTheme();
   const { isConnected, lastEvent } = useRealtime();
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
@@ -418,15 +420,16 @@ const CustomerSettings = () => {
   return (
     <div className="space-y-6 pt-16">
       {/* Status Bar */}
-      <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-        <div className="flex items-center gap-3">
+      {/*
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'} bg-muted/50 p-3 rounded-lg`}>
+        <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-3'}`}>
           {lastSyncTime && (
             <Badge variant="secondary" className="text-xs">
               Last saved: {new Date(lastSyncTime).toLocaleTimeString()}
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-2'}`}>
           <span className="text-xs text-muted-foreground">
             {settings.preferences.autoSave ? 'Changes save automatically' : 'Save manually'}
           </span>
@@ -437,11 +440,12 @@ const CustomerSettings = () => {
           )}
         </div>
       </div>
+      */}
 
       {/* Main Header */}
-      <div className="flex justify-between items-center">
+      <div className={`flex ${isMobile ? 'flex-col gap-4' : 'justify-between items-center'}`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className={`font-bold tracking-tight flex items-center gap-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
             <SettingsIcon className="w-8 h-8 text-primary" />
             Account Settings
           </h1>
@@ -450,25 +454,26 @@ const CustomerSettings = () => {
             <span className="font-medium ml-1">View your Profile for personal information.</span>
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+        <div className={`flex gap-2 ${isMobile ? 'flex-col w-full' : ''}`}>
+          <Button
+            variant="outline"
             onClick={() => window.location.href = '/customer/profile'}
-            className="border-blue-200 text-blue-700 hover:bg-blue-50"
+            className={`border-blue-200 text-blue-700 hover:bg-blue-50 ${isMobile ? 'w-full' : ''}`}
           >
             <User className="w-4 h-4 mr-2" />
             Profile
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={loadSettings}
             disabled={loading}
+            className={isMobile ? 'w-full' : ''}
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Refreshing...' : 'Refresh'}
           </Button>
           {!settings.preferences.autoSave && (
-            <Button onClick={saveSettings} disabled={saving}>
+            <Button onClick={saveSettings} disabled={saving} className={isMobile ? 'w-full' : ''}>
               {saving ? (
                 <>
                   <Save className="w-4 h-4 mr-2" />
@@ -486,22 +491,22 @@ const CustomerSettings = () => {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
+        <TabsList className={`grid w-full grid-cols-4 ${isMobile ? 'gap-1' : 'gap-2'}`}>
+          <TabsTrigger value="notifications" className={`flex items-center gap-2 ${isMobile ? 'text-xs' : ''}`}>
             <Bell className="w-4 h-4" />
-            Notifications
+            {isMobile ? 'Notifs' : 'Notifications'}
           </TabsTrigger>
-          <TabsTrigger value="privacy" className="flex items-center gap-2">
+          <TabsTrigger value="privacy" className={`flex items-center gap-2 ${isMobile ? 'text-xs' : ''}`}>
             <Lock className="w-4 h-4" />
             Privacy
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
+          <TabsTrigger value="security" className={`flex items-center gap-2 ${isMobile ? 'text-xs' : ''}`}>
             <Shield className="w-4 h-4" />
             Security
           </TabsTrigger>
-          <TabsTrigger value="preferences" className="flex items-center gap-2">
+          <TabsTrigger value="preferences" className={`flex items-center gap-2 ${isMobile ? 'text-xs' : ''}`}>
             <Palette className="w-4 h-4" />
-            Display
+            {isMobile ? 'Display' : 'Display'}
           </TabsTrigger>
         </TabsList>
 
@@ -566,47 +571,47 @@ const CustomerSettings = () => {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Privacy Controls */}
-              {[
-                {
-                  key: 'showActivity',
-                  title: 'Activity Status',
-                  description: 'Show when you were last active',
-                  value: settings.privacy.showActivity
-                },
-                {
-                  key: 'dataCollection',
-                  title: 'Analytics & Data Collection',
-                  description: 'Anonymous usage analytics for improvements',
-                  value: settings.privacy.dataCollection
-                },
-                {
-                  key: 'marketingConsent',
-                  title: 'Marketing Communications',
-                  description: 'Promotional emails and marketing content',
-                  value: settings.privacy.marketingConsent
-                },
-                {
-                  key: 'thirdPartySharing',
-                  title: 'Third-Party Sharing',
-                  description: 'Anonymous data sharing with partners',
-                  value: settings.privacy.thirdPartySharing
-                }
-              ].map((item, index) => (
-                <div key={item.key}>
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="font-medium">{item.title}</p>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                {/* Privacy Controls */}
+                {[
+                  {
+                    key: 'showActivity',
+                    title: 'Activity Status',
+                    description: 'Show when you were last active',
+                    value: settings.privacy.showActivity
+                  },
+                  {
+                    key: 'dataCollection',
+                    title: 'Analytics & Data Collection',
+                    description: 'Anonymous usage analytics for improvements',
+                    value: settings.privacy.dataCollection
+                  },
+                  {
+                    key: 'marketingConsent',
+                    title: 'Marketing Communications',
+                    description: 'Promotional emails and marketing content',
+                    value: settings.privacy.marketingConsent
+                  },
+                  {
+                    key: 'thirdPartySharing',
+                    title: 'Third-Party Sharing',
+                    description: 'Anonymous data sharing with partners',
+                    value: settings.privacy.thirdPartySharing
+                  }
+                ].map((item, index) => (
+                  <div key={item.key}>
+                    <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} py-2`}>
+                      <div>
+                        <p className="font-medium">{item.title}</p>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </div>
+                      <Switch
+                        checked={item.value}
+                        onCheckedChange={(checked) => updateSettings('privacy', item.key, checked)}
+                      />
                     </div>
-                    <Switch
-                      checked={item.value}
-                      onCheckedChange={(checked) => updateSettings('privacy', item.key, checked)}
-                    />
+                    {index < 3 && <Separator className="my-3" />}
                   </div>
-                  {index < 3 && <Separator className="my-3" />}
-                </div>
-              ))}
+                ))}
 
               {/* Warnings */}
               {!settings.privacy.dataCollection && (
@@ -623,16 +628,16 @@ const CustomerSettings = () => {
 
               {/* Information Notice */}
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mt-4">
-                <div className="flex items-center justify-between">
+                <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
                   <div>
                     <p className="text-sm font-medium text-blue-800">Personal Information</p>
                     <p className="text-xs text-blue-700">Update your name, email, and contact details</p>
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => window.location.href = '/customer/profile'}
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    className={`border-blue-300 text-blue-700 hover:bg-blue-100 ${isMobile ? 'w-full' : ''}`}
                   >
                     Go to Profile →
                   </Button>
@@ -644,7 +649,7 @@ const CustomerSettings = () => {
 
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -654,12 +659,12 @@ const CustomerSettings = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* 2FA Setting */}
-                <div className="flex items-center justify-between py-2">
+                <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} py-2`}>
                   <div>
                     <p className="font-medium">Two-Factor Authentication</p>
                     <p className="text-sm text-muted-foreground">Extra security layer</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-2'}`}>
                     {settings.security.twoFactorEnabled && (
                       <Badge variant="secondary" className="bg-green-100 text-green-800">
                         <Shield className="w-3 h-3 mr-1" />
@@ -684,7 +689,7 @@ const CustomerSettings = () => {
                 <Separator />
                 
                 {/* Login Alerts */}
-                <div className="flex items-center justify-between py-2">
+                <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} py-2`}>
                   <div>
                     <p className="font-medium">Login Alerts</p>
                     <p className="text-sm text-muted-foreground">Email alerts for new devices</p>
@@ -795,7 +800,7 @@ const CustomerSettings = () => {
 
         {/* Display & Preferences Tab */}
         <TabsContent value="preferences" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
             {/* Language & Display */}
             <Card>
               <CardHeader>
@@ -922,7 +927,7 @@ const CustomerSettings = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Auto-save */}
-                <div className="flex items-center justify-between py-2">
+                <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} py-2`}>
                   <div>
                     <p className="font-medium">Auto-save</p>
                     <p className="text-sm text-muted-foreground">Save changes automatically</p>
@@ -970,9 +975,9 @@ const CustomerSettings = () => {
                 {/* Data Management */}
                 <div className="space-y-3">
                   <p className="font-medium">Your Data</p>
-                  
-                  <Button 
-                    variant="outline" 
+
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="w-full"
                     onClick={exportData}
@@ -980,9 +985,9 @@ const CustomerSettings = () => {
                     <Download className="w-4 h-4 mr-2" />
                     Download My Data
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
+
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="w-full"
                     onClick={() => {
@@ -1003,12 +1008,12 @@ const CustomerSettings = () => {
                 {/* Account Management */}
                 <div className="space-y-3">
                   <p className="font-medium text-destructive">Account Management</p>
-                  
+
                   <Button variant="outline" size="sm" className="w-full">
                     <AlertTriangle className="w-4 h-4 mr-2" />
                     Temporarily Deactivate
                   </Button>
-                  
+
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" className="w-full">
@@ -1023,15 +1028,15 @@ const CustomerSettings = () => {
                           Delete Account Permanently?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete your account, including all your properties, messages, and saved data. 
+                          This will permanently delete your account, including all your properties, messages, and saved data.
                           You'll receive a confirmation email at support@buildhomemartsquares.com
                         </AlertDialogDescription>
                       </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
+                      <AlertDialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
+                        <AlertDialogCancel className={isMobile ? 'w-full' : ''}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
                           onClick={deleteAccount}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          className={`bg-destructive text-destructive-foreground hover:bg-destructive/90 ${isMobile ? 'w-full' : ''}`}
                         >
                           Yes, Delete Forever
                         </AlertDialogAction>

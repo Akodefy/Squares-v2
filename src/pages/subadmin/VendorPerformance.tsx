@@ -111,7 +111,7 @@ const VendorPerformance = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
@@ -147,7 +147,7 @@ const VendorPerformance = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {vendors.length > 0 
+              {vendors.length > 0
                 ? (vendors.reduce((sum, v) => sum + v.averageRating, 0) / vendors.length).toFixed(1)
                 : '0.0'
               }
@@ -160,7 +160,7 @@ const VendorPerformance = () => {
       </div>
 
       {/* Search and Sort */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -173,7 +173,7 @@ const VendorPerformance = () => {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as any)}
-          className="px-4 py-2 border rounded-md bg-background"
+          className="px-4 py-2 border rounded-md bg-background w-full sm:w-auto"
         >
           <option value="performanceScore">Sort by Performance</option>
           <option value="totalProperties">Sort by Properties</option>
@@ -199,24 +199,24 @@ const VendorPerformance = () => {
             return (
               <Card key={vendor._id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-xl">{vendor.name}</CardTitle>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <CardTitle className="text-lg sm:text-xl">{vendor.name}</CardTitle>
                         <Badge className={perfBadge.class}>
                           {perfBadge.label}
                         </Badge>
                       </div>
                       <CardDescription>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span>{vendor.email}</span>
-                          {vendor.phone && <span>• {vendor.phone}</span>}
-                          <span>• Joined {new Date(vendor.joinedDate).toLocaleDateString()}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm">
+                          <span className="truncate">{vendor.email}</span>
+                          {vendor.phone && <span className="hidden sm:inline">• {vendor.phone}</span>}
+                          <span className="truncate">Joined {new Date(vendor.joinedDate).toLocaleDateString()}</span>
                         </div>
                       </CardDescription>
                     </div>
-                    <div className="text-right ml-4">
-                      <div className={`text-3xl font-bold ${getPerformanceColor(vendor.performanceScore)}`}>
+                    <div className="text-center sm:text-right">
+                      <div className={`text-2xl sm:text-3xl font-bold ${getPerformanceColor(vendor.performanceScore)}`}>
                         {vendor.performanceScore}%
                       </div>
                       <p className="text-xs text-muted-foreground">Performance Score</p>
@@ -224,30 +224,30 @@ const VendorPerformance = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-2xl font-bold">{vendor.totalProperties}</p>
+                        <Building className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xl sm:text-2xl font-bold">{vendor.totalProperties}</p>
                           <p className="text-xs text-muted-foreground">Total Properties</p>
                         </div>
                       </div>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-yellow-500" />
-                        <div>
-                          <p className="text-2xl font-bold">{vendor.averageRating.toFixed(1)}</p>
+                        <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xl sm:text-2xl font-bold">{vendor.averageRating.toFixed(1)}</p>
                           <p className="text-xs text-muted-foreground">{vendor.totalReviews} Reviews</p>
                         </div>
                       </div>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-2xl font-bold">{vendor.responseRate}%</p>
+                        <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xl sm:text-2xl font-bold">{vendor.responseRate}%</p>
                           <p className="text-xs text-muted-foreground">Response Rate</p>
                         </div>
                       </div>
@@ -255,12 +255,12 @@ const VendorPerformance = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         {vendor.performanceScore >= 80 ? (
-                          <TrendingUp className="h-4 w-4 text-green-600" />
+                          <TrendingUp className="h-4 w-4 text-green-600 flex-shrink-0" />
                         ) : (
-                          <TrendingDown className="h-4 w-4 text-red-600" />
+                          <TrendingDown className="h-4 w-4 text-red-600 flex-shrink-0" />
                         )}
-                        <div>
-                          <p className="text-2xl font-bold">{formatResponseTime(vendor.averageResponseTime)}</p>
+                        <div className="min-w-0">
+                          <p className="text-xl sm:text-2xl font-bold">{formatResponseTime(vendor.averageResponseTime)}</p>
                           <p className="text-xs text-muted-foreground">Avg Response</p>
                         </div>
                       </div>
@@ -285,6 +285,7 @@ const VendorPerformance = () => {
                       setSelectedVendor(vendor);
                       setViewDialogOpen(true);
                     }}
+                    className="w-full sm:w-auto touch-manipulation min-h-[40px]"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Full Details
@@ -298,20 +299,20 @@ const VendorPerformance = () => {
 
       {/* View Vendor Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl mx-4 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle>{selectedVendor?.name} - Performance Details</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">{selectedVendor?.name} - Performance Details</DialogTitle>
+            <DialogDescription className="text-sm">
               Comprehensive performance metrics and statistics
             </DialogDescription>
           </DialogHeader>
           {selectedVendor && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-semibold mb-2">Contact Information</h4>
                   <ul className="text-sm space-y-1">
-                    <li><strong>Email:</strong> {selectedVendor.email}</li>
+                    <li><strong>Email:</strong> <span className="break-words">{selectedVendor.email}</span></li>
                     {selectedVendor.phone && <li><strong>Phone:</strong> {selectedVendor.phone}</li>}
                     <li><strong>Joined:</strong> {new Date(selectedVendor.joinedDate).toLocaleDateString()}</li>
                     {selectedVendor.lastActive && (
@@ -322,7 +323,7 @@ const VendorPerformance = () => {
                 <div>
                   <h4 className="font-semibold mb-2">Performance Score</h4>
                   <div className="text-center">
-                    <div className={`text-5xl font-bold ${getPerformanceColor(selectedVendor.performanceScore)}`}>
+                    <div className={`text-3xl sm:text-5xl font-bold ${getPerformanceColor(selectedVendor.performanceScore)}`}>
                       {selectedVendor.performanceScore}%
                     </div>
                     <Badge className={`mt-2 ${getPerformanceBadge(selectedVendor.performanceScore).class}`}>
@@ -334,17 +335,17 @@ const VendorPerformance = () => {
 
               <div>
                 <h4 className="font-semibold mb-2">Property Statistics</h4>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-muted p-4 rounded-lg text-center">
-                    <p className="text-2xl font-bold">{selectedVendor.totalProperties}</p>
+                    <p className="text-xl sm:text-2xl font-bold">{selectedVendor.totalProperties}</p>
                     <p className="text-xs text-muted-foreground">Total</p>
                   </div>
                   <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-green-600">{selectedVendor.activeProperties}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-green-600">{selectedVendor.activeProperties}</p>
                     <p className="text-xs text-muted-foreground">Active</p>
                   </div>
                   <div className="bg-red-50 dark:bg-red-950 p-4 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-red-600">{selectedVendor.rejectedProperties}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-red-600">{selectedVendor.rejectedProperties}</p>
                     <p className="text-xs text-muted-foreground">Rejected</p>
                   </div>
                 </div>
@@ -353,26 +354,26 @@ const VendorPerformance = () => {
               <div>
                 <h4 className="font-semibold mb-2">Customer Engagement</h4>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                     <span className="text-sm">Average Rating</span>
                     <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500 flex-shrink-0" />
                       <span className="font-semibold">{selectedVendor.averageRating.toFixed(1)} / 5.0</span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                     <span className="text-sm">Total Reviews</span>
                     <span className="font-semibold">{selectedVendor.totalReviews}</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                     <span className="text-sm">Total Messages</span>
                     <span className="font-semibold">{selectedVendor.totalMessages}</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                     <span className="text-sm">Response Rate</span>
                     <span className="font-semibold">{selectedVendor.responseRate}%</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                     <span className="text-sm">Average Response Time</span>
                     <span className="font-semibold">{formatResponseTime(selectedVendor.averageResponseTime)}</span>
                   </div>

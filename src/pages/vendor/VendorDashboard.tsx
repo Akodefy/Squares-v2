@@ -183,13 +183,13 @@ const VendorDashboard = () => {
 
 
   return (
-    <div className="space-y-6 mt-16">
+    <div className="space-y-4 md:space-y-6 mt-16 px-4 md:px-0">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vendor Dashboard</h1>
-          <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Manage your properties and track your performance</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Vendor Dashboard</h1>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+            <p className="text-sm md:text-base text-muted-foreground">Manage your properties and track your performance</p>
             {lastUpdated && (
               <span className="text-xs text-muted-foreground">
                 • Last updated: {lastUpdated.toLocaleTimeString()}
@@ -197,55 +197,61 @@ const VendorDashboard = () => {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          {unreadNotifications > 0 && (
-            <Button variant="outline">
-              <Bell className="w-4 h-4 mr-2" />
-              Notifications ({unreadNotifications})
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh} disabled={isLoading} className="flex-1 sm:flex-none">
+              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
-          <Link to="/vendor/analytics">
-            <Button variant="outline">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              View Analytics
-            </Button>
-          </Link>
-          <Link to="/vendor/properties/add">
-            <Button>
-              <Home className="w-4 h-4 mr-2" />
-              Add Property
-            </Button>
-          </Link>
+            {unreadNotifications > 0 && (
+              <Button variant="outline" className="flex-1 sm:flex-none">
+                <Bell className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Notifications ({unreadNotifications})</span>
+                <span className="sm:hidden">({unreadNotifications})</span>
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Link to="/vendor/analytics" className="flex-1 sm:flex-none">
+              <Button variant="outline" className="w-full">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">View Analytics</span>
+                <span className="sm:hidden">Analytics</span>
+              </Button>
+            </Link>
+            <Link to="/vendor/properties/add" className="flex-1 sm:flex-none">
+              <Button className="w-full">
+                <Home className="w-4 h-4 mr-2" />
+                Add Property
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-6">
         {statsCards.map((stat) => {
           const changeData = vendorDashboardService.formatPercentageChange(stat.change);
           return (
             <Card key={stat.title}>
-              <CardContent className="p-6">
+              <CardContent className="p-3 md:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-lg md:text-2xl font-bold truncate">{stat.value}</p>
                     <div className="flex items-center mt-1">
                       {changeData.isPositive ? (
-                        <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                        <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500 mr-1 flex-shrink-0" />
                       ) : (
-                        <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+                        <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-500 mr-1 flex-shrink-0" />
                       )}
-                      <p className={`text-xs ${changeData.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                      <p className={`text-xs truncate ${changeData.isPositive ? 'text-green-500' : 'text-red-500'}`}>
                         {stat.change}
                       </p>
                     </div>
                   </div>
-                  <stat.icon className={`h-8 w-8 ${stat.color}`} />
+                  <stat.icon className={`h-6 w-6 md:h-8 md:w-8 ${stat.color} flex-shrink-0 ml-2`} />
                 </div>
               </CardContent>
             </Card>
@@ -253,19 +259,20 @@ const VendorDashboard = () => {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Performance Chart - Stock Market Style */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Views Performance
-              <div className="flex gap-2">
+          <CardHeader className="pb-3 md:pb-6">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base md:text-lg">
+              <span>Views Performance</span>
+              <div className="flex gap-1 sm:gap-2">
                 {["7d", "30d", "90d"].map((range) => (
                   <Button
                     key={range}
                     variant={dateRange === range ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setDateRange(range)}
+                    className="text-xs px-2 py-1 h-7"
                   >
                     {range}
                   </Button>
@@ -273,12 +280,12 @@ const VendorDashboard = () => {
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart 
+              <ResponsiveContainer width="100%" height={250} className="md:h-[300px]">
+                <LineChart
                   data={chartData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
                 >
                   <defs>
                     <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
@@ -286,34 +293,36 @@ const VendorDashboard = () => {
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid 
-                    strokeDasharray="3 3" 
-                    stroke="hsl(var(--border))" 
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
                     opacity={0.3}
                     vertical={false}
                   />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
+                    fontSize={10}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
+                    fontSize={10}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value) => `${value}`}
+                    width={30}
                   />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--popover))',
                       border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                       color: 'hsl(var(--popover-foreground))',
-                      fontSize: '13px'
+                      fontSize: '12px',
+                      padding: '8px'
                     }}
                     labelStyle={{
                       color: 'hsl(var(--popover-foreground))',
@@ -322,14 +331,14 @@ const VendorDashboard = () => {
                     }}
                     cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="views" 
-                    stroke="#10b981" 
-                    strokeWidth={2.5}
+                  <Line
+                    type="monotone"
+                    dataKey="views"
+                    stroke="#10b981"
+                    strokeWidth={2}
                     dot={false}
-                    activeDot={{ 
-                      r: 5, 
+                    activeDot={{
+                      r: 4,
                       fill: '#10b981',
                       stroke: '#fff',
                       strokeWidth: 2
@@ -340,10 +349,10 @@ const VendorDashboard = () => {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex flex-col items-center justify-center h-[300px] text-center">
-                <Activity className="w-16 h-16 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold text-muted-foreground mb-2">No Performance Data</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
+              <div className="flex flex-col items-center justify-center h-[200px] md:h-[300px] text-center px-4">
+                <Activity className="w-12 h-12 md:w-16 md:h-16 text-muted-foreground mb-3 md:mb-4" />
+                <h3 className="text-base md:text-lg font-semibold text-muted-foreground mb-2">No Performance Data</h3>
+                <p className="text-xs md:text-sm text-muted-foreground max-w-md">
                   Performance metrics will appear here once your properties start receiving views.
                 </p>
               </div>
@@ -353,51 +362,54 @@ const VendorDashboard = () => {
 
         {/* Recent Activities */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Recent Activities
-              <Button variant="ghost" size="sm">View All</Button>
+          <CardHeader className="pb-3 md:pb-6">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base md:text-lg">
+              <span>Recent Activities</span>
+              <Button variant="ghost" size="sm" className="self-start sm:self-auto">View All</Button>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="pt-0">
+            <div className="space-y-3 md:space-y-4">
               {recentLeads.length > 0 ? (
                 recentLeads.map((lead) => (
-                  <div key={lead._id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5" />
+                  <div key={lead._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-3">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
-                      <div>
-                        <p className="font-medium">{lead.name}</p>
-                        <p className="text-sm text-muted-foreground">{lead.propertyTitle}</p>
-                        <p className="text-xs text-muted-foreground">{lead.message || 'New inquiry'}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{lead.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{lead.propertyTitle}</p>
+                        <p className="text-xs text-muted-foreground truncate">{lead.message || 'New inquiry'}</p>
                       </div>
                     </div>
-                    <div className="text-right space-y-2">
+                    <div className="flex flex-col sm:items-end gap-2 sm:space-y-2">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="text-xs">
                           {lead.status || 'new'}
                         </Badge>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem 
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
                               onClick={() => updateLeadStatus(lead._id, 'contacted')}
+                              className="text-sm"
                             >
                               Mark as Contacted
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => updateLeadStatus(lead._id, 'qualified')}
+                              className="text-sm"
                             >
                               Mark as Qualified
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => updateLeadStatus(lead._id, 'converted')}
+                              className="text-sm"
                             >
                               Mark as Converted
                             </DropdownMenuItem>
@@ -405,17 +417,17 @@ const VendorDashboard = () => {
                         </DropdownMenu>
                       </div>
                       <p className="text-xs text-muted-foreground flex items-center">
-                        <Activity className="w-3 h-3 mr-1" />
-                        {new Date(lead.createdAt).toLocaleDateString()}
+                        <Activity className="w-3 h-3 mr-1 flex-shrink-0" />
+                        <span className="truncate">{new Date(lead.createdAt).toLocaleDateString()}</span>
                       </p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No recent activities</p>
-                  <p className="text-sm">Property inquiries and messages will appear here</p>
+                <div className="text-center py-6 md:py-8 text-muted-foreground">
+                  <Activity className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 md:mb-4 opacity-50" />
+                  <p className="text-sm md:text-base">No recent activities</p>
+                  <p className="text-xs md:text-sm">Property inquiries and messages will appear here</p>
                 </div>
               )}
             </div>
@@ -425,64 +437,64 @@ const VendorDashboard = () => {
 
       {/* Recent Properties */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Recent Properties
-            <Button variant="ghost" size="sm">View All</Button>
+        <CardHeader className="pb-3 md:pb-6">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base md:text-lg">
+            <span>Recent Properties</span>
+            <Button variant="ghost" size="sm" className="self-start sm:self-auto">View All</Button>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {recentProperties.length > 0 ? (
               recentProperties.map((property) => (
                 <Card key={property._id} className="overflow-hidden">
                   <div className="relative">
-                    <img 
-                      src={property.images[0] || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300&h=200&fit=crop&auto=format"} 
+                    <img
+                      src={property.images[0] || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300&h=200&fit=crop&auto=format"}
                       alt={property.title}
-                      className="w-full h-32 object-cover"
+                      className="w-full h-24 md:h-32 object-cover"
                     />
-                    <Badge className={`absolute top-2 right-2 ${vendorDashboardService.getStatusColor(property.status)} text-white`}>
+                    <Badge className={`absolute top-1 right-1 md:top-2 md:right-2 text-xs ${vendorDashboardService.getStatusColor(property.status)} text-white`}>
                       {property.status}
                     </Badge>
-                    <div className="absolute bottom-2 left-2">
+                    <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2">
                       <Badge variant="secondary" className="text-xs">
                         {property.listingType}
                       </Badge>
                     </div>
                   </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold line-clamp-1">{property.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-2 flex items-center">
-                      <MapPin className="w-3 h-3 mr-1" />
-                      {property.location}
+                  <CardContent className="p-3 md:p-4">
+                    <h3 className="font-semibold text-sm md:text-base line-clamp-1 mb-1">{property.title}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground mb-2 flex items-center">
+                      <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                      <span className="truncate">{property.location}</span>
                     </p>
-                    <p className="text-lg font-bold text-primary mb-3">
+                    <p className="text-base md:text-lg font-bold text-primary mb-2 md:mb-3 truncate">
                       {vendorDashboardService.formatPrice(property.price, property.currency)}
                     </p>
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center">
-                        <Eye className="w-4 h-4 mr-1" />
-                        {property.views} views
+                    <div className="flex justify-between text-xs md:text-sm gap-1">
+                      <span className="flex items-center flex-1 min-w-0">
+                        <Eye className="w-3 h-3 md:w-4 md:h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{property.views} views</span>
                       </span>
-                      <span className="flex items-center">
-                        <Heart className="w-4 h-4 mr-1" />
-                        {property.favorites} favorites
+                      <span className="flex items-center flex-1 min-w-0">
+                        <Heart className="w-3 h-3 md:w-4 md:h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{property.favorites} fav</span>
                       </span>
-                      <span className="flex items-center">
-                        <Star className="w-4 h-4 mr-1" />
-                        {property.rating || 0} rating
+                      <span className="flex items-center flex-1 min-w-0">
+                        <Star className="w-3 h-3 md:w-4 md:h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{property.rating || 0}</span>
                       </span>
                     </div>
                   </CardContent>
                 </Card>
               ))
             ) : (
-              <div className="col-span-full text-center py-8 text-muted-foreground">
-                <Home className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No properties found</p>
-                <p className="text-sm">Add your first property to get started</p>
-                <Button className="mt-4">
+              <div className="col-span-full text-center py-6 md:py-8 text-muted-foreground">
+                <Home className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 md:mb-4 opacity-50" />
+                <p className="text-sm md:text-base">No properties found</p>
+                <p className="text-xs md:text-sm">Add your first property to get started</p>
+                <Button className="mt-3 md:mt-4" size="sm">
                   <Home className="w-4 h-4 mr-2" />
                   Add Property
                 </Button>

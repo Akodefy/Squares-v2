@@ -171,7 +171,7 @@ const PropertyRejections = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search rejected properties by title or city..."
+          placeholder="Search rejected properties by title, city, state, email, or description..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -192,36 +192,36 @@ const PropertyRejections = () => {
           </Card>
         ) : (
           properties.map((property) => (
-            <Card key={property._id} className="border-l-4 border-l-red-500">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <CardTitle className="text-xl">{property.title}</CardTitle>
+            <Card key={property._id} className="border-l-4 border-l-red-500 overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="space-y-2 flex-1 text-center sm:text-left">
+                    <CardTitle className="text-lg sm:text-xl leading-tight">{property.title}</CardTitle>
                     <CardDescription className="space-y-1">
-                      <div className="flex items-center gap-4 text-sm">
+                      <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                         <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {property.address.city}, {property.address.state}
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{property.address.city}, {property.address.state}</span>
                         </span>
                         <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Rejected: {property.rejectedAt ? new Date(property.rejectedAt).toLocaleDateString() : 'N/A'}
+                          <Calendar className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">Rejected: {property.rejectedAt ? new Date(property.rejectedAt).toLocaleDateString() : 'N/A'}</span>
                         </span>
                         <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {property.owner.email}
+                          <User className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{property.owner.email}</span>
                         </span>
                       </div>
                     </CardDescription>
                     {property.rejectionReason && (
-                      <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3 mt-3">
+                      <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-2 sm:p-3 mt-3 mx-auto sm:mx-0 max-w-full">
                         <div className="flex items-start gap-2">
                           <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-red-900 dark:text-red-100">Rejection Reason:</p>
-                            <p className="text-sm text-red-700 dark:text-red-300 mt-1">{property.rejectionReason}</p>
+                            <p className="text-sm text-red-700 dark:text-red-300 mt-1 break-words">{property.rejectionReason}</p>
                             {property.rejectedBy && (
-                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                              <p className="text-xs text-red-600 dark:text-red-400 mt-1 truncate">
                                 Rejected by: {property.rejectedBy.name}
                               </p>
                             )}
@@ -230,41 +230,47 @@ const PropertyRejections = () => {
                       </div>
                     )}
                   </div>
-                  <div className="text-right ml-4">
-                    <div className="text-2xl font-bold text-primary">
+                  <div className="text-center sm:text-right flex-shrink-0">
+                    <div className="text-xl sm:text-2xl font-bold text-primary mb-2">
                       {formatPrice(property.price)}
                     </div>
-                    <Badge variant="destructive" className="mt-1">
-                      Rejected
-                    </Badge>
-                    <Badge variant="outline" className="mt-1 ml-1">
-                      {property.type} • {property.listingType}
-                    </Badge>
+                    <div className="flex flex-col gap-1 items-center sm:items-end">
+                      <Badge variant="destructive" className="text-xs px-2 py-1 font-semibold">
+                        Rejected
+                      </Badge>
+                      <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
+                        {property.type} • {property.listingType}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedProperty(property);
-                      setViewDialogOpen(true);
-                    }}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleReactivate(property._id)}
-                    disabled={actionLoading[property._id]}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reactivate for Review
-                  </Button>
+              <CardContent className="pt-0">
+                <div className="flex flex-col sm:flex-row gap-2 sm:justify-start">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedProperty(property);
+                        setViewDialogOpen(true);
+                      }}
+                      className="flex-1 touch-manipulation min-h-[40px]"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Details
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleReactivate(property._id)}
+                      disabled={actionLoading[property._id]}
+                      className="flex-1 touch-manipulation min-h-[40px]"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reactivate for Review
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

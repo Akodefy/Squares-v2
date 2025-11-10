@@ -46,9 +46,16 @@ import { Badge } from "@/components/ui/badge";
 import { analyticsService, AnalyticsOverviewStats, AnalyticsFilters, PerformanceMetrics } from "@/services/analyticsService";
 import { propertyService } from "@/services/propertyService";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+// Register autoTable plugin with jsPDF
+import autoTable from 'jspdf-autotable';
 
 const VendorAnalytics = () => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [timeframe, setTimeframe] = useState<'7days' | '30days' | '90days' | '1year'>("30days");
   const [propertyFilter, setPropertyFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -101,14 +108,150 @@ const VendorAnalytics = () => {
   const handleExportData = async (format: 'csv' | 'pdf') => {
     try {
       setExporting(true);
-      const blob = await analyticsService.exportAnalyticsData(filters, format);
-      const filename = `analytics-${timeframe}-${Date.now()}.${format}`;
-      analyticsService.downloadBlob(blob, filename);
+
+      if (format === 'csv') {
+        await exportToCSV();
+      } else if (format === 'pdf') {
+        await exportToPDF();
+      }
+
+      toast({
+        title: "Success",
+        description: `Analytics data exported as ${format.toUpperCase()}!`,
+      });
     } catch (error) {
       console.error("Export failed:", error);
+      toast({
+        title: "Error",
+        description: `Failed to export analytics data as ${format.toUpperCase()}`,
+        variant: "destructive",
+      });
     } finally {
       setExporting(false);
     }
+  };
+
+  const exportToCSV = () => {
+    const csvData = [];
+
+    // Add header
+    csvData.push(['Metric', 'Value', 'Change', 'Description']);
+
+    // Add overview stats
+    if (overviewStats) {
+      csvData.push(['Total Views', overviewStats.totalViews || 0, '', 'Property page views']);
+      csvData.push(['Total Leads', overviewStats.totalLeads || 0, '', 'Generated leads']);
+      csvData.push(['Total Calls', overviewStats.totalCalls || 0, '', 'Direct calls']);
+      csvData.push(['Total Messages', overviewStats.totalMessages || 0, '', 'Chat inquiries']);
+      csvData.push(['Total Revenue', overviewStats.totalRevenue || 0, '', 'Revenue generated']);
+      csvData.push(['Average Rating', overviewStats.averageRating || 0, '', 'Customer reviews']);
+    }
+
+    // Add property performance data
+    if (performanceMetrics?.propertyPerformance?.length) {
+      csvData.push([]);
+      csvData.push(['Property Performance']);
+      csvData.push(['Property Title', 'Views', 'Favorites', 'Conversion Rate', 'Revenue']);
+
+      performanceMetrics.propertyPerformance.forEach(property => {
+        csvData.push([
+          property.title || 'Untitled',
+          property.views || 0,
+          property.favorites || 0,
+          `${property.conversionRate || 0}%`,
+          property.revenue || 0
+        ]);
+      });
+    }
+
+    // Convert to CSV string
+    const csvContent = csvData.map(row =>
+      row.map(field => `"${field}"`).join(',')
+    ).join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const filename = `analytics-${timeframe}-${Date.now()}.csv`;
+    analyticsService.downloadBlob(blob, filename);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    // Add title
+    doc.setFontSize(20);
+    doc.text('Analytics Report', 20, 20);
+
+    // Add timeframe
+    doc.setFontSize(12);
+    doc.text(`Timeframe: ${timeframe}`, 20, 35);
+
+    let yPosition = 50;
+
+    // Add overview stats table
+    if (overviewStats) {
+      doc.setFontSize(16);
+      doc.text('Overview Statistics', 20, yPosition);
+      yPosition += 10;
+
+      const overviewData = [
+        ['Metric', 'Value', 'Description'],
+        ['Total Views', String(overviewStats.totalViews || 0), 'Property page views'],
+        ['Total Leads', String(overviewStats.totalLeads || 0), 'Generated leads'],
+        ['Total Calls', String(overviewStats.totalCalls || 0), 'Direct calls'],
+        ['Total Messages', String(overviewStats.totalMessages || 0), 'Chat inquiries'],
+        ['Total Revenue', `₹${overviewStats.totalRevenue || 0}`, 'Revenue generated'],
+        ['Average Rating', String(overviewStats.averageRating || 0), 'Customer reviews']
+      ];
+
+      autoTable(doc, {
+        body: overviewData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [41, 128, 185] },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 20;
+    }
+
+    // Add property performance table
+    if (performanceMetrics?.propertyPerformance?.length) {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.text('Property Performance', 20, yPosition);
+      yPosition += 10;
+
+      const propertyData = [
+        ['Property Title', 'Views', 'Favorites', 'Conversion Rate', 'Revenue']
+      ];
+
+      performanceMetrics.propertyPerformance.forEach(property => {
+        propertyData.push([
+          property.title || 'Untitled',
+          String(property.views || 0),
+          String(property.favorites || 0),
+          `${property.conversionRate || 0}%`,
+          `₹${property.revenue || 0}`
+        ]);
+      });
+
+      autoTable(doc, {
+        body: propertyData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [52, 152, 219] },
+      });
+    }
+
+    // Save PDF
+    const filename = `analytics-${timeframe}-${Date.now()}.pdf`;
+    doc.save(filename);
   };
 
   if (loading) {
@@ -309,14 +452,14 @@ const VendorAnalytics = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'justify-between items-center'}`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+          <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight`}>Analytics</h1>
           <p className="text-muted-foreground">Track your property performance and marketing insights</p>
         </div>
-        <div className="flex gap-2">
+        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
           <Select value={timeframe} onValueChange={(value) => setTimeframe(value as '7days' | '30days' | '90days' | '1year')}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className={`${isMobile ? 'w-full' : 'w-40'}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -326,11 +469,12 @@ const VendorAnalytics = () => {
               <SelectItem value="1year">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
+          <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'space-x-2'}`}>
+            <Button
+              variant="outline"
               onClick={() => handleExportData('csv')}
               disabled={exporting}
+              className={`${isMobile ? 'w-full h-11' : 'h-9'}`}
             >
               {exporting ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -339,10 +483,11 @@ const VendorAnalytics = () => {
               )}
               Export CSV
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => handleExportData('pdf')}
               disabled={exporting}
+              className={`${isMobile ? 'w-full h-11' : 'h-9'}`}
             >
               {exporting ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -356,36 +501,36 @@ const VendorAnalytics = () => {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
         {displayStats.map((stat) => (
           <Card key={stat.title}>
-            <CardContent className="p-6">
+            <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
+                <div className="flex-1">
+                  <p className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-muted-foreground`}>{stat.title}</p>
+                  <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold`}>{stat.value}</p>
                   <div className="flex items-center mt-2">
                     {stat.changeType === "increase" ? (
-                      <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                      <TrendingUp className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} text-green-500 mr-1`} />
                     ) : stat.changeType === "decrease" ? (
-                      <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
+                      <TrendingDown className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} text-red-500 mr-1`} />
                     ) : null}
-                    <span className={`text-sm ${
+                    <span className={`${isMobile ? 'text-xs' : 'text-sm'} ${
                       stat.changeType === "increase" ? "text-green-500" : stat.changeType === "decrease" ? "text-red-500" : "text-muted-foreground"
                     }`}>
                       {stat.change}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+                  <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-muted-foreground mt-1`}>{stat.description}</p>
                 </div>
-                <stat.icon className="h-8 w-8 text-muted-foreground" />
+                <stat.icon className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} text-muted-foreground`} />
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
         {/* Property Engagement Overview */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -396,9 +541,9 @@ const VendorAnalytics = () => {
                   Track views, interactions, and conversions across your properties
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-row'}`}>
                 <Select value={engagementMetric} onValueChange={(value) => setEngagementMetric(value as any)}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className={`${isMobile ? 'w-full' : 'w-40'}`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -409,7 +554,7 @@ const VendorAnalytics = () => {
                   </SelectContent>
                 </Select>
                 <Select value={engagementChartType} onValueChange={(value) => setEngagementChartType(value as any)}>
-                  <SelectTrigger className="w-36">
+                  <SelectTrigger className={`${isMobile ? 'w-full' : 'w-36'}`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -574,46 +719,46 @@ const VendorAnalytics = () => {
                 </ResponsiveContainer>
                 
                 {/* Engagement Summary Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mt-6 pt-4 border-t">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <Eye className="w-5 h-5 mx-auto text-blue-600 mb-1" />
-                    <div className="text-xs text-blue-600 font-medium">Total Views</div>
-                    <div className="text-lg font-bold text-blue-700">
+                <div className={`grid gap-3 mt-6 pt-4 border-t ${isMobile ? 'grid-cols-1' : 'grid-cols-3 md:grid-cols-6'}`}>
+                  <div className="text-center p-2 bg-blue-50 rounded-lg">
+                    <Eye className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} mx-auto text-blue-600 mb-1`} />
+                    <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-blue-600 font-medium`}>Views</div>
+                    <div className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold text-blue-700`}>
                       {filteredEngagementData.reduce((acc, curr) => acc + (curr.views || 0), 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <Users className="w-5 h-5 mx-auto text-purple-600 mb-1" />
-                    <div className="text-xs text-purple-600 font-medium">Interactions</div>
-                    <div className="text-lg font-bold text-purple-700">
+                  <div className="text-center p-2 bg-purple-50 rounded-lg">
+                    <Users className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} mx-auto text-purple-600 mb-1`} />
+                    <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-purple-600 font-medium`}>Interactions</div>
+                    <div className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold text-purple-700`}>
                       {filteredEngagementData.reduce((acc, curr) => acc + (curr.interactions || 0), 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <TrendingUp className="w-5 h-5 mx-auto text-green-600 mb-1" />
-                    <div className="text-xs text-green-600 font-medium">Conversions</div>
-                    <div className="text-lg font-bold text-green-700">
+                  <div className="text-center p-2 bg-green-50 rounded-lg">
+                    <TrendingUp className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} mx-auto text-green-600 mb-1`} />
+                    <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-green-600 font-medium`}>Conversions</div>
+                    <div className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold text-green-700`}>
                       {filteredEngagementData.reduce((acc, curr) => acc + (curr.conversions || 0), 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-center p-3 bg-amber-50 rounded-lg">
-                    <Heart className="w-5 h-5 mx-auto text-amber-600 mb-1" />
-                    <div className="text-xs text-amber-600 font-medium">Favorites</div>
-                    <div className="text-lg font-bold text-amber-700">
+                  <div className="text-center p-2 bg-amber-50 rounded-lg">
+                    <Heart className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} mx-auto text-amber-600 mb-1`} />
+                    <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-amber-600 font-medium`}>Favorites</div>
+                    <div className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold text-amber-700`}>
                       {filteredEngagementData.reduce((acc, curr) => acc + (curr.favorites || 0), 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-center p-3 bg-pink-50 rounded-lg">
-                    <Share className="w-5 h-5 mx-auto text-pink-600 mb-1" />
-                    <div className="text-xs text-pink-600 font-medium">Shares</div>
-                    <div className="text-lg font-bold text-pink-700">
+                  <div className="text-center p-2 bg-pink-50 rounded-lg">
+                    <Share className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} mx-auto text-pink-600 mb-1`} />
+                    <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-pink-600 font-medium`}>Shares</div>
+                    <div className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold text-pink-700`}>
                       {filteredEngagementData.reduce((acc, curr) => acc + (curr.shares || 0), 0).toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-center p-3 bg-cyan-50 rounded-lg">
-                    <MessageSquare className="w-5 h-5 mx-auto text-cyan-600 mb-1" />
-                    <div className="text-xs text-cyan-600 font-medium">Inquiries</div>
-                    <div className="text-lg font-bold text-cyan-700">
+                  <div className="text-center p-2 bg-cyan-50 rounded-lg">
+                    <MessageSquare className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} mx-auto text-cyan-600 mb-1`} />
+                    <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-cyan-600 font-medium`}>Inquiries</div>
+                    <div className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold text-cyan-700`}>
                       {filteredEngagementData.reduce((acc, curr) => acc + (curr.inquiries || 0), 0).toLocaleString()}
                     </div>
                   </div>
@@ -675,7 +820,7 @@ const VendorAnalytics = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t">
+            <div className={`grid gap-4 mt-6 pt-4 border-t ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
               <div className="text-center">
                 <div className="text-sm text-muted-foreground">Avg Response</div>
                 <div className="text-2xl font-bold text-green-600">
@@ -798,7 +943,7 @@ const VendorAnalytics = () => {
               </ResponsiveContainer>
               
               {/* Property Performance Summary Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+              <div className={`grid gap-4 pt-4 border-t ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <div className="text-xs text-blue-600 font-medium mb-1">Total Views</div>
                   <div className="text-2xl font-bold text-blue-700">
@@ -840,7 +985,7 @@ const VendorAnalytics = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
         {/* Weekly Engagement */}
         <Card>
           <CardHeader>
@@ -947,7 +1092,7 @@ const VendorAnalytics = () => {
           <CardTitle>Insights & Recommendations</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
               <h4 className="font-semibold text-blue-900 mb-2">Performance Analytics</h4>
               <p className="text-sm text-blue-700">

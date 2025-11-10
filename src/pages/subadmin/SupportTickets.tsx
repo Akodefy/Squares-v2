@@ -227,9 +227,9 @@ const SupportTickets = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -260,42 +260,44 @@ const SupportTickets = () => {
           tickets.map((ticket) => (
             <Card key={ticket._id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <CardTitle className="text-lg">
                         {ticket.ticketNumber && (
                           <span className="text-muted-foreground mr-2">#{ticket.ticketNumber}</span>
                         )}
                         {ticket.subject || 'Support Request'}
                       </CardTitle>
-                      <Badge variant={getStatusBadgeVariant(ticket.status)}>
-                        {ticket.status.replace('_', ' ')}
-                      </Badge>
-                      {ticket.priority && (
-                        <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
-                          {ticket.priority}
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                          {ticket.status.replace('_', ' ')}
                         </Badge>
-                      )}
-                      {ticket.category && (
-                        <Badge variant="outline">
-                          {ticket.category}
-                        </Badge>
-                      )}
+                        {ticket.priority && (
+                          <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
+                            {ticket.priority}
+                          </Badge>
+                        )}
+                        {ticket.category && (
+                          <Badge variant="outline">
+                            {ticket.category}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-1">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {ticket.sender.profile.firstName} {ticket.sender.profile.lastName}
+                          <User className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{ticket.sender.profile.firstName} {ticket.sender.profile.lastName}</span>
                         </span>
                         <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {ticket.sender.email}
+                          <Mail className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{ticket.sender.email}</span>
                         </span>
                         <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(ticket.createdAt).toLocaleDateString()}
+                          <Clock className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{new Date(ticket.createdAt).toLocaleDateString()}</span>
                         </span>
                       </div>
                     </div>
@@ -303,45 +305,49 @@ const SupportTickets = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-muted p-4 rounded-lg">
+                <div className="bg-muted p-3 sm:p-4 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <MessageSquare className="h-4 w-4 mt-1 text-muted-foreground" />
-                    <p className="text-sm leading-relaxed">{ticket.message}</p>
+                    <MessageSquare className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
+                    <p className="text-sm leading-relaxed break-words">{ticket.message}</p>
                   </div>
                 </div>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => handleViewConversation(ticket)}
+                    className="flex-1 touch-manipulation min-h-[40px]"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Full Conversation
                   </Button>
-                  <Button 
+                  <Button
                     size="sm"
                     onClick={() => handleReply(ticket)}
+                    className="flex-1 touch-manipulation min-h-[40px]"
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Reply
                   </Button>
                   {ticket.status === 'open' && (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="secondary"
                       onClick={() => handleUpdateStatus(ticket._id, 'in-progress')}
                       disabled={actionLoading}
+                      className="flex-1 touch-manipulation min-h-[40px]"
                     >
                       Mark In Progress
                     </Button>
                   )}
                   {ticket.status === 'in-progress' && (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="secondary"
                       onClick={() => handleUpdateStatus(ticket._id, 'resolved')}
                       disabled={actionLoading}
+                      className="flex-1 touch-manipulation min-h-[40px]"
                     >
                       Mark Resolved
                     </Button>
@@ -355,21 +361,23 @@ const SupportTickets = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-2">
           <Button
             variant="outline"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(currentPage - 1)}
+            className="w-full sm:w-auto"
           >
             Previous
           </Button>
-          <span className="px-3 py-2 text-sm">
+          <span className="px-3 py-2 text-sm text-center">
             Page {currentPage} of {totalPages}
           </span>
           <Button
             variant="outline"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(currentPage + 1)}
+            className="w-full sm:w-auto"
           >
             Next
           </Button>
@@ -378,13 +386,13 @@ const SupportTickets = () => {
 
       {/* View Conversation Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto mx-4 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
               {selectedTicket?.ticketNumber && `#${selectedTicket.ticketNumber} - `}
               {selectedTicket?.subject || 'Support Ticket'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               Conversation history with {selectedTicket?.sender.profile.firstName} {selectedTicket?.sender.profile.lastName}
             </DialogDescription>
           </DialogHeader>
@@ -458,10 +466,10 @@ const SupportTickets = () => {
 
       {/* Reply Dialog */}
       <Dialog open={replyDialogOpen} onOpenChange={setReplyDialogOpen}>
-        <DialogContent>
+        <DialogContent className="mx-4 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle>Reply to Support Ticket</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Reply to Support Ticket</DialogTitle>
+            <DialogDescription className="text-sm">
               Send a response to {selectedTicket?.sender.profile.firstName} {selectedTicket?.sender.profile.lastName}
             </DialogDescription>
           </DialogHeader>

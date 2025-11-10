@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PincodeAutocomplete } from "@/components/PincodeAutocomplete";
 import { locaService } from "@/services/locaService";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { 
   User, 
@@ -40,6 +41,7 @@ import { uploadService } from "@/services/uploadService";
 
 const Profile = () => {
   const { isConnected, lastEvent } = useRealtime();
+  const isMobile = useIsMobile();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -485,9 +487,9 @@ const Profile = () => {
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className={`flex ${isMobile ? 'flex-col gap-4' : 'items-center justify-between'}`}>
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <h1 className={`font-bold flex items-center gap-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
             <User className="w-8 h-8 text-primary" />
             My Profile
           </h1>
@@ -495,15 +497,15 @@ const Profile = () => {
             View your profile information and activity. Visit <span className="font-medium">Settings</span> to manage preferences.
           </p>
         </div>
-        
-        <div className="flex gap-2">
+
+        <div className={`flex gap-2 ${isMobile ? 'flex-col w-full' : ''}`}>
           {!isEditing && !loading && (
-            <Button onClick={() => setIsEditing(true)}>
+            <Button onClick={() => setIsEditing(true)} className={isMobile ? 'w-full' : ''}>
               <Edit3 className="w-4 h-4 mr-2" />
               Edit Profile
             </Button>
           )}
-          <Button variant="outline" onClick={() => window.location.href = '/customer/settings'}>
+          <Button variant="outline" onClick={() => window.location.href = '/customer/settings'} className={isMobile ? 'w-full' : ''}>
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </Button>
@@ -520,11 +522,11 @@ const Profile = () => {
           {/* Profile Header */}
           <Card>
             <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                <div className="relative">
-                  <Avatar className="w-24 h-24">
+              <div className={`flex ${isMobile ? 'flex-col' : 'flex-col md:flex-row'} items-start md:items-center gap-6`}>
+                <div className="relative self-center md:self-start">
+                  <Avatar className={`${isMobile ? 'w-20 h-20' : 'w-24 h-24'}`}>
                     <AvatarImage src={profile.avatar} />
-                    <AvatarFallback className="text-2xl">
+                    <AvatarFallback className={`${isMobile ? 'text-xl' : 'text-2xl'}`}>
                       {profile.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
@@ -549,10 +551,10 @@ const Profile = () => {
                     )}
                   </Button>
                 </div>
-                
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-bold">{profile.name}</h2>
+
+                <div className="flex-1 space-y-2 text-center md:text-left">
+                  <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-2'}`}>
+                    <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold`}>{profile.name}</h2>
                     {profile.verified && (
                       <Badge variant="default" className="bg-green-100 text-green-800">
                         <Shield className="w-3 h-3 mr-1" />
@@ -560,8 +562,8 @@ const Profile = () => {
                       </Badge>
                     )}
                   </div>
-                  
-                  <div className="flex items-center gap-4 text-muted-foreground">
+
+                  <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4'} text-muted-foreground`}>
                     <span className="flex items-center gap-1">
                       <Mail className="w-4 h-4" />
                       {profile.email}
@@ -571,8 +573,8 @@ const Profile = () => {
                       {profile.phone}
                     </span>
                   </div>
-                  
-                  <div className="flex items-center gap-4 text-muted-foreground">
+
+                  <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4'} text-muted-foreground`}>
                     <span className="flex items-center gap-1">
                       <MapPin className="w-4 h-4" />
                       {profile.location}
@@ -585,7 +587,7 @@ const Profile = () => {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-4 text-center">
+                <div className={`grid gap-4 text-center ${isMobile ? 'grid-cols-2 w-full' : 'grid-cols-2'}`}>
                   <div className="p-3 bg-muted/50 rounded-lg">
                     <p className="text-2xl font-bold text-primary">{stats.ownedProperties}</p>
                     <p className="text-xs text-muted-foreground">Properties</p>
@@ -600,13 +602,13 @@ const Profile = () => {
           </Card>
 
           {/* Profile Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
             <Card>
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                   <div className="space-y-2">
                     <Label>Full Name</Label>
                     {isEditing ? (
@@ -833,8 +835,8 @@ const Profile = () => {
                 </div>
 
                 {isEditing && (
-                  <div className="flex gap-2 pt-4">
-                    <Button onClick={handleSave} disabled={saving}>
+                  <div className={`flex gap-2 pt-4 ${isMobile ? 'flex-col' : ''}`}>
+                    <Button onClick={handleSave} disabled={saving} className={isMobile ? 'w-full' : ''}>
                       {saving ? (
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -847,7 +849,7 @@ const Profile = () => {
                         </>
                       )}
                     </Button>
-                    <Button variant="outline" onClick={handleCancel}>
+                    <Button variant="outline" onClick={handleCancel} className={isMobile ? 'w-full' : ''}>
                       <X className="w-4 h-4 mr-2" />
                       Cancel
                     </Button>
@@ -909,7 +911,7 @@ const Profile = () => {
           {/* Quick Settings Link Card */}
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+              <div className={`flex ${isMobile ? 'flex-col gap-4' : 'items-center justify-between'}`}>
                 <div className="flex items-center gap-3">
                   <Settings className="w-8 h-8 text-primary" />
                   <div>
@@ -919,7 +921,7 @@ const Profile = () => {
                     </p>
                   </div>
                 </div>
-                <Button onClick={() => window.location.href = '/customer/settings'}>
+                <Button onClick={() => window.location.href = '/customer/settings'} className={isMobile ? 'w-full' : ''}>
                   Go to Settings
                 </Button>
               </div>

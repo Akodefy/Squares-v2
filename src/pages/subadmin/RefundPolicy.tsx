@@ -161,27 +161,27 @@ const RefundPolicy = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Refund Policy</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Refund Policy</h1>
           <p className="text-muted-foreground mt-1">
             Manage the platform's refund policy and terms
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button variant="outline" onClick={() => setIsEditing(false)} className="w-full sm:w-auto touch-manipulation min-h-[40px]">
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto touch-manipulation min-h-[40px]">
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)}>
+            <Button onClick={() => setIsEditing(true)} className="w-full sm:w-auto touch-manipulation min-h-[40px]">
               <Edit className="h-4 w-4 mr-2" />
               Edit Policy
             </Button>
@@ -208,7 +208,7 @@ const RefundPolicy = () => {
           <div className="space-y-6">
             {policy.sections.map((section) => (
               <div key={section.id} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                   {isEditing ? (
                     <Input
                       value={section.title}
@@ -223,6 +223,7 @@ const RefundPolicy = () => {
                       variant="destructive"
                       size="sm"
                       onClick={() => removeSection(section.id)}
+                      className="w-full sm:w-auto touch-manipulation min-h-[36px]"
                     >
                       Remove
                     </Button>
@@ -245,13 +246,13 @@ const RefundPolicy = () => {
             ))}
             
             {isEditing && (
-              <Button variant="outline" onClick={addSection} className="w-full">
+              <Button variant="outline" onClick={addSection} className="w-full touch-manipulation min-h-[40px]">
                 Add New Section
               </Button>
             )}
           </div>
           
-          <div className="mt-6 pt-4 border-t text-sm text-muted-foreground">
+          <div className="mt-6 pt-4 border-t text-sm text-muted-foreground space-y-1">
             <p>Last updated: {new Date(policy.lastUpdated).toLocaleDateString()}</p>
             <p>Status: <span className="text-green-600 font-medium">Active</span></p>
           </div>

@@ -406,56 +406,57 @@ const Properties = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-6">
+      <div className="dashboard-header-responsive">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Property Management</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="dashboard-title-responsive">Property Management</h1>
+          <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
             Manage property listings and details
           </p>
         </div>
-        <Button onClick={() => navigate("/admin/properties/add")}>
+        <Button onClick={() => navigate("/admin/properties/add")} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
-          Add Property
+          <span className="hidden sm:inline">Add Property</span>
+          <span className="sm:hidden">Add</span>
         </Button>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Card className="stats-card-responsive">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Properties</CardTitle>
+            <CardTitle className="stats-label-responsive">Total Properties</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{properties.length}</div>
+            <div className="stats-value-responsive">{properties.length}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="stats-card-responsive">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approval</CardTitle>
+            <CardTitle className="stats-label-responsive">Pending Approval</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
+            <div className="stats-value-responsive text-yellow-600">
               {properties.filter(p => p.status === 'pending').length}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="stats-card-responsive">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Available Properties</CardTitle>
+            <CardTitle className="stats-label-responsive">Available Properties</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="stats-value-responsive text-green-600">
               {properties.filter(p => p.status === 'available').length}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="stats-card-responsive">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Featured</CardTitle>
+            <CardTitle className="stats-label-responsive">Featured</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="stats-value-responsive text-blue-600">
               {properties.filter(p => p.featured).length}
             </div>
           </CardContent>
@@ -464,14 +465,14 @@ const Properties = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Properties</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg md:text-xl">All Properties</CardTitle>
+          <CardDescription className="text-sm md:text-base">
             {filteredProperties.length} propert{filteredProperties.length !== 1 ? "ies" : "y"} found
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="search-container-responsive">
               <div className="flex-1">
                 <SearchFilter
                   searchTerm={searchTerm}
@@ -509,20 +510,22 @@ const Properties = () => {
             </div>
           </div>
 
-          <DataTable
-            columns={columns}
-            data={paginatedItems.map(property => ({ ...property, id: property._id }))}
-            hideDefaultActions
-          />
+          <div className="table-responsive-wrapper">
+            <DataTable
+              columns={columns}
+              data={paginatedItems.map(property => ({ ...property, id: property._id }))}
+              hideDefaultActions
+            />
+          </div>
 
           {totalPages > 1 && (
-            <div className="mt-6">
+            <div className="mt-4 md:mt-6">
               <Pagination>
-                <PaginationContent>
+                <PaginationContent className="pagination-responsive">
                   <PaginationItem>
                     <PaginationPrevious
                       onClick={previousPage}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      className={`pagination-button-responsive ${currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
                     />
                   </PaginationItem>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -530,7 +533,7 @@ const Properties = () => {
                       <PaginationLink
                         onClick={() => goToPage(page)}
                         isActive={currentPage === page}
-                        className="cursor-pointer"
+                        className="pagination-button-responsive cursor-pointer"
                       >
                         {page}
                       </PaginationLink>
@@ -539,7 +542,7 @@ const Properties = () => {
                   <PaginationItem>
                     <PaginationNext
                       onClick={nextPage}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      className={`pagination-button-responsive ${currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
                     />
                   </PaginationItem>
                 </PaginationContent>

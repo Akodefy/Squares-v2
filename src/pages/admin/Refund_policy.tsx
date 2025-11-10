@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 
 const Refund_policy = () => {
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-6">
+      <div className="dashboard-header-responsive">
         <div>
-          <h1 className="text-3xl font-bold">Refund Policy</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="dashboard-title-responsive">Refund Policy</h1>
+          <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
             Edit refund policy
           </p>
         </div>
@@ -16,10 +16,10 @@ const Refund_policy = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Refund Policy</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Refund Policy</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm md:text-base">
             This page is automatically generated. Add your custom content here.
           </p>
         </CardContent>

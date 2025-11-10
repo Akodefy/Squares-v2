@@ -16,9 +16,9 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   return (
     <>
       {/* Logo - Responsive positioning */}
-      <Link 
-        to="/" 
-        className="fixed -top-5 left-2 xs:left-3 sm:left-4 md:-top-6 md:left-4 lg:left-6 z-[60] transition-transform hover:scale-105 duration-300"
+      <Link
+        to="/"
+        className="fixed -top-2 left-2 xs:left-3 sm:left-4 md:-top-6 md:left-4 lg:left-6 z-[60] transition-transform hover:scale-105 duration-300"
       >
         <img
           src={theme === "dark" ? logoDark : logoLight}

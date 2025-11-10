@@ -234,11 +234,14 @@ router.get('/properties/rejected',
     const skip = (page - 1) * limit;
 
     let query = { status: 'rejected' };
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { 'address.city': { $regex: search, $options: 'i' } }
+        { 'address.city': { $regex: search, $options: 'i' } },
+        { 'address.state': { $regex: search, $options: 'i' } },
+        { 'owner.email': { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
 
