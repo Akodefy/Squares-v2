@@ -28,10 +28,6 @@ const Navbar = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Debug logging
-  console.log('Navbar: isAuthenticated:', isAuthenticated);
-  console.log('Navbar: user:', user);
-
   // Property categories for dropdown
   const residentialProperties = [
     { label: "Flat / Apartment", value: "flat_apartment" },
