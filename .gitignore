@@ -21,4 +21,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Documentation files
 *.md
+
+# Test scripts and files
+test-*.js
+test-*.cjs
+test-*.sh
+*-test.js
+*-test.cjs
+*.test.js
+*.spec.js
+check-*.js
+check-*.cjs
+check-*.sh
+debug-*.js
+migrate-*.js
+migrate-*.cjs
+fix-*.js
+fix-*.cjs
+sync-*.js
+sync-*.cjs
