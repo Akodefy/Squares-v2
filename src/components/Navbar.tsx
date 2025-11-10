@@ -1,4 +1,4 @@
-import { Menu, X, User, ChevronDown } from "lucide-react";
+import { Menu, X, User, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import newBadge from "@/assets/new-badge.gif";
@@ -21,6 +21,9 @@ import {
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [buyExpanded, setBuyExpanded] = useState(false);
+  const [rentExpanded, setRentExpanded] = useState(false);
+  const [commercialExpanded, setCommercialExpanded] = useState(false);
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -70,14 +73,14 @@ const Navbar = () => {
   return (
     <>
       {/* Logo - Responsive positioning */}
-      <Link 
-        to="/" 
-        className="fixed -top-5 -left-6 xs:top-0 xs:left-4 sm:left-6 md:-top-8 md:left-8 z-[60] transition-transform hover:scale-105 duration-300"
+      <Link
+        to="/"
+        className="fixed top-0 left-0 xs:top-0 xs:left-4 sm:left-6 md:-top-8 md:left-8 z-[60] transition-transform hover:scale-105 duration-300"
       >
         <img
           src={theme === "dark" ? logoDark : logoLight}
           alt="BuildHomeMart"
-          className="w-[160px] h-[80px] xs:w-[180px] xs:h-[85px] sm:w-[200px] sm:h-[90px] md:w-[220px] md:h-[100px] object-contain"
+          className="w-[120px] h-[60px] xs:w-[140px] xs:h-[70px] sm:w-[160px] sm:h-[80px] md:w-[180px] md:h-[90px] lg:w-[200px] lg:h-[100px] object-contain"
         />
       </Link>
       
@@ -253,48 +256,95 @@ const Navbar = () => {
             <div className="px-4 py-3 sm:py-4 space-y-2 sm:space-y-3">
               {/* Buy Section */}
               <div className="space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Buy</p>
                 <button
-                  onClick={() => {
-                    handlePropertyTypeClick('sale');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
+                  onClick={() => setBuyExpanded(!buyExpanded)}
+                  className="flex items-center justify-between w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
                 >
-                  All Properties for Sale
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Buy</span>
+                  {buyExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
-                <button
-                  onClick={() => {
-                    handlePropertyTypeClick('sale', 'flat_apartment');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left py-2 pl-4 text-sm hover:text-primary transition-colors"
-                >
-                  Residential Properties
-                </button>
+                {buyExpanded && (
+                  <div className="space-y-1 pl-4">
+                    <button
+                      onClick={() => {
+                        handlePropertyTypeClick('sale');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left py-2 text-sm hover:text-primary transition-colors"
+                    >
+                      All Properties for Sale
+                    </button>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Residential</p>
+                      {residentialProperties.map((prop) => (
+                        <button
+                          key={prop.value}
+                          onClick={() => {
+                            handlePropertyTypeClick('sale', prop.value);
+                            setMobileMenuOpen(false);
+                          }}
+                          className="block w-full text-left py-1 pl-2 text-sm hover:text-primary transition-colors"
+                        >
+                          {prop.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Agricultural</p>
+                      {agriculturalProperties.map((prop) => (
+                        <button
+                          key={prop.value}
+                          onClick={() => {
+                            handlePropertyTypeClick('sale', prop.value);
+                            setMobileMenuOpen(false);
+                          }}
+                          className="block w-full text-left py-1 pl-2 text-sm hover:text-primary transition-colors"
+                        >
+                          {prop.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Rent Section */}
               <div className="space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Rent</p>
                 <button
-                  onClick={() => {
-                    handlePropertyTypeClick('rent');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
+                  onClick={() => setRentExpanded(!rentExpanded)}
+                  className="flex items-center justify-between w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
                 >
-                  All Properties for Rent
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Rent</span>
+                  {rentExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
-                <button
-                  onClick={() => {
-                    handlePropertyTypeClick('rent', 'flat_apartment');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left py-2 pl-4 text-sm hover:text-primary transition-colors"
-                >
-                  Residential Properties
-                </button>
+                {rentExpanded && (
+                  <div className="space-y-1 pl-4">
+                    <button
+                      onClick={() => {
+                        handlePropertyTypeClick('rent');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left py-2 text-sm hover:text-primary transition-colors"
+                    >
+                      All Properties for Rent
+                    </button>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Residential</p>
+                      {residentialProperties.map((prop) => (
+                        <button
+                          key={prop.value}
+                          onClick={() => {
+                            handlePropertyTypeClick('rent', prop.value);
+                            setMobileMenuOpen(false);
+                          }}
+                          className="block w-full text-left py-1 pl-2 text-sm hover:text-primary transition-colors"
+                        >
+                          {prop.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Sell Section */}
@@ -307,29 +357,75 @@ const Navbar = () => {
                 >
                   Post Property for Free
                 </Link>
+                <Link
+                  to="/vendor/login"
+                  className="block py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-3 rounded-md text-center"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Post Property
+                </Link>
+                <Link
+                  to="/contact?service=valuation"
+                  className="block py-2 text-sm hover:text-primary transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Property Valuation
+                </Link>
+                <Link
+                  to="/vendor/properties"
+                  className="block py-2 text-sm hover:text-primary transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  My Listed Properties
+                </Link>
               </div>
 
               {/* Commercial Section */}
               <div className="space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Commercial</p>
                 <button
-                  onClick={() => {
-                    handlePropertyTypeClick('sale', 'all_commercial');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
+                  onClick={() => setCommercialExpanded(!commercialExpanded)}
+                  className="flex items-center justify-between w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
                 >
-                  Buy Commercial
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Commercial</span>
+                  {commercialExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
-                <button
-                  onClick={() => {
-                    handlePropertyTypeClick('rent', 'all_commercial');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left py-2 text-sm font-medium hover:text-primary transition-colors"
-                >
-                  Rent Commercial
-                </button>
+                {commercialExpanded && (
+                  <div className="space-y-1 pl-4">
+                    <button
+                      onClick={() => {
+                        handlePropertyTypeClick('sale', 'all_commercial');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left py-2 text-sm hover:text-primary transition-colors"
+                    >
+                      Buy Commercial
+                    </button>
+                    <button
+                      onClick={() => {
+                        handlePropertyTypeClick('rent', 'all_commercial');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left py-2 text-sm hover:text-primary transition-colors"
+                    >
+                      Rent Commercial
+                    </button>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Commercial Types</p>
+                      {commercialProperties.map((prop) => (
+                        <button
+                          key={prop.value}
+                          onClick={() => {
+                            handlePropertyTypeClick('sale', prop.value);
+                            setMobileMenuOpen(false);
+                          }}
+                          className="block w-full text-left py-1 pl-2 text-sm hover:text-primary transition-colors"
+                        >
+                          {prop.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Link
