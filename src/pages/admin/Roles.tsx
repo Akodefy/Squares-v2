@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Plus, Edit, Trash2, Shield, Users, ToggleLeft, ToggleRight, MoreHorizontal } from "lucide-react";
 
@@ -55,8 +55,9 @@ const Roles = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     try {
       setLoading(true);
       const filters = {
@@ -72,15 +73,15 @@ const Roles = () => {
         ...role,
         pages: role.pages || []
       }));
-      
+
       setRoles(rolesWithPages);
       setTotalPages(response.data.pagination.totalPages);
       setTotalRoles(response.data.pagination.totalRoles);
-      
+
       // Extract SuperAdmin and SubAdmin roles
       const superAdmin = rolesWithPages.find(r => r.name.toLowerCase() === 'superadmin');
       const subAdmin = rolesWithPages.find(r => r.name.toLowerCase() === 'subadmin');
-      
+
       setSuperAdminRole(superAdmin || null);
       setSubAdminRole(subAdmin || null);
     } catch (error) {
@@ -88,21 +89,38 @@ const Roles = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, statusFilter]);
 
   useEffect(() => {
     fetchRoles();
-  }, [currentPage, searchTerm, statusFilter]);
+  }, [fetchRoles]);
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-  };
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
-  const handleStatusFilter = (value: string) => {
+  const handleSearch = useCallback((value: string) => {
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced search
+    searchTimeoutRef.current = setTimeout(() => {
+      setSearchTerm(value);
+      setCurrentPage(1);
+    }, 300);
+  }, []);
+
+  const handleStatusFilter = useCallback((value: string) => {
     setStatusFilter(value);
     setCurrentPage(1);
-  };
+  }, []);
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -403,9 +421,9 @@ const Roles = () => {
               <div className="text-base md:text-lg lg:text-xl font-bold text-destructive">
                 {superAdminRole?.userCount || 0}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
+              {/* <div className="text-xs text-muted-foreground mt-1">
                 Level {superAdminRole?.level || 10}
-              </div>
+              </div> */}
             </CardContent>
           </Card>
           <Card className="border-orange-500/20 bg-orange-500/10">
@@ -419,9 +437,9 @@ const Roles = () => {
               <div className="text-base md:text-lg lg:text-xl font-bold text-orange-500">
                 {subAdminRole?.userCount || 0}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
+              {/* <div className="text-xs text-muted-foreground mt-1">
                 Level {subAdminRole?.level || 7}
-              </div>
+              </div> */}
             </CardContent>
           </Card>
         </div>
