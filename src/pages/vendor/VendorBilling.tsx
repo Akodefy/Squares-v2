@@ -30,12 +30,6 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { billingService, VendorSubscription, Payment, BillingStats, Invoice } from "@/services/billingService";
-import { 
-  createBillingReportPDF, 
-  createInvoicePDF, 
-  createPaymentReceiptPDF, 
-  downloadPDF 
-} from "@/utils/pdfUtils";
 
 const VendorBilling: React.FC = () => {
   const isMobile = useIsMobile();
@@ -185,28 +179,20 @@ const VendorBilling: React.FC = () => {
   const handleExport = async () => {
     try {
       const periodName = selectedPeriod.replace(/_/g, '-'); // e.g., "last_30_days" -> "last-30-days"
+      const blob = await billingService.exportBillingData('pdf', {
+        dateFrom: getDateFromPeriod(selectedPeriod),
+      });
       
-      // Generate PDF client-side for reliable results
-      if (billingStats) {
-        const blob = createBillingReportPDF(
-          billingStats,
-          payments,
-          invoices,
-          subscription,
-          {
-            dateFrom: getDateFromPeriod(selectedPeriod)
-          }
-        );
-        
-        downloadPDF(blob, `billing-report-${periodName}-${new Date().toISOString().split('T')[0]}.pdf`);
+      if (blob) {
+        billingService.downloadBlob(blob, `billing-report-${periodName}-${new Date().toISOString().split('T')[0]}.pdf`);
         toast({
           title: "Success",
-          description: "Billing report generated and downloaded successfully!",
+          description: "Billing report downloaded successfully.",
         });
       } else {
         toast({
           title: "Error",
-          description: "Unable to generate report. Please wait for data to load.",
+          description: "Failed to generate billing report. No data received.",
           variant: "destructive",
         });
       }
@@ -214,7 +200,7 @@ const VendorBilling: React.FC = () => {
       console.error("Export failed:", error);
       toast({
         title: "Error",
-        description: "Failed to generate billing report. Please try again.",
+        description: "Failed to download billing report. Please try again.",
         variant: "destructive",
       });
     }
@@ -239,18 +225,25 @@ const VendorBilling: React.FC = () => {
 
   const handleDownloadReceipt = async (payment: Payment) => {
     try {
-      // Generate PDF client-side for reliable results
-      const blob = createPaymentReceiptPDF(payment);
-      downloadPDF(blob, `receipt-${payment._id.slice(-8)}.pdf`);
-      toast({
-        title: "Success",
-        description: "Payment receipt generated and downloaded successfully!",
-      });
+      const blob = await billingService.downloadReceipt(payment._id);
+      if (blob) {
+        billingService.downloadBlob(blob, `receipt-${payment._id.slice(-8)}.pdf`);
+        toast({
+          title: "Success",
+          description: "Payment receipt downloaded successfully.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to generate receipt. No data received.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error("Failed to generate receipt:", error);
+      console.error("Failed to download receipt:", error);
       toast({
         title: "Error",
-        description: "Failed to generate receipt. Please try again.",
+        description: "Failed to download receipt. Please try again.",
         variant: "destructive",
       });
     }
@@ -275,18 +268,25 @@ const VendorBilling: React.FC = () => {
 
   const handleDownloadInvoice = async (invoice: Invoice) => {
     try {
-      // Generate PDF client-side for reliable results
-      const blob = createInvoicePDF(invoice);
-      downloadPDF(blob, `invoice-${invoice.invoiceNumber}.pdf`);
-      toast({
-        title: "Success",
-        description: `Invoice ${invoice.invoiceNumber} generated and downloaded successfully!`,
-      });
+      const blob = await billingService.downloadInvoice(invoice._id);
+      if (blob) {
+        billingService.downloadBlob(blob, `invoice-${invoice.invoiceNumber}.pdf`);
+        toast({
+          title: "Success",
+          description: `Invoice ${invoice.invoiceNumber} downloaded successfully.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to generate invoice ${invoice.invoiceNumber}. No data received.`,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error("Failed to generate invoice:", error);
+      console.error("Failed to download invoice:", error);
       toast({
         title: "Error",
-        description: `Failed to generate invoice ${invoice.invoiceNumber}. Please try again.`,
+        description: `Failed to download invoice ${invoice.invoiceNumber}. Please try again.`,
         variant: "destructive",
       });
     }
@@ -294,37 +294,16 @@ const VendorBilling: React.FC = () => {
 
   const handleDownloadAllInvoices = async () => {
     try {
-      let successCount = 0;
       for (const invoice of invoices) {
-        try {
-          await handleDownloadInvoice(invoice);
-          successCount++;
-          // Add delay to prevent browser from blocking multiple downloads
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (error) {
-          console.error(`Failed to download invoice ${invoice.invoiceNumber}:`, error);
-        }
+        await handleDownloadInvoice(invoice);
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
-      
-      if (successCount > 0) {
-        toast({
-          title: "Success",
-          description: `Successfully downloaded ${successCount} of ${invoices.length} invoices`,
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to download any invoices",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Success",
+        description: `Downloaded ${invoices.length} invoices`,
+      });
     } catch (error) {
       console.error("Failed to download all invoices:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download invoices. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -405,11 +384,7 @@ const VendorBilling: React.FC = () => {
                 </div>
               )}
               <div className="flex gap-2 pt-4">
-                <Button 
-                  onClick={() => handleDownloadReceipt(selectedPayment)} 
-                  className="w-full"
-                  disabled={!selectedPayment}
-                >
+                <Button onClick={() => handleDownloadReceipt(selectedPayment)} className="w-full">
                   <Download className="w-4 h-4 mr-2" />
                   Download Receipt
                 </Button>
@@ -514,11 +489,7 @@ const VendorBilling: React.FC = () => {
               </div>
 
               <div className="flex gap-2">
-                <Button 
-                  onClick={() => handleDownloadInvoice(selectedInvoice)} 
-                  className="w-full"
-                  disabled={!selectedInvoice}
-                >
+                <Button onClick={() => handleDownloadInvoice(selectedInvoice)} className="w-full">
                   <Download className="w-4 h-4 mr-2" />
                   Download PDF
                 </Button>

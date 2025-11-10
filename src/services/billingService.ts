@@ -561,11 +561,29 @@ class BillingService {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to download receipt");
+        const errorText = await response.text();
+        let errorMessage = "Failed to download receipt";
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/pdf')) {
+        throw new Error("Invalid receipt format received from server");
       }
 
       const blob = await response.blob();
-      
+
+      // Check if blob has content
+      if (blob.size === 0) {
+        throw new Error("Receipt file is empty");
+      }
+
       toast({
         title: "Success",
         description: "Receipt downloaded successfully!",
@@ -574,6 +592,7 @@ class BillingService {
       return blob;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to download receipt";
+      console.error("Receipt download error:", error);
       toast({
         title: "Error",
         description: errorMessage,
