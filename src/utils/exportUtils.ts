@@ -52,8 +52,85 @@ type SummaryResult = Record<string, string | number>;
 
 class ExportUtils {
   /**
-   * Generate Excel report with multiple sheets
+   * Generate workbook without immediately saving it
    */
+  static generateWorkbook(config: ExportConfig, sheets: SheetData[]): XLSX.WorkBook {
+    try {
+      // Create a new workbook
+      const workbook = XLSX.utils.book_new();
+      
+      // Add metadata sheet if provided
+      if (config.metadata) {
+        const metadataArray = Object.entries(config.metadata).map(([key, value]) => ({
+          Property: key,
+          Value: value
+        }));
+        
+        const metadataSheet = XLSX.utils.json_to_sheet(metadataArray);
+        XLSX.utils.book_append_sheet(workbook, metadataSheet, 'Report Info');
+      }
+
+      // Add each sheet
+      sheets.forEach(sheet => {
+        try {
+          // Convert data to worksheet
+          const worksheet = XLSX.utils.json_to_sheet(sheet.data);
+          
+          // Apply column widths if provided
+          if (sheet.columns && sheet.columns.length > 0) {
+            worksheet['!cols'] = sheet.columns;
+          }
+
+          // Auto-size columns if no specific widths provided
+          if (!sheet.columns) {
+            const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
+            const cols: Array<{ wch: number }> = [];
+            
+            for (let col = range.s.c; col <= range.e.c; col++) {
+              let maxWidth = 10; // minimum width
+              
+              for (let row = range.s.r; row <= range.e.r; row++) {
+                const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+                const cell = worksheet[cellRef];
+                
+                if (cell && cell.v) {
+                  const cellValue = String(cell.v);
+                  maxWidth = Math.max(maxWidth, Math.min(cellValue.length + 2, 50)); // max width 50
+                }
+              }
+              
+              cols.push({ wch: maxWidth });
+            }
+            
+            worksheet['!cols'] = cols;
+          }
+
+          // Add the sheet to workbook
+          XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name);
+        } catch (sheetError) {
+          console.error(`Error processing sheet ${sheet.name}:`, sheetError);
+          // Continue with other sheets even if one fails
+        }
+      });
+
+      return workbook;
+    } catch (error) {
+      console.error('Error generating workbook:', error);
+      throw new Error('Failed to generate Excel workbook');
+    }
+  }
+
+  /**
+   * Write workbook to buffer for blob creation
+   */
+  static writeWorkbookToBuffer(workbook: XLSX.WorkBook): ArrayBuffer {
+    try {
+      return XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    } catch (error) {
+      console.error('Error writing workbook to buffer:', error);
+      throw new Error('Failed to write workbook to buffer');
+    }
+  }
   static generateExcelReport(config: ExportConfig, sheets: SheetData[]): void {
     try {
       // Create a new workbook

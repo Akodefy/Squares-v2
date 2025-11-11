@@ -1,6 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ExportUtils from '@/utils/exportUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
@@ -900,13 +901,14 @@ class BillingService {
     }
   }
 
-  async exportBillingData(format: 'csv' | 'pdf' | 'excel', filters: BillingFilters = {}): Promise<Blob | null> {
+  async exportBillingData(format: 'csv' | 'excel', filters: BillingFilters = {}): Promise<Blob | null> {
     try {
-      if (format === 'pdf') {
-        // Generate PDF client-side for better formatting
-        return this.generateBillingReportPDF(filters);
+      if (format === 'excel') {
+        // Generate Excel client-side using ExportUtils
+        return this.generateBillingReportExcel(filters);
       }
 
+      // For CSV export, use server endpoint
       const queryParams = new URLSearchParams();
       queryParams.append('format', format);
 
@@ -1013,7 +1015,7 @@ class BillingService {
         margin: { left: marginLeft, right: marginRight }
       });
 
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
+      yPosition = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
 
       // Get payments data
       const paymentsData = await this.getPayments(filters);
@@ -1062,7 +1064,7 @@ class BillingService {
       // Get invoices data
       const invoicesData = await this.getInvoices(filters);
       if (invoicesData.invoices.length > 0) {
-        yPosition = (doc as any).lastAutoTable.finalY + 15;
+        yPosition = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
 
         if (yPosition > pageHeight - 80) {
           doc.addPage();
@@ -1128,6 +1130,145 @@ class BillingService {
       errorDoc.text('Error generating detailed report.', 20, 60);
       errorDoc.text('Please try again later.', 20, 70);
       return errorDoc.output('blob');
+    }
+  }
+
+  private async generateBillingReportExcel(filters: BillingFilters = {}): Promise<Blob> {
+    try {
+      // Get all billing data
+      const [paymentsData, invoicesData, stats] = await Promise.all([
+        this.getPayments({ ...filters, limit: 1000 }),
+        this.getInvoices({ ...filters, limit: 1000 }),
+        this.getBillingStats()
+      ]);
+
+      // Format payments data for Excel export
+      const paymentsExportData = paymentsData.payments.map((payment, index) => ({
+        '#': index + 1,
+        'Payment ID': payment._id?.slice(-8) || 'N/A',
+        'Transaction ID': payment.transactionId || 'N/A',
+        'Date': ExportUtils.formatDate(payment.createdAt),
+        'Description': payment.description || 'Subscription Payment',
+        'Amount': payment.amount,
+        'Currency': payment.currency,
+        'Status': payment.status.toUpperCase(),
+        'Payment Method': payment.paymentMethod.replace('_', ' ').toUpperCase(),
+        'Gateway': payment.paymentGateway || 'N/A',
+        'Paid At': payment.paidAt ? ExportUtils.formatDate(payment.paidAt) : 'N/A',
+        'Failure Reason': payment.failureReason || 'N/A'
+      }));
+
+      // Format invoices data for Excel export
+      const invoicesExportData = invoicesData.invoices.map((invoice, index) => ({
+        '#': index + 1,
+        'Invoice Number': invoice.invoiceNumber,
+        'Issue Date': ExportUtils.formatDate(invoice.issueDate),
+        'Due Date': ExportUtils.formatDate(invoice.dueDate),
+        'Paid Date': invoice.paidDate ? ExportUtils.formatDate(invoice.paidDate) : 'N/A',
+        'Amount': invoice.amount,
+        'Tax': invoice.tax,
+        'Total': invoice.total,
+        'Currency': invoice.currency,
+        'Status': invoice.status.toUpperCase(),
+        'Vendor Name': invoice.vendorDetails.name || 'N/A',
+        'Vendor Email': invoice.vendorDetails.email || 'N/A',
+        'Vendor GST': invoice.vendorDetails.gst || 'N/A'
+      }));
+
+      // Format summary data
+      const summaryData = [
+        { 'Metric': 'Total Revenue', 'Value': stats.totalRevenue, 'Formatted': ExportUtils.formatCurrency(stats.totalRevenue) },
+        { 'Metric': 'Monthly Revenue', 'Value': stats.monthlyRevenue, 'Formatted': ExportUtils.formatCurrency(stats.monthlyRevenue) },
+        { 'Metric': 'Active Subscriptions', 'Value': stats.activeSubscriptions, 'Formatted': stats.activeSubscriptions.toString() },
+        { 'Metric': 'Total Invoices', 'Value': stats.totalInvoices, 'Formatted': stats.totalInvoices.toString() },
+        { 'Metric': 'Paid Invoices', 'Value': stats.paidInvoices, 'Formatted': stats.paidInvoices.toString() },
+        { 'Metric': 'Overdue Invoices', 'Value': stats.overdueInvoices, 'Formatted': stats.overdueInvoices.toString() },
+        { 'Metric': 'Next Billing Amount', 'Value': stats.nextBillingAmount, 'Formatted': ExportUtils.formatCurrency(stats.nextBillingAmount) },
+        { 'Metric': 'Next Billing Date', 'Value': stats.nextBillingDate, 'Formatted': ExportUtils.formatDate(stats.nextBillingDate) },
+        { 'Metric': 'Subscription Status', 'Value': stats.subscriptionStatus, 'Formatted': stats.subscriptionStatus.toUpperCase() }
+      ];
+
+      // Format usage stats if available
+      const usageData = [];
+      if (stats.usageStats) {
+        usageData.push(
+          { 'Resource': 'Properties', 'Used': stats.usageStats.properties.used, 'Limit': stats.usageStats.properties.limit, 'Usage %': Math.round((stats.usageStats.properties.used / stats.usageStats.properties.limit) * 100) },
+          { 'Resource': 'Leads', 'Used': stats.usageStats.leads.used, 'Limit': stats.usageStats.leads.limit, 'Usage %': Math.round((stats.usageStats.leads.used / stats.usageStats.leads.limit) * 100) },
+          { 'Resource': 'Messages', 'Used': stats.usageStats.messages.used, 'Limit': stats.usageStats.messages.limit, 'Usage %': Math.round((stats.usageStats.messages.used / stats.usageStats.messages.limit) * 100) }
+        );
+      }
+
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      const dateRange = filters.dateFrom && filters.dateTo
+        ? `${ExportUtils.formatDate(filters.dateFrom)} - ${ExportUtils.formatDate(filters.dateTo)}`
+        : 'All Time';
+
+      // Excel export configuration
+      const config = {
+        filename: 'billing-report',
+        title: 'Vendor Billing Report',
+        metadata: {
+          'Report Generated': currentDate,
+          'Period': dateRange,
+          'Generated By': 'BuildHomeMartSquares Vendor Portal',
+          'Total Payments': paymentsExportData.length.toString(),
+          'Total Invoices': invoicesExportData.length.toString(),
+          'Report Type': 'Comprehensive Billing Summary'
+        }
+      };
+
+      // Prepare sheets for Excel export
+      const sheets = [
+        {
+          name: 'Summary',
+          data: summaryData,
+          columns: [{ wch: 25 }, { wch: 15 }, { wch: 20 }]
+        },
+        {
+          name: 'Payments',
+          data: paymentsExportData,
+          columns: [
+            { wch: 5 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, 
+            { wch: 25 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, 
+            { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 20 }
+          ]
+        },
+        {
+          name: 'Invoices',
+          data: invoicesExportData,
+          columns: [
+            { wch: 5 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, 
+            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, 
+            { wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 15 }
+          ]
+        }
+      ];
+
+      // Add usage data sheet if available
+      if (usageData.length > 0) {
+        sheets.push({
+          name: 'Usage Statistics',
+          data: usageData,
+          columns: [{ wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 15 }]
+        });
+      }
+
+      // Use ExportUtils to generate Excel and return as blob
+      const workbook = ExportUtils.generateWorkbook(config, sheets);
+      const excelBuffer = ExportUtils.writeWorkbookToBuffer(workbook);
+      
+      return new Blob([excelBuffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+    } catch (error) {
+      console.error('Error generating Excel report:', error);
+      throw new Error('Failed to generate Excel billing report');
     }
   }
 }

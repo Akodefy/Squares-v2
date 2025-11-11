@@ -25,11 +25,13 @@ import {
   Plus,
   Eye,
   FileText,
-  BarChart3
+  BarChart3,
+  FileSpreadsheet
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { billingService, VendorSubscription, Payment, BillingStats, Invoice } from "@/services/billingService";
+import ExportUtils from "@/utils/exportUtils";
 
 const VendorBilling: React.FC = () => {
   const isMobile = useIsMobile();
@@ -176,31 +178,144 @@ const VendorBilling: React.FC = () => {
     return payment.description || '';
   };
 
-  const handleExport = async () => {
+  const handleExportExcel = async () => {
     try {
-      const periodName = selectedPeriod.replace(/_/g, '-'); // e.g., "last_30_days" -> "last-30-days"
-      const blob = await billingService.exportBillingData('pdf', {
-        dateFrom: getDateFromPeriod(selectedPeriod),
+      const [paymentsData, invoicesData, stats] = await Promise.all([
+        billingService.getPayments({ 
+          dateFrom: getDateFromPeriod(selectedPeriod),
+          limit: 100
+        }),
+        billingService.getInvoices({ limit: 100 }),
+        billingService.getBillingStats()
+      ]);
+
+      // Format payments data for Excel export
+      const paymentsExportData = paymentsData.payments.map((payment, index) => ({
+        '#': index + 1,
+        'Payment ID': payment._id?.slice(-8) || 'N/A',
+        'Transaction ID': payment.transactionId || 'N/A',
+        'Date': ExportUtils.formatDate(payment.createdAt),
+        'Description': payment.description || 'Subscription Payment',
+        'Amount': `₹${payment.amount}`,
+        'Currency': payment.currency,
+        'Status': payment.status.toUpperCase(),
+        'Payment Method': payment.paymentMethod.replace('_', ' ').toUpperCase(),
+        'Gateway': payment.paymentGateway || 'N/A',
+        'Paid At': payment.paidAt ? ExportUtils.formatDate(payment.paidAt) : 'N/A',
+        'Failure Reason': payment.failureReason || 'N/A'
+      }));
+
+      // Format invoices data for Excel export
+      const invoicesExportData = invoicesData.invoices.map((invoice, index) => ({
+        '#': index + 1,
+        'Invoice Number': invoice.invoiceNumber,
+        'Issue Date': ExportUtils.formatDate(invoice.issueDate),
+        'Due Date': ExportUtils.formatDate(invoice.dueDate),
+        'Paid Date': invoice.paidDate ? ExportUtils.formatDate(invoice.paidDate) : 'N/A',
+        'Amount': `₹${invoice.amount}`,
+        'Tax': `₹${invoice.tax}`,
+        'Total': `₹${invoice.total}`,
+        'Currency': invoice.currency,
+        'Status': invoice.status.toUpperCase(),
+        'Vendor Name': invoice.vendorDetails.name || 'N/A',
+        'Vendor Email': invoice.vendorDetails.email || 'N/A',
+        'Vendor GST': invoice.vendorDetails.gst || 'N/A'
+      }));
+
+      // Format summary data
+      const summaryData = [
+        { 'Metric': 'Total Revenue', 'Value': `₹${stats.totalRevenue}` },
+        { 'Metric': 'Monthly Revenue', 'Value': `₹${stats.monthlyRevenue}` },
+        { 'Metric': 'Active Subscriptions', 'Value': stats.activeSubscriptions },
+        { 'Metric': 'Total Invoices', 'Value': stats.totalInvoices },
+        { 'Metric': 'Paid Invoices', 'Value': stats.paidInvoices },
+        { 'Metric': 'Overdue Invoices', 'Value': stats.overdueInvoices },
+        { 'Metric': 'Next Billing Amount', 'Value': `₹${stats.nextBillingAmount}` },
+        { 'Metric': 'Next Billing Date', 'Value': ExportUtils.formatDate(stats.nextBillingDate) },
+        { 'Metric': 'Subscription Status', 'Value': stats.subscriptionStatus.toUpperCase() }
+      ];
+
+      // Format usage stats if available
+      const usageData = [];
+      if (stats.usageStats) {
+        usageData.push(
+          { 'Resource': 'Properties', 'Used': stats.usageStats.properties.used, 'Limit': stats.usageStats.properties.limit, 'Usage %': `${Math.round((stats.usageStats.properties.used / stats.usageStats.properties.limit) * 100)}%` },
+          { 'Resource': 'Leads', 'Used': stats.usageStats.leads.used, 'Limit': stats.usageStats.leads.limit, 'Usage %': `${Math.round((stats.usageStats.leads.used / stats.usageStats.leads.limit) * 100)}%` },
+          { 'Resource': 'Messages', 'Used': stats.usageStats.messages.used, 'Limit': stats.usageStats.messages.limit, 'Usage %': `${Math.round((stats.usageStats.messages.used / stats.usageStats.messages.limit) * 100)}%` }
+        );
+      }
+
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
-      
-      if (blob) {
-        billingService.downloadBlob(blob, `billing-report-${periodName}-${new Date().toISOString().split('T')[0]}.pdf`);
-        toast({
-          title: "Success",
-          description: "Billing report downloaded successfully.",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to generate billing report. No data received.",
-          variant: "destructive",
+
+      const periodName = selectedPeriod.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+      // Excel export configuration
+      const config = {
+        filename: `vendor-billing-report-${selectedPeriod}`,
+        title: 'Vendor Billing Report',
+        metadata: {
+          'Report Generated': currentDate,
+          'Period': periodName,
+          'Generated By': 'BuildHomeMartSquares Vendor Portal',
+          'Total Payments': paymentsExportData.length.toString(),
+          'Total Invoices': invoicesExportData.length.toString(),
+          'Report Type': 'Comprehensive Billing Summary'
+        }
+      };
+
+      // Prepare sheets for Excel export
+      const sheets = [
+        {
+          name: 'Summary',
+          data: summaryData,
+          columns: [{ wch: 25 }, { wch: 20 }]
+        },
+        {
+          name: 'Payments',
+          data: paymentsExportData,
+          columns: [
+            { wch: 5 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, 
+            { wch: 25 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, 
+            { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 20 }
+          ]
+        },
+        {
+          name: 'Invoices',
+          data: invoicesExportData,
+          columns: [
+            { wch: 5 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, 
+            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, 
+            { wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 15 }
+          ]
+        }
+      ];
+
+      // Add usage data sheet if available
+      if (usageData.length > 0) {
+        sheets.push({
+          name: 'Usage Statistics',
+          data: usageData,
+          columns: [{ wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 15 }]
         });
       }
-    } catch (error) {
-      console.error("Export failed:", error);
+
+      // Generate Excel file
+      ExportUtils.generateExcelReport(config, sheets);
+
       toast({
-        title: "Error",
-        description: "Failed to download billing report. Please try again.",
+        title: "Export Successful",
+        description: "Billing report exported to Excel successfully!",
+      });
+
+    } catch (error) {
+      console.error("Excel export failed:", error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export billing report to Excel. Please try again.",
         variant: "destructive",
       });
     }
@@ -520,9 +635,9 @@ const VendorBilling: React.FC = () => {
               <SelectItem value="last_year">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={handleExport} className={`${isMobile ? 'w-full h-11' : 'h-9'}`}>
-            <Download className="w-4 h-4 mr-2" />
-            Export
+          <Button variant="outline" onClick={handleExportExcel} className={`${isMobile ? 'w-full h-11' : 'h-9'}`}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Export Excel
           </Button>
         </div>
       </div>

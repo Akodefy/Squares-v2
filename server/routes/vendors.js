@@ -3437,7 +3437,7 @@ www.buildhomemartsquares.com
 // @access  Private/Agent
 router.get('/billing/export', requireVendorRole, asyncHandler(async (req, res) => {
   const vendorId = req.user.id;
-  const { format = 'pdf', dateFrom, dateTo } = req.query;
+  const { format = 'csv', dateFrom, dateTo } = req.query;
   
   try {
     const Subscription = require('../models/Subscription');
@@ -3469,6 +3469,29 @@ router.get('/billing/export', requireVendorRole, asyncHandler(async (req, res) =
       
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=billing-export-${Date.now()}.csv`);
+    } else if (format === 'excel') {
+      // For Excel, return JSON data that frontend will process
+      const excelData = subscriptions.map((sub, index) => ({
+        '#': index + 1,
+        'Date': new Date(sub.createdAt).toLocaleDateString(),
+        'Plan': sub.plan ? sub.plan.name : 'N/A',
+        'Amount': sub.amount || 0,
+        'Currency': sub.currency || 'INR',
+        'Status': sub.status,
+        'Start Date': new Date(sub.startDate).toLocaleDateString(),
+        'End Date': new Date(sub.endDate).toLocaleDateString()
+      }));
+      
+      res.json({
+        success: true,
+        data: excelData,
+        summary: {
+          totalSubscriptions: subscriptions.length,
+          totalAmount: subscriptions.reduce((sum, sub) => sum + (sub.amount || 0), 0),
+          activeSubscriptions: subscriptions.filter(sub => sub.status === 'active').length
+        }
+      });
+      return;
     } else {
       exportData = `
 =====================================

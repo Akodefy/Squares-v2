@@ -153,7 +153,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       </Card>
 
       {/* Test Buttons Section */}
-      {showTestButtons && (
+      {/* {showTestButtons && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -189,7 +189,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
     </div>
   );
 };
