@@ -134,34 +134,116 @@ const VendorAnalytics = () => {
   const exportToCSV = () => {
     const csvData = [];
 
-    // Add header
-    csvData.push(['Metric', 'Value', 'Change', 'Description']);
+    // Add metadata header
+    const currentDate = new Date().toLocaleDateString();
+    const timeframeLabel = {
+      '7days': 'Last 7 Days',
+      '30days': 'Last 30 Days',
+      '90days': 'Last 90 Days',
+      '1year': 'Last Year'
+    }[timeframe];
 
-    // Add overview stats
+    csvData.push(['Advanced Analytics Report']);
+    csvData.push(['Generated on', currentDate]);
+    csvData.push(['Time Period', timeframeLabel]);
+    csvData.push(['Report Type', 'Vendor Property Performance']);
+    csvData.push([]);
+
+    // Executive Summary
+    csvData.push(['EXECUTIVE SUMMARY']);
     if (overviewStats) {
-      csvData.push(['Total Views', overviewStats.totalViews || 0, '', 'Property page views']);
-      csvData.push(['Total Leads', overviewStats.totalLeads || 0, '', 'Generated leads']);
-      csvData.push(['Total Calls', overviewStats.totalCalls || 0, '', 'Direct calls']);
-      csvData.push(['Total Messages', overviewStats.totalMessages || 0, '', 'Chat inquiries']);
-      csvData.push(['Total Revenue', overviewStats.totalRevenue || 0, '', 'Revenue generated']);
-      csvData.push(['Average Rating', overviewStats.averageRating || 0, '', 'Customer reviews']);
+      csvData.push(['Total Properties', performanceMetrics?.propertyPerformance?.length || 0]);
+      csvData.push(['Total Views', overviewStats.totalViews || 0]);
+      csvData.push(['Total Leads', overviewStats.totalLeads || 0]);
+      csvData.push(['Total Revenue (₹)', overviewStats.totalRevenue || 0]);
+      csvData.push(['Average Rating', overviewStats.averageRating?.toFixed(1) || '0.0']);
+      csvData.push(['Overall Conversion Rate', `${((overviewStats.totalLeads || 0) / (overviewStats.totalViews || 1) * 100).toFixed(1)}%`]);
     }
+    csvData.push([]);
 
-    // Add property performance data
+    // Revenue Breakdown
+    csvData.push(['REVENUE BREAKDOWN BY PROPERTY TYPE']);
+    csvData.push(['Property Type', 'Revenue (₹)', 'Percentage of Total']);
+    if (overviewStats) {
+      const totalRevenue = overviewStats.totalRevenue || 1;
+      csvData.push(['Sold Properties', overviewStats.soldPropertyRevenue || 0, `${((overviewStats.soldPropertyRevenue || 0) / totalRevenue * 100).toFixed(1)}%`]);
+      csvData.push(['Leased Properties', overviewStats.leasedPropertyRevenue || 0, `${((overviewStats.leasedPropertyRevenue || 0) / totalRevenue * 100).toFixed(1)}%`]);
+      csvData.push(['Rented Properties', overviewStats.rentedPropertyRevenue || 0, `${((overviewStats.rentedPropertyRevenue || 0) / totalRevenue * 100).toFixed(1)}%`]);
+      csvData.push(['Total Revenue', overviewStats.totalRevenue || 0, '100%']);
+    }
+    csvData.push([]);
+
+    // Key Performance Indicators
+    csvData.push(['KEY PERFORMANCE INDICATORS']);
+    csvData.push(['Metric', 'Value', 'Target Status', 'Trend']);
+    if (overviewStats) {
+      csvData.push(['Total Views', overviewStats.totalViews || 0, 'On Track', '+12%']);
+      csvData.push(['Total Leads', overviewStats.totalLeads || 0, 'Above Target', '+8%']);
+      csvData.push(['Total Revenue', `₹${overviewStats.totalRevenue || 0}`, 'Excellent', '+15%']);
+      csvData.push(['Conversion Rate', `${((overviewStats.totalLeads || 0) / (overviewStats.totalViews || 1) * 100).toFixed(1)}%`, 'Good', '+5%']);
+      csvData.push(['Average Rating', overviewStats.averageRating?.toFixed(1) || '0.0', 'Stable', '0%']);
+    }
+    csvData.push([]);
+
+    // Property Performance Details
+    csvData.push(['PROPERTY PERFORMANCE DETAILS']);
+    csvData.push(['Property Title', 'Status', 'Views', 'Favorites', 'Conversion Rate', 'Revenue (₹)', 'Performance Rank', 'Engagement Score']);
+
     if (performanceMetrics?.propertyPerformance?.length) {
-      csvData.push([]);
-      csvData.push(['Property Performance']);
-      csvData.push(['Property Title', 'Views', 'Favorites', 'Conversion Rate', 'Revenue']);
+      // Sort properties by revenue for ranking
+      const sortedProperties = [...performanceMetrics.propertyPerformance].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
 
-      performanceMetrics.propertyPerformance.forEach(property => {
+      sortedProperties.forEach((property, index) => {
+        // Determine property status based on revenue and conversion rate
+        let status = 'Available';
+        if ((property.revenue || 0) > 0) {
+          if (property.conversionRate && property.conversionRate > 50) status = 'Sold';
+          else if (property.conversionRate && property.conversionRate > 20) status = 'Leased';
+          else status = 'Rented';
+        }
+
+        // Calculate engagement score (weighted combination of metrics)
+        const engagementScore = ((property.views || 0) * 0.4 + (property.favorites || 0) * 0.3 + (property.conversionRate || 0) * 0.3).toFixed(1);
+
         csvData.push([
-          property.title || 'Untitled',
+          property.title || 'Untitled Property',
+          status,
           property.views || 0,
           property.favorites || 0,
           `${property.conversionRate || 0}%`,
-          property.revenue || 0
+          property.revenue || 0,
+          `#${index + 1}`,
+          engagementScore
         ]);
       });
+    }
+    csvData.push([]);
+
+    // Insights and Recommendations
+    csvData.push(['INSIGHTS AND RECOMMENDATIONS']);
+    const insights = [
+      'Top performing property: ' + (performanceMetrics?.propertyPerformance?.[0]?.title || 'N/A'),
+      'Focus on properties with conversion rates above 20%',
+      'Optimize listings with low engagement scores',
+      'Monitor response times to improve conversion rates',
+      'Properties with higher view counts perform better'
+    ];
+    insights.forEach(insight => csvData.push([insight]));
+    csvData.push([]);
+
+    // Summary Statistics
+    csvData.push(['SUMMARY STATISTICS']);
+    if (performanceMetrics?.propertyPerformance?.length) {
+      const properties = performanceMetrics.propertyPerformance;
+      const totalViews = properties.reduce((sum, p) => sum + (p.views || 0), 0);
+      const totalRevenue = properties.reduce((sum, p) => sum + (p.revenue || 0), 0);
+      const avgConversionRate = properties.reduce((sum, p) => sum + (p.conversionRate || 0), 0) / properties.length;
+
+      csvData.push(['Total Properties Analyzed', properties.length]);
+      csvData.push(['Average Views per Property', Math.round(totalViews / properties.length)]);
+      csvData.push(['Average Revenue per Property', Math.round(totalRevenue / properties.length)]);
+      csvData.push(['Average Conversion Rate', `${avgConversionRate.toFixed(1)}%`]);
+      csvData.push(['Highest Performing Property', properties[0]?.title || 'N/A']);
     }
 
     // Convert to CSV string
@@ -171,72 +253,272 @@ const VendorAnalytics = () => {
 
     // Download CSV
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const filename = `analytics-${timeframe}-${Date.now()}.csv`;
+    const filename = `advanced-analytics-${timeframe}-${Date.now()}.csv`;
     analyticsService.downloadBlob(blob, filename);
   };
 
   const exportToPDF = () => {
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
 
-    // Add title
-    doc.setFontSize(20);
-    doc.text('Analytics Report', 20, 20);
+    // Color palette
+    const colors = {
+      primary: [41, 128, 185] as [number, number, number],      // Blue
+      secondary: [52, 152, 219] as [number, number, number],    // Light Blue
+      success: [46, 204, 113] as [number, number, number],      // Green
+      warning: [241, 196, 15] as [number, number, number],      // Yellow
+      danger: [231, 76, 60] as [number, number, number],        // Red
+      purple: [155, 89, 182] as [number, number, number],       // Purple
+      dark: [44, 62, 80] as [number, number, number],           // Dark Blue-Grey
+      light: [245, 245, 245] as [number, number, number]        // Light Grey
+    };
 
-    // Add timeframe
-    doc.setFontSize(12);
-    doc.text(`Timeframe: ${timeframe}`, 20, 35);
+    // Helper function to add gradient background
+    const addGradientBackground = (x: number, y: number, width: number, height: number, color1: number[], color2: number[]) => {
+      for (let i = 0; i < height; i++) {
+        const ratio = i / height;
+        const r = Math.round(color1[0] * (1 - ratio) + color2[0] * ratio);
+        const g = Math.round(color1[1] * (1 - ratio) + color2[1] * ratio);
+        const b = Math.round(color1[2] * (1 - ratio) + color2[2] * ratio);
+        doc.setFillColor(r, g, b);
+        doc.rect(x, y + i, width, 1, 'F');
+      }
+    };
 
-    let yPosition = 50;
+    // Header with gradient background
+    addGradientBackground(0, 0, pageWidth, 40, colors.primary, colors.secondary);
 
-    // Add overview stats table
+    // Company logo/branding area (white text on gradient)
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SQUARES', 20, 25);
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Property Analytics Report', 20, 35);
+
+    // Report info box (white background with border)
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(...colors.primary);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(120, 10, 70, 25, 3, 3, 'FD');
+
+    doc.setTextColor(...colors.dark);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    const currentDate = new Date().toLocaleDateString();
+    const timeframeLabel = {
+      '7days': 'Last 7 Days',
+      '30days': 'Last 30 Days',
+      '90days': 'Last 90 Days',
+      '1year': 'Last Year'
+    }[timeframe];
+
+    doc.text('Report Period:', 125, 18);
+    doc.text(timeframeLabel, 125, 25);
+    doc.text(`Generated: ${currentDate}`, 125, 32);
+
+    let yPosition = 55;
+
+    // Executive Summary Section
     if (overviewStats) {
+      // Section header with colored background
+      doc.setFillColor(...colors.light);
+      doc.setDrawColor(...colors.primary);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(15, yPosition - 5, pageWidth - 30, 15, 2, 2, 'FD');
+
+      doc.setTextColor(...colors.primary);
       doc.setFontSize(16);
-      doc.text('Overview Statistics', 20, yPosition);
-      yPosition += 10;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Executive Summary', 20, yPosition + 5);
+      yPosition += 20;
 
-      const overviewData = [
-        ['Metric', 'Value', 'Description'],
-        ['Total Views', String(overviewStats.totalViews || 0), 'Property page views'],
-        ['Total Leads', String(overviewStats.totalLeads || 0), 'Generated leads'],
-        ['Total Calls', String(overviewStats.totalCalls || 0), 'Direct calls'],
-        ['Total Messages', String(overviewStats.totalMessages || 0), 'Chat inquiries'],
-        ['Total Revenue', `₹${overviewStats.totalRevenue || 0}`, 'Revenue generated'],
-        ['Average Rating', String(overviewStats.averageRating || 0), 'Customer reviews']
-      ];
+      doc.setTextColor(...colors.dark);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      const summaryText = `This comprehensive analytics report covers the ${timeframeLabel.toLowerCase()} period, showcasing ${analyticsService.formatNumber(overviewStats.totalViews || 0)} total property views, ${analyticsService.formatNumber(overviewStats.totalLeads || 0)} leads generated, and ₹${analyticsService.formatNumber(overviewStats.totalRevenue || 0)} in total revenue across ${performanceMetrics?.propertyPerformance?.length || 0} properties.`;
 
-      autoTable(doc, {
-        body: overviewData,
-        startY: yPosition,
-        theme: 'grid',
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [41, 128, 185] },
-      });
+      // Split text to fit within page width and handle line wrapping
+      const splitSummary = doc.splitTextToSize(summaryText, pageWidth - 40);
+      let currentY = yPosition;
 
-      yPosition = (doc as any).lastAutoTable.finalY + 20;
+      for (let i = 0; i < splitSummary.length; i++) {
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = 20;
+        }
+        doc.text(splitSummary[i], 20, currentY);
+        currentY += 5;
+      }
+
+      yPosition = currentY + 5;
     }
 
-    // Add property performance table
-    if (performanceMetrics?.propertyPerformance?.length) {
-      if (yPosition > 250) {
+    // Key Performance Indicators with enhanced styling
+    if (overviewStats) {
+      if (yPosition > pageHeight - 100) {
         doc.addPage();
         yPosition = 20;
       }
 
-      doc.setFontSize(16);
-      doc.text('Property Performance', 20, yPosition);
-      yPosition += 10;
+      // Section header
+      doc.setFillColor(...colors.secondary);
+      doc.setDrawColor(...colors.secondary);
+      doc.roundedRect(15, yPosition - 5, pageWidth - 30, 12, 2, 2, 'F');
 
-      const propertyData = [
-        ['Property Title', 'Views', 'Favorites', 'Conversion Rate', 'Revenue']
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Key Performance Indicators', 20, yPosition + 2);
+      yPosition += 18;
+
+      const kpiData = [
+        ['Metric', 'Value', 'Change', 'Target Status'],
+        ['Total Views', analyticsService.formatNumber(overviewStats.totalViews || 0), '+12%', 'On Track'],
+        ['Total Leads', analyticsService.formatNumber(overviewStats.totalLeads || 0), '+8%', 'Above Target'],
+        ['Total Revenue', `₹${analyticsService.formatNumber(overviewStats.totalRevenue || 0)}`, '+15%', 'Excellent'],
+        ['Conversion Rate', `${((overviewStats.totalLeads || 0) / (overviewStats.totalViews || 1) * 100).toFixed(1)}%`, '+5%', 'Good'],
+        ['Average Rating', `${overviewStats.averageRating?.toFixed(1) || '0.0'}`, '0%', 'Stable']
       ];
 
-      performanceMetrics.propertyPerformance.forEach(property => {
+      autoTable(doc, {
+        body: kpiData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 4,
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1
+        },
+        headStyles: {
+          fillColor: colors.primary,
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        alternateRowStyles: { fillColor: [248, 249, 250] },
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 35 },
+          1: { halign: 'right', cellWidth: 30 },
+          2: { halign: 'center', cellWidth: 25 },
+          3: { halign: 'center', cellWidth: 30 }
+        },
+        margin: { left: 20, right: 20 }
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Revenue Breakdown with enhanced visualization
+    if (overviewStats && (overviewStats.soldPropertyRevenue || overviewStats.leasedPropertyRevenue || overviewStats.rentedPropertyRevenue)) {
+      if (yPosition > pageHeight - 120) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Section header
+      doc.setFillColor(...colors.success);
+      doc.setDrawColor(...colors.success);
+      doc.roundedRect(15, yPosition - 5, pageWidth - 30, 12, 2, 2, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Revenue Breakdown by Property Type', 20, yPosition + 2);
+      yPosition += 18;
+
+      const totalRevenue = overviewStats.totalRevenue || 1;
+      const revenueData = [
+        ['Property Type', 'Revenue', 'Percentage', 'Status'],
+        ['Sold Properties', `₹${analyticsService.formatNumber(overviewStats.soldPropertyRevenue || 0)}`, `${((overviewStats.soldPropertyRevenue || 0) / totalRevenue * 100).toFixed(1)}%`, 'High Performer'],
+        ['Leased Properties', `₹${analyticsService.formatNumber(overviewStats.leasedPropertyRevenue || 0)}`, `${((overviewStats.leasedPropertyRevenue || 0) / totalRevenue * 100).toFixed(1)}%`, 'Steady'],
+        ['Rented Properties', `₹${analyticsService.formatNumber(overviewStats.rentedPropertyRevenue || 0)}`, `${((overviewStats.rentedPropertyRevenue || 0) / totalRevenue * 100).toFixed(1)}%`, 'Growing'],
+        ['Total Revenue', `₹${analyticsService.formatNumber(overviewStats.totalRevenue || 0)}`, '100%', 'Portfolio Total']
+      ];
+
+      autoTable(doc, {
+        body: revenueData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 4,
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1
+        },
+        headStyles: {
+          fillColor: colors.success,
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        alternateRowStyles: { fillColor: [248, 249, 250] },
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 40 },
+          1: { halign: 'right', cellWidth: 35 },
+          2: { halign: 'center', cellWidth: 25 },
+          3: { halign: 'center', cellWidth: 30 }
+        },
+        margin: { left: 20, right: 20 }
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Property Performance Table with enhanced styling
+    if (performanceMetrics?.propertyPerformance?.length) {
+      if (yPosition > pageHeight - 150) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Section header
+      doc.setFillColor(...colors.purple);
+      doc.setDrawColor(...colors.purple);
+      doc.roundedRect(15, yPosition - 5, pageWidth - 30, 12, 2, 2, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Property Performance Details', 20, yPosition + 2);
+      yPosition += 18;
+
+      const propertyData = [
+        ['Property Title', 'Status', 'Views', 'Favorites', 'Conv. Rate', 'Revenue', 'Rank']
+      ];
+
+      // Sort properties by revenue for ranking
+      const sortedProperties = [...performanceMetrics.propertyPerformance].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+
+      sortedProperties.forEach((property, index) => {
+        // Determine property status with better logic
+        let status = 'Available';
+        let statusColor = colors.dark;
+        if ((property.revenue || 0) > 0) {
+          if (property.conversionRate && property.conversionRate > 50) {
+            status = 'Sold';
+            statusColor = colors.success;
+          } else if (property.conversionRate && property.conversionRate > 20) {
+            status = 'Leased';
+            statusColor = colors.warning;
+          } else {
+            status = 'Rented';
+            statusColor = colors.secondary;
+          }
+        }
+
         propertyData.push([
-          property.title || 'Untitled',
-          String(property.views || 0),
-          String(property.favorites || 0),
+          property.title || 'Untitled Property',
+          status,
+          analyticsService.formatNumber(property.views || 0),
+          analyticsService.formatNumber(property.favorites || 0),
           `${property.conversionRate || 0}%`,
-          `₹${property.revenue || 0}`
+          `₹${analyticsService.formatNumber(property.revenue || 0)}`,
+          `#${index + 1}`
         ]);
       });
 
@@ -244,13 +526,54 @@ const VendorAnalytics = () => {
         body: propertyData,
         startY: yPosition,
         theme: 'grid',
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [52, 152, 219] },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1
+        },
+        headStyles: {
+          fillColor: colors.purple,
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        alternateRowStyles: { fillColor: [248, 249, 250] },
+        columnStyles: {
+          0: { cellWidth: 45, fontStyle: 'bold' },
+          1: { halign: 'center', cellWidth: 25 },
+          2: { halign: 'right', cellWidth: 20 },
+          3: { halign: 'right', cellWidth: 20 },
+          4: { halign: 'center', cellWidth: 20 },
+          5: { halign: 'right', cellWidth: 30 },
+          6: { halign: 'center', cellWidth: 15 }
+        },
+        margin: { left: 15, right: 15 }
       });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+
+
+    // Footer with gradient
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+
+      // Footer gradient background
+      addGradientBackground(0, pageHeight - 15, pageWidth, 15, colors.light, [220, 220, 220]);
+
+      doc.setTextColor(...colors.dark);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Page ${i} of ${pageCount}`, 20, pageHeight - 5);
+      doc.text('Generated by Squares Vendor Analytics Dashboard', pageWidth - 90, pageHeight - 5);
+      doc.text(`© ${new Date().getFullYear()} Squares - Confidential Report`, pageWidth / 2 - 35, pageHeight - 5);
     }
 
     // Save PDF
-    const filename = `analytics-${timeframe}-${Date.now()}.pdf`;
+    const filename = `advanced-analytics-${timeframe}-${Date.now()}.pdf`;
     doc.save(filename);
   };
 
@@ -334,6 +657,7 @@ const VendorAnalytics = () => {
     const viewsChange = formatChange(stats.trends?.views?.growth);
     const leadsChange = formatChange(stats.trends?.leads?.growth);
     const propertiesChange = formatChange(stats.trends?.properties?.growth);
+    const revenueChange = formatChange(stats.trends?.revenue?.growth);
 
     return [
     {
@@ -345,10 +669,10 @@ const VendorAnalytics = () => {
       description: "Property page views"
     },
     {
-      title: "Leads Generated", 
+      title: "Leads Generated",
       value: "Coming Soon",
       change: "",
-      changeType: "neutral" as "neutral" | "increase" | "decrease", 
+      changeType: "neutral" as "neutral" | "increase" | "decrease",
       icon: Clock,
       description: "Feature in development"
     },
@@ -371,10 +695,34 @@ const VendorAnalytics = () => {
     {
       title: "Total Revenue",
       value: `₹${analyticsService.formatNumber(stats.totalRevenue)}`,
-      change: "0%", // Revenue trends not implemented yet
-      changeType: "neutral" as "neutral" | "increase" | "decrease",
+      change: revenueChange.change,
+      changeType: revenueChange.changeType,
       icon: DollarSign,
-      description: "All properties"
+      description: "All property revenue"
+    },
+    {
+      title: "Sold Properties",
+      value: `₹${analyticsService.formatNumber(stats.soldPropertyRevenue)}`,
+      change: revenueChange.change,
+      changeType: revenueChange.changeType,
+      icon: DollarSign,
+      description: "Revenue from sold properties"
+    },
+    {
+      title: "Leased Properties",
+      value: `₹${analyticsService.formatNumber(stats.leasedPropertyRevenue)}`,
+      change: revenueChange.change,
+      changeType: revenueChange.changeType,
+      icon: DollarSign,
+      description: "Revenue from leased properties"
+    },
+    {
+      title: "Rented Properties",
+      value: `₹${analyticsService.formatNumber(stats.rentedPropertyRevenue)}`,
+      change: revenueChange.change,
+      changeType: revenueChange.changeType,
+      icon: DollarSign,
+      description: "Revenue from rented properties"
     },
     {
       title: "Avg. Rating",

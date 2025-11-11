@@ -8,6 +8,9 @@ export interface AnalyticsOverviewStats {
   totalCalls: number;
   totalMessages: number;
   totalRevenue: number;
+  soldPropertyRevenue: number;
+  leasedPropertyRevenue: number;
+  rentedPropertyRevenue: number;
   totalProperties: number;
   averageRating: number;
   responseTime: string;
@@ -24,6 +27,11 @@ export interface AnalyticsOverviewStats {
       growth: number;
     };
     properties: {
+      current: number;
+      previous: number;
+      growth: number;
+    };
+    revenue: {
       current: number;
       previous: number;
       growth: number;
@@ -130,6 +138,9 @@ class AnalyticsService {
         totalCalls: 0,
         totalMessages: 0,
         totalRevenue: 0,
+        soldPropertyRevenue: 0,
+        leasedPropertyRevenue: 0,
+        rentedPropertyRevenue: 0,
         totalProperties: 0,
         averageRating: 0,
         responseTime: "Not calculated",
@@ -144,6 +155,9 @@ class AnalyticsService {
         totalCalls: 0,
         totalMessages: 0,
         totalRevenue: 0,
+        soldPropertyRevenue: 0,
+        leasedPropertyRevenue: 0,
+        rentedPropertyRevenue: 0,
         totalProperties: 0,
         averageRating: 0,
         responseTime: "Not calculated",

@@ -2375,14 +2375,68 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
       })
     ]);
     
-    // Calculate total revenue from sold properties in this period
-    const soldProperties = await Property.find({
-      owner: vendorObjectId,
-      status: 'sold',
-      updatedAt: { $gte: currentStartDate, $lte: currentEndDate }
-    }).select('price');
+    // Calculate separate revenue from different property types
+    const [soldProperties, leasedProperties, rentedProperties] = await Promise.all([
+      Property.find({
+        owner: vendorObjectId,
+        status: 'sold',
+        updatedAt: { $gte: currentStartDate, $lte: currentEndDate }
+      }).select('price'),
+      Property.find({
+        owner: vendorObjectId,
+        status: { $in: ['leased'] },
+        updatedAt: { $gte: currentStartDate, $lte: currentEndDate }
+      }).select('price'),
+      Property.find({
+        owner: vendorObjectId,
+        status: 'rented',
+        updatedAt: { $gte: currentStartDate, $lte: currentEndDate }
+      }).select('price')
+    ]);
     
-    const totalRevenue = soldProperties.reduce((sum, prop) => {
+    const soldPropertyRevenue = soldProperties.reduce((sum, prop) => {
+      const price = parseFloat(prop.price?.toString().replace(/[^0-9.]/g, '') || '0');
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
+    
+    const leasedPropertyRevenue = leasedProperties.reduce((sum, prop) => {
+      const price = parseFloat(prop.price?.toString().replace(/[^0-9.]/g, '') || '0');
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
+    
+    const rentedPropertyRevenue = rentedProperties.reduce((sum, prop) => {
+      const price = parseFloat(prop.price?.toString().replace(/[^0-9.]/g, '') || '0');
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
+    
+    const totalRevenue = soldPropertyRevenue + leasedPropertyRevenue + rentedPropertyRevenue;
+    
+    // Calculate previous period revenue for trends
+    const [prevSoldProps, prevLeasedProps, prevRentedProps] = await Promise.all([
+      Property.find({
+        owner: vendorObjectId,
+        status: 'sold',
+        updatedAt: { $gte: previousStartDate, $lte: previousEndDate }
+      }).select('price'),
+      Property.find({
+        owner: vendorObjectId,
+        status: { $in: ['leased'] },
+        updatedAt: { $gte: previousStartDate, $lte: previousEndDate }
+      }).select('price'),
+      Property.find({
+        owner: vendorObjectId,
+        status: 'rented',
+        updatedAt: { $gte: previousStartDate, $lte: previousEndDate }
+      }).select('price')
+    ]);
+    
+    const prevTotalRevenue = prevSoldProps.reduce((sum, prop) => {
+      const price = parseFloat(prop.price?.toString().replace(/[^0-9.]/g, '') || '0');
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0) + prevLeasedProps.reduce((sum, prop) => {
+      const price = parseFloat(prop.price?.toString().replace(/[^0-9.]/g, '') || '0');
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0) + prevRentedProps.reduce((sum, prop) => {
       const price = parseFloat(prop.price?.toString().replace(/[^0-9.]/g, '') || '0');
       return sum + (isNaN(price) ? 0 : price);
     }, 0);
@@ -2391,10 +2445,15 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
     const prevLeads = previousLeads;
     const prevProperties = previousProperties;
 
-    // Calculate trends
-    const viewsGrowth = prevViews > 0 ? ((currentViews - prevViews) / prevViews * 100) : 0;
-    const leadsGrowth = prevLeads > 0 ? ((currentLeads - prevLeads) / prevLeads * 100) : 0;
-    const propertiesGrowth = prevProperties > 0 ? ((totalProperties - prevProperties) / prevProperties * 100) : 0;
+    // Calculate trends with proper fallbacks
+    const viewsGrowth = prevViews > 0 ? ((currentViews - prevViews) / prevViews * 100) : 
+      (currentViews > 0 ? 100 : 0);
+    const leadsGrowth = prevLeads > 0 ? ((currentLeads - prevLeads) / prevLeads * 100) : 
+      (currentLeads > 0 ? 100 : 0);
+    const propertiesGrowth = prevProperties > 0 ? ((totalProperties - prevProperties) / prevProperties * 100) : 
+      (totalProperties > 0 ? 100 : 0);
+    const revenueGrowth = prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue * 100) : 
+      (totalRevenue > 0 ? 100 : 0);
 
     // Calculate conversion rate
     const conversionRate = currentViews > 0 ? ((currentLeads / currentViews) * 100) : 0;
@@ -2420,7 +2479,7 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
       // Distribute data across weeks (simplified approach)
       chartViews.push(Math.floor(currentViews / weeksToShow));
       chartLeads.push(Math.floor(currentLeads / weeksToShow));
-      chartInquiries.push(Math.floor(currentMessages / weeksToShow));
+      chartInquiries.push(Math.floor(totalMessages / weeksToShow));
     }
 
     const analyticsData = {
@@ -2429,6 +2488,9 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
       totalCalls: totalCalls,
       totalMessages: totalMessages,
       totalRevenue: totalRevenue,
+      soldPropertyRevenue: soldPropertyRevenue,
+      leasedPropertyRevenue: leasedPropertyRevenue,
+      rentedPropertyRevenue: rentedPropertyRevenue,
       totalProperties,
       averageRating: Math.round(averageRating * 10) / 10,
       responseTime: "4.2 hours", // Will be calculated from message response times
@@ -2448,6 +2510,11 @@ router.get('/analytics/overview', requireVendorRole, asyncHandler(async (req, re
           current: totalProperties,
           previous: prevProperties,
           growth: Math.round(propertiesGrowth * 10) / 10
+        },
+        revenue: {
+          current: totalRevenue,
+          previous: prevTotalRevenue,
+          growth: Math.round(revenueGrowth * 10) / 10
         }
       },
       chartData: {
