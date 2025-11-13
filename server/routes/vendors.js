@@ -2829,7 +2829,7 @@ router.get('/subscription-limits', requireVendorRole, asyncHandler(async (req, r
       planName = plan.name || 'Free';
       
       // Get property limit from plan
-      const propertyLimit = plan.limits?.properties || 5;
+      const propertyLimit = plan.limits?.properties !== undefined ? plan.limits.properties : 5;
       maxProperties = propertyLimit === 0 ? 999999 : propertyLimit; // 0 means unlimited
       
       // Extract features
