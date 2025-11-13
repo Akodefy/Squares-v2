@@ -72,7 +72,13 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     }
 
     if (propertyType) {
-      queryFilter.type = propertyType;
+      // Handle comma-separated property types (e.g., "commercial,office")
+      if (propertyType.includes(',')) {
+        const propertyTypeArray = propertyType.split(',').map(type => type.trim());
+        queryFilter.type = { $in: propertyTypeArray };
+      } else {
+        queryFilter.type = propertyType;
+      }
     }
 
     if (bedrooms) {

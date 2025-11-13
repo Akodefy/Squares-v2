@@ -28,33 +28,33 @@ const Navbar = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Property categories for dropdown
+  // Property categories for dropdown - mapped to database values
   const residentialProperties = [
-    { label: "Flat / Apartment", value: "flat_apartment" },
-    { label: "Residential House", value: "residential_house" },
+    { label: "Flat / Apartment", value: "apartment" },
+    { label: "Residential House", value: "house" },
     { label: "Villa", value: "villa" },
-    { label: "Builder Floor Apartment", value: "builder_floor_apartment" },
-    { label: "Residential Land / Plot", value: "residential_land_plot" },
-    { label: "Penthouse", value: "penthouse" },
-    { label: "Studio Apartment", value: "studio_apartment" },
+    { label: "Builder Floor Apartment", value: "apartment" },
+    { label: "Residential Land / Plot", value: "plot" },
+    { label: "Penthouse", value: "apartment" },
+    { label: "Studio Apartment", value: "apartment" },
     { label: "PG (Paying Guest)", value: "pg" },
   ];
 
   const commercialProperties = [
-    { label: "Commercial Office Space", value: "commercial_office_space" },
-    { label: "Office in IT Park / SEZ", value: "office_in_it_park_sez" },
-    { label: "Commercial Shop", value: "commercial_shop" },
-    { label: "Commercial Showroom", value: "commercial_showroom" },
-    { label: "Commercial Land", value: "commercial_land" },
-    { label: "Warehouse / Godown", value: "warehouse_godown" },
-    { label: "Industrial Land", value: "industrial_land" },
-    { label: "Industrial Building", value: "industrial_building" },
-    { label: "Industrial Shed", value: "industrial_shed" },
+    { label: "Commercial Office Space", value: "office" },
+    { label: "Office in IT Park / SEZ", value: "office" },
+    { label: "Commercial Shop", value: "commercial" },
+    { label: "Commercial Showroom", value: "commercial" },
+    { label: "Commercial Land", value: "land" },
+    { label: "Warehouse / Godown", value: "commercial" },
+    { label: "Industrial Land", value: "land" },
+    { label: "Industrial Building", value: "commercial" },
+    { label: "Industrial Shed", value: "commercial" },
   ];
 
   const agriculturalProperties = [
-    { label: "Agricultural Land", value: "agricultural_land" },
-    { label: "Farm House", value: "farm_house" },
+    { label: "Agricultural Land", value: "land" },
+    { label: "Farm House", value: "house" },
   ];
 
   const handlePropertyTypeClick = (listingType: string, propertyType?: string) => {
@@ -173,10 +173,10 @@ const Navbar = () => {
                     Commercial <ChevronDown className="h-3 w-3" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56">
-                    <DropdownMenuItem onClick={() => handlePropertyTypeClick('sale', 'all_commercial')}>
+                    <DropdownMenuItem onClick={() => handlePropertyTypeClick('sale', 'commercial,office')}>
                       Buy Commercial Property
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handlePropertyTypeClick('rent', 'all_commercial')}>
+                    <DropdownMenuItem onClick={() => handlePropertyTypeClick('rent', 'commercial,office')}>
                       Rent Commercial Property
                     </DropdownMenuItem>
                     <DropdownMenuSub>
@@ -389,7 +389,7 @@ const Navbar = () => {
                   <div className="space-y-1 pl-4">
                     <button
                       onClick={() => {
-                        handlePropertyTypeClick('sale', 'all_commercial');
+                        handlePropertyTypeClick('sale', 'commercial,office');
                         setMobileMenuOpen(false);
                       }}
                       className="block w-full text-left py-2 text-sm hover:text-primary transition-colors"
@@ -398,7 +398,7 @@ const Navbar = () => {
                     </button>
                     <button
                       onClick={() => {
-                        handlePropertyTypeClick('rent', 'all_commercial');
+                        handlePropertyTypeClick('rent', 'commercial,office');
                         setMobileMenuOpen(false);
                       }}
                       className="block w-full text-left py-2 text-sm hover:text-primary transition-colors"

@@ -121,7 +121,7 @@ const Products = () => {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Sidebar - Filters */}
         <aside className="lg:w-64 flex-shrink-0">
-          <PropertyFilters onFilterChange={handleFilterChange} />
+          <PropertyFilters onFilterChange={handleFilterChange} initialFilters={filters} />
         </aside>
 
         {/* Main Content - Property Grid */}

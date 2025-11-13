@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
@@ -6,9 +6,10 @@ import { PropertyFilters as PropertyFilterType } from "@/services/propertyServic
 
 interface PropertyFiltersProps {
   onFilterChange: (filters: PropertyFilterType) => void;
+  initialFilters?: PropertyFilterType;
 }
 
-const PropertyFilters = ({ onFilterChange }: PropertyFiltersProps) => {
+const PropertyFilters = ({ onFilterChange, initialFilters }: PropertyFiltersProps) => {
   const [filters, setFilters] = useState<PropertyFilterType>({
     propertyType: undefined,
     bedrooms: undefined,
@@ -16,6 +17,13 @@ const PropertyFilters = ({ onFilterChange }: PropertyFiltersProps) => {
     maxPrice: undefined,
     listingType: undefined,
   });
+
+  // Update filters when initialFilters change
+  useEffect(() => {
+    if (initialFilters) {
+      setFilters(initialFilters);
+    }
+  }, [initialFilters]);
 
   const handleFilterChange = (key: keyof PropertyFilterType, value: any) => {
     const newFilters = { ...filters, [key]: value === 'all' || value === 'any' || value === 'any-budget' ? undefined : value };

@@ -67,7 +67,7 @@ const Footer = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => handlePropertySearch('sale', 'flat_apartment')}
+                  onClick={() => handlePropertySearch('sale', 'apartment')}
                   className="hover:text-primary transition-colors text-left"
                 >
                   Residential Properties
@@ -75,7 +75,7 @@ const Footer = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => handlePropertySearch('sale', 'all_commercial')}
+                  onClick={() => handlePropertySearch('sale', 'commercial,office')}
                   className="hover:text-primary transition-colors text-left"
                 >
                   Commercial Properties
@@ -83,7 +83,7 @@ const Footer = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => handlePropertySearch('sale', 'agricultural_land')}
+                  onClick={() => handlePropertySearch('sale', 'land')}
                   className="hover:text-primary transition-colors text-left"
                 >
                   Agricultural Land
@@ -105,7 +105,7 @@ const Footer = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => handlePropertySearch('rent', 'flat_apartment')}
+                  onClick={() => handlePropertySearch('rent', 'apartment')}
                   className="hover:text-primary transition-colors text-left"
                 >
                   Residential for Rent
@@ -113,7 +113,7 @@ const Footer = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => handlePropertySearch('rent', 'all_commercial')}
+                  onClick={() => handlePropertySearch('rent', 'commercial,office')}
                   className="hover:text-primary transition-colors text-left"
                 >
                   Commercial for Rent
