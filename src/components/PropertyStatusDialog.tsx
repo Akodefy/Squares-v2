@@ -114,11 +114,9 @@ const PropertyStatusDialog: React.FC<PropertyStatusDialogProps> = ({
     const searchLower = customerSearch.toLowerCase();
     const fullName = `${customer.profile?.firstName || ''} ${customer.profile?.lastName || ''}`.toLowerCase();
     const email = customer.email?.toLowerCase() || '';
-    const phone = customer.profile?.phone || '';
     
     return fullName.includes(searchLower) || 
-           email.includes(searchLower) || 
-           phone.includes(searchLower);
+           email.includes(searchLower);
   });
 
   React.useEffect(() => {
@@ -259,7 +257,7 @@ const PropertyStatusDialog: React.FC<PropertyStatusDialogProps> = ({
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     id="customer-search"
-                    placeholder="Search by name, email, or phone..."
+                    placeholder="Search by name or email..."
                     value={customerSearch}
                     onChange={(e) => setCustomerSearch(e.target.value)}
                     className="pl-10"
@@ -282,18 +280,29 @@ const PropertyStatusDialog: React.FC<PropertyStatusDialogProps> = ({
                           {customerSearch ? 'No customers found' : 'No customers available'}
                         </div>
                       ) : (
-                        filteredCustomers.map((customer) => (
-                          <SelectItem key={customer._id} value={customer._id}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {customer.profile?.firstName} {customer.profile?.lastName}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {customer.email} {customer.profile?.phone && `• ${customer.profile.phone}`}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
+                        filteredCustomers.map((customer) => {
+                          // Hide phone and show partial email for privacy
+                          const maskEmail = (email: string) => {
+                            const [localPart, domain] = email.split('@');
+                            const maskedLocal = localPart.length > 3 
+                              ? localPart.substring(0, 2) + '*'.repeat(localPart.length - 3) + localPart.slice(-1)
+                              : localPart.substring(0, 1) + '*'.repeat(localPart.length - 1);
+                            return `${maskedLocal}@${domain}`;
+                          };
+
+                          return (
+                            <SelectItem key={customer._id} value={customer._id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {customer.profile?.firstName} {customer.profile?.lastName}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {maskEmail(customer.email)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })
                       )}
                     </SelectContent>
                   </Select>
