@@ -425,26 +425,26 @@ const startServer = async () => {
     await connectWithRetry();
     
     server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Client URL: ${process.env.CLIENT_URL || 'http://localhost:8001'}`);
-      console.log(`✅ Database connection established`);
+      console.log(` Server running on port ${PORT}`);
+      console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(` Client URL: ${process.env.CLIENT_URL || 'http://localhost:8001'}`);
+      console.log(` Database connection established`);
       
       // Start payment cleanup job (runs every 5 minutes)
       paymentCleanupJob.start(5);
-      console.log(`💳 Payment cleanup job started (runs every 5 minutes)`);
-      console.log(`⏱️  Razorpay timeout limit: 15 minutes`);
+      console.log(` Payment cleanup job started (runs every 5 minutes)`);
+      console.log(`  Razorpay timeout limit: 15 minutes`);
     });
   } catch (error) {
-    console.error('🚫 Failed to start server:', error.message);
-    console.error('💡 Server starting without database connection - some features may not work');
+    console.error(' Failed to start server:', error.message);
+    console.error(' Server starting without database connection - some features may not work');
     
     // Start server anyway but warn about database issues
     server.listen(PORT, () => {
-      console.log(`⚠️  Server running on port ${PORT} (DATABASE DISCONNECTED)`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Client URL: ${process.env.CLIENT_URL || 'http://localhost:8001'}`);
-      console.log(`❌ Database connection failed - check connection and restart`);
+      console.log(`  Server running on port ${PORT} (DATABASE DISCONNECTED)`);
+      console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(` Client URL: ${process.env.CLIENT_URL || 'http://localhost:8001'}`);
+      console.log(` Database connection failed - check connection and restart`);
     });
   }
 };
@@ -473,7 +473,7 @@ const gracefulShutdown = (signal) => {
       
       console.log('Process terminated gracefully');
       process.exit(0);
-    } catch (error) {
+    } catch (error) {x`
       console.error('Error during graceful shutdown:', error);
       process.exit(1);
     }
