@@ -4,9 +4,10 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: '/v2/',
   server: {
     host: "::",
-    port: 8001,
+    port: 3001,
     allowedHosts: [
       "69cc952bc2a5.ngrok-free.app", 
       "fuzzy-papayas-see.loca.lt",
