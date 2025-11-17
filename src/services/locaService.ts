@@ -52,7 +52,8 @@ class LocaService {
   private async loadData(): Promise<void> {
     try {
       console.log('Loading loca.json...');
-      const response = await fetch('/loca.json');
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const response = await fetch(`${baseUrl}loca.json`);
       
       if (!response.ok) {
         throw new Error(`Failed to load loca.json: ${response.statusText}`);

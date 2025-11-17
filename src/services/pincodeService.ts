@@ -45,7 +45,8 @@ class PincodeService {
 
     this.loading = true;
     try {
-      const response = await fetch('/5c2f62fe-5afa-4119-a499-fec9d604d5bd.json');
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const response = await fetch(`${baseUrl}5c2f62fe-5afa-4119-a499-fec9d604d5bd.json`);
       if (!response.ok) {
         throw new Error('Failed to load pincode data');
       }
