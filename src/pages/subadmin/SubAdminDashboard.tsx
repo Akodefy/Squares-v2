@@ -181,7 +181,7 @@ const SubAdminDashboard = () => {
           </CardHeader>
           <CardContent className="space-y-2">
             <a 
-              href="/subadmin/property-reviews" 
+              href="/v2/subadmin/property-reviews" 
               className="block p-3 rounded-lg border hover:bg-accent transition-colors"
             >
               <div className="font-medium">Review Properties</div>
@@ -190,7 +190,7 @@ const SubAdminDashboard = () => {
               </div>
             </a>
             <a 
-              href="/subadmin/support-tickets" 
+              href="/v2/subadmin/support-tickets" 
               className="block p-3 rounded-lg border hover:bg-accent transition-colors"
             >
               <div className="font-medium">Handle Support</div>

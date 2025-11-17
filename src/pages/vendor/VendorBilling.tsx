@@ -738,7 +738,7 @@ const VendorBilling: React.FC = () => {
 
                   <div className="pt-4 border-t">
                     <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
-                      <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-plans'} className={`${isMobile ? 'w-full h-11' : ''}`}>
+                      <Button variant="outline" onClick={() => window.location.href = '/v2/vendor/subscription-plans'} className={`${isMobile ? 'w-full h-11' : ''}`}>
                         Change Plan
                       </Button>
                       <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>

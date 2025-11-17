@@ -457,7 +457,7 @@ const CustomerSettings = () => {
         <div className={`flex gap-2 ${isMobile ? 'flex-col w-full' : ''}`}>
           <Button
             variant="outline"
-            onClick={() => window.location.href = '/customer/profile'}
+            onClick={() => window.location.href = '/v2/customer/profile'}
             className={`border-blue-200 text-blue-700 hover:bg-blue-50 ${isMobile ? 'w-full' : ''}`}
           >
             <User className="w-4 h-4 mr-2" />

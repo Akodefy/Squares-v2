@@ -1234,7 +1234,7 @@ const VendorAnalytics = () => {
                 You haven't added any properties yet. Add your first property to start tracking performance analytics.
               </p>
               <Button 
-                onClick={() => window.location.href = '/vendor/properties/add'} 
+                onClick={() => window.location.href = '/v2/vendor/properties/add'} 
                 className="mt-2"
               >
                 Add Your First Property
