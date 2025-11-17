@@ -1,7 +1,0 @@
-in sub admin portal
-
-1.merge property review and approval in single page populate data from database if any one of the admins approve the property it will be listed as same as super amdin portal
-2.same as do for vendor approval page
-3.generated report/home/dheena/Downloads/Squares/ninety-nine-acres-web-main/instructions.txt pdf not downloaded
-4.failed to send notification through registed customer mail ids
-5.data not populated in performance Tracking
