@@ -141,6 +141,7 @@ const AddProperty = () => {
   const [uploadedVideos, setUploadedVideos] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadingVideos, setUploadingVideos] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Store selected location names for display
   const [selectedLocationNames, setSelectedLocationNames] = useState({
@@ -579,58 +580,152 @@ const AddProperty = () => {
 
 
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setUploadingImages(true);
-      
-      try {
-        const imagePromises = files.map(async (file) => {
-          return {
-            id: Date.now() + Math.random(),
-            name: file.name,
-            url: URL.createObjectURL(file),
-            file: file // Store the actual file for upload
-          };
-        });
-        
-        const newImages = await Promise.all(imagePromises);
-        setUploadedImages(prev => [...prev, ...newImages]);
-      } catch (error) {
-        console.error('Error processing images:', error);
-      } finally {
-        setUploadingImages(false);
-      }
+  const handleImageUpload = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    setUploadingImages(true);
+
+    try {
+      const imagePromises = fileArray.map(async (file) => {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`${file.name} is not a valid image file`);
+        }
+
+        // Validate file size (max 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxSize) {
+          throw new Error(`${file.name} is too large. Maximum size is 10MB`);
+        }
+
+        return {
+          id: Date.now() + Math.random(),
+          name: file.name,
+          url: URL.createObjectURL(file),
+          file: file // Store the actual file for upload
+        };
+      });
+
+      const newImages = await Promise.all(imagePromises);
+      setUploadedImages(prev => [...prev, ...newImages]);
+
+      toast({
+        title: "Images Added",
+        description: `${newImages.length} image(s) ready for upload`,
+      });
+    } catch (error) {
+      console.error('Error processing images:', error);
+      toast({
+        title: "Upload Error",
+        description: error instanceof Error ? error.message : "Failed to process images",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImages(false);
     }
   };
 
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setUploadingVideos(true);
-      
-      try {
-        const videoPromises = files.map(async (file) => {
-          return {
-            id: Date.now() + Math.random(),
-            name: file.name,
-            url: URL.createObjectURL(file),
-            file: file // Store the actual file for upload
-          };
-        });
-        
-        const newVideos = await Promise.all(videoPromises);
-        setUploadedVideos(prev => [...prev, ...newVideos]);
-      } catch (error) {
-        console.error('Error processing videos:', error);
-      } finally {
-        setUploadingVideos(false);
-      }
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      await handleImageUpload(e.target.files);
+      // Reset input value to allow re-uploading same file
+      e.target.value = '';
+    }
+  };
+
+  const handleVideoUpload = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    setUploadingVideos(true);
+
+    try {
+      const videoPromises = fileArray.map(async (file) => {
+        // Validate file type
+        if (!file.type.startsWith('video/')) {
+          throw new Error(`${file.name} is not a valid video file`);
+        }
+
+        // Validate file size (max 100MB)
+        const maxSize = 100 * 1024 * 1024; // 100MB
+        if (file.size > maxSize) {
+          throw new Error(`${file.name} is too large. Maximum size is 100MB`);
+        }
+
+        return {
+          id: Date.now() + Math.random(),
+          name: file.name,
+          url: URL.createObjectURL(file),
+          file: file // Store the actual file for upload
+        };
+      });
+
+      const newVideos = await Promise.all(videoPromises);
+      setUploadedVideos(prev => [...prev, ...newVideos]);
+
+      toast({
+        title: "Videos Added",
+        description: `${newVideos.length} video(s) ready for upload`,
+      });
+    } catch (error) {
+      console.error('Error processing videos:', error);
+      toast({
+        title: "Upload Error",
+        description: error instanceof Error ? error.message : "Failed to process videos",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingVideos(false);
+    }
+  };
+
+  const handleVideoFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      await handleVideoUpload(e.target.files);
+      // Reset input value to allow re-uploading same file
+      e.target.value = '';
     }
   };
 
   const removeImage = (id: number) => {
     setUploadedImages(prev => prev.filter(img => img.id !== id));
+  };
+
+  // Cleanup object URLs when component unmounts or images change
+  useEffect(() => {
+    return () => {
+      uploadedImages.forEach(image => {
+        if (image.url.startsWith('blob:')) {
+          URL.revokeObjectURL(image.url);
+        }
+      });
+      uploadedVideos.forEach(video => {
+        if (video.url.startsWith('blob:')) {
+          URL.revokeObjectURL(video.url);
+        }
+      });
+    };
+  }, [uploadedImages, uploadedVideos]);
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await handleImageUpload(files);
+    }
   };
 
   const renderStepContent = () => {
@@ -1439,13 +1534,27 @@ const AddProperty = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 Upload high-quality images of your property (up to 20 images)
               </p>
+              <Alert className="mb-4">
+                <AlertDescription>
+                  <strong>Note:</strong> Images are processed locally first and uploaded to the server when you submit the property. If you refresh the page, uploaded images will be lost.
+                </AlertDescription>
+              </Alert>
               
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  isDragOver
+                    ? 'border-primary bg-primary/5'
+                    : 'border-muted-foreground/25'
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <Camera className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <div className="space-y-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => document.getElementById('image-upload').click()}
+                  <Button
+                    variant="outline"
+                    onClick={() => document.getElementById('image-upload')?.click()}
                     disabled={uploadingImages}
                   >
                     {uploadingImages ? (
@@ -1470,7 +1579,7 @@ const AddProperty = () => {
                   multiple
                   accept="image/*"
                   className="hidden"
-                  onChange={handleImageUpload}
+                  onChange={handleFileInputChange}
                   disabled={uploadingImages}
                 />
               </div>
@@ -1505,17 +1614,18 @@ const AddProperty = () => {
               )}
             </div>
 
+            {/* Property Videos section commented out as not necessary
             <div>
               <Label className="text-base font-medium">Property Videos (Optional)</Label>
               <p className="text-sm text-muted-foreground mb-4">
                 Upload videos to showcase your property better
               </p>
-              
+
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
                 <Video className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <div className="space-y-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => document.getElementById('video-upload')?.click()}
                     disabled={uploadingVideos}
                   >
@@ -1541,7 +1651,7 @@ const AddProperty = () => {
                   multiple
                   accept="video/*"
                   className="hidden"
-                  onChange={handleVideoUpload}
+                  onChange={handleVideoFileInputChange}
                   disabled={uploadingVideos}
                 />
               </div>
@@ -1577,6 +1687,7 @@ const AddProperty = () => {
                 </div>
               )}
             </div>
+            */}
 
             <div className="space-y-2">
               <Label htmlFor="virtualTour">Virtual Tour URL (Optional)</Label>
