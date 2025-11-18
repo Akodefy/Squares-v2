@@ -1584,12 +1584,6 @@ const AddProperty = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 Upload high-quality images of your property (up to 20 images)
               </p>
-              <Alert className="mb-4">
-                <AlertDescription>
-                  <strong>Note:</strong> Images are processed locally first and uploaded to the server when you submit the property. If you refresh the page, uploaded images will be lost.
-                </AlertDescription>
-              </Alert>
-              
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                   isDragOver
