@@ -34,7 +34,7 @@ import { locaService, type PincodeSuggestion } from "@/services/locaService";
 import AutocompleteInput from "@/components/form/AutocompleteInput";
 import EnhancedLocationSelector from "@/components/vendor/EnhancedLocationSelector";
 import { PincodeAutocomplete } from "@/components/PincodeAutocomplete";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 // Upload function using server-side endpoint
 const uploadToCloudinary = async (file: File, folder: string): Promise<string> => {
@@ -68,6 +68,7 @@ const uploadToCloudinary = async (file: File, folder: string): Promise<string> =
 
 const AddProperty = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [hasAddPropertySubscription, setHasAddPropertySubscription] = useState(false);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
@@ -630,8 +631,10 @@ const AddProperty = () => {
   }, [toast]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File input change triggered', e.target.files);
     const files = e.target.files;
     if (files && files.length > 0) {
+      console.log(`Processing ${files.length} files`);
       handleImageUpload(files);
     }
     // Reset input value to allow re-uploading same file
@@ -1562,6 +1565,9 @@ const AddProperty = () => {
                     variant="outline"
                     onClick={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Upload button clicked, triggering file input');
+                      console.log('File input ref:', fileInputRef.current);
                       fileInputRef.current?.click();
                     }}
                     disabled={uploadingImages}
