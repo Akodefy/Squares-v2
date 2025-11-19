@@ -29,7 +29,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
 import { notificationService } from "@/services/notificationService";
-import { emailService } from "@/services/emailService";
 import { NotificationSettings, type NotificationPreferences } from "@/components/settings/NotificationSettings";
 import { PasswordChangeDialog } from "@/components/PasswordChangeDialog";
 import { useTheme } from "next-themes";
@@ -601,7 +600,7 @@ const CustomerSettings = () => {
                     description: 'Promotional emails and marketing content',
                     value: settings.privacy.marketingConsent
                   }
-                  // Commented out as per requirements
+                  // Commented out: Third-Party Sharing
                   // {
                   //   key: 'thirdPartySharing',
                   //   title: 'Third-Party Sharing',
@@ -798,7 +797,7 @@ const CustomerSettings = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Currency - Fixed to INR only for customer portal */}
+                {/* Currency - Fixed to INR only */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
@@ -807,7 +806,7 @@ const CustomerSettings = () => {
                   <div className="p-3 bg-muted rounded-md border">
                     <p className="text-sm font-medium">₹ Indian Rupee (INR)</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      All prices are displayed in Indian Rupee
+                      All prices are displayed in Indian Rupees
                     </p>
                   </div>
                 </div>
@@ -920,23 +919,16 @@ const CustomerSettings = () => {
                         <AlertDialogAction
                           onClick={async () => {
                             try {
-                              const user = await userService.getCurrentUser();
-                              const userEmail = user?.data?.user?.email || 'your email';
-                              const userName = user?.data?.user?.profile ? `${user.data.user.profile.firstName} ${user.data.user.profile.lastName}`.trim() : '';
-                              
-                              // Send deactivation email
-                              await emailService.sendAccountDeactivationEmail(userEmail, userName);
+                              // Call backend API to request deactivation
+                              await userService.requestAccountDeactivation();
                               
                               toast({
                                 title: "📧 Confirmation Email Sent",
-                                description: `Check ${userEmail} and click the link to complete account deactivation`,
+                                description: "Check your email and click the link to complete account deactivation",
                               });
                             } catch (error) {
-                              toast({
-                                title: "Request Failed",
-                                description: "Unable to process deactivation. Please try again.",
-                                variant: "destructive"
-                              });
+                              console.error('Deactivation request error:', error);
+                              // Error toast is already handled in userService
                             }
                           }}
                           className={`bg-orange-600 text-white hover:bg-orange-700 ${isMobile ? 'w-full' : ''}`}
@@ -984,24 +976,17 @@ const CustomerSettings = () => {
                         <AlertDialogAction
                           onClick={async () => {
                             try {
-                              const user = await userService.getCurrentUser();
-                              const userEmail = user?.data?.user?.email || 'your email';
-                              const userName = user?.data?.user?.profile ? `${user.data.user.profile.firstName} ${user.data.user.profile.lastName}`.trim() : '';
-                              
-                              // Send deletion confirmation email
-                              await emailService.sendAccountDeletionEmail(userEmail, userName);
+                              // Call backend API to request permanent deletion
+                              await userService.requestAccountDeletion();
                               
                               toast({
                                 title: "📧 Confirmation Email Sent",
-                                description: `Check ${userEmail} and click the link to confirm permanent deletion. Link expires in 24 hours.`,
+                                description: "Check your email and click the link to confirm permanent deletion. Link expires in 24 hours.",
                                 variant: "destructive"
                               });
                             } catch (error) {
-                              toast({
-                                title: "Request Failed",
-                                description: "Unable to process deletion request. Please contact support.",
-                                variant: "destructive"
-                              });
+                              console.error('Deletion request error:', error);
+                              // Error toast is already handled in userService
                             }
                           }}
                           className={`bg-destructive text-destructive-foreground hover:bg-destructive/90 ${isMobile ? 'w-full' : ''}`}

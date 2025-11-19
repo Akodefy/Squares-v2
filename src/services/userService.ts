@@ -586,6 +586,108 @@ class UserService {
     }
   }
 
+  // Account Deactivation - Request deactivation link via email
+  async requestAccountDeactivation(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.makeRequest<{ success: boolean; message: string }>('/auth/request-deactivation', {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      toast({
+        title: "Deactivation Email Sent",
+        description: "Check your email for the confirmation link",
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to request account deactivation";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  // Confirm Account Deactivation - Called when user clicks link in email
+  async confirmAccountDeactivation(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.makeRequest<{ success: boolean; message: string }>('/auth/confirm-deactivation', {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+
+      toast({
+        title: "Account Deactivated",
+        description: "Your account has been temporarily deactivated",
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to deactivate account";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  // Account Deletion - Request permanent deletion link via email
+  async requestAccountDeletion(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.makeRequest<{ success: boolean; message: string }>('/auth/request-deletion', {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      toast({
+        title: "Deletion Email Sent",
+        description: "Check your email for the confirmation link. Link expires in 24 hours.",
+        variant: "destructive"
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to request account deletion";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  // Confirm Account Deletion - Called when user clicks link in email
+  async confirmAccountDeletion(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.makeRequest<{ success: boolean; message: string }>('/auth/confirm-deletion', {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted",
+        variant: "destructive"
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete account";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   // Helper method to get full name
   getFullName(user: User): string {
     return `${user.profile.firstName} ${user.profile.lastName}`.trim();

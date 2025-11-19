@@ -1172,4 +1172,268 @@ router.post('/change-password', authenticateToken, asyncHandler(async (req, res)
   });
 }));
 
+// @desc    Request account deactivation - Send confirmation email
+// @route   POST /api/auth/request-deactivation
+// @access  Private
+router.post('/request-deactivation', authenticateToken, asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Generate deactivation token (valid for 24 hours)
+  const deactivationToken = jwt.sign(
+    { 
+      userId: user._id, 
+      email: user.email,
+      type: 'account_deactivation'
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  // Send deactivation confirmation email
+  try {
+    await sendEmail({
+      to: user.email,
+      template: 'account-deactivation',
+      data: {
+        firstName: user.profile.firstName || 'User',
+        deactivationUrl: `${process.env.CLIENT_URL}/v2/confirm-deactivation?token=${deactivationToken}`,
+        userName: `${user.profile.firstName} ${user.profile.lastName}`.trim()
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Deactivation confirmation email sent. Please check your email to complete the process.'
+    });
+  } catch (emailError) {
+    console.error('Failed to send deactivation email:', emailError);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send confirmation email. Please try again.'
+    });
+  }
+}));
+
+// @desc    Confirm account deactivation
+// @route   POST /api/auth/confirm-deactivation
+// @access  Public
+router.post('/confirm-deactivation', asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      message: 'Deactivation token is required'
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    if (decoded.type !== 'account_deactivation') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid deactivation token'
+      });
+    }
+
+    // Find and update user status to inactive
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Deactivate account
+    user.status = 'inactive';
+    await user.save();
+
+    // Send confirmation email
+    try {
+      await sendEmail({
+        to: user.email,
+        template: 'account-deactivated-confirmation',
+        data: {
+          firstName: user.profile.firstName || 'User',
+          deactivationDate: new Date().toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          reactivationLink: `${process.env.CLIENT_URL}/v2/login`
+        }
+      });
+    } catch (emailError) {
+      console.error('Failed to send deactivation confirmation:', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Your account has been deactivated. You can reactivate it anytime by logging in.'
+    });
+
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Deactivation link has expired. Please request a new one.'
+      });
+    }
+    
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid deactivation token'
+    });
+  }
+}));
+
+// @desc    Request account deletion - Send confirmation email
+// @route   POST /api/auth/request-deletion
+// @access  Private
+router.post('/request-deletion', authenticateToken, asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Generate deletion token (valid for 24 hours)
+  const deletionToken = jwt.sign(
+    { 
+      userId: user._id, 
+      email: user.email,
+      type: 'account_deletion'
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  // Send deletion confirmation email
+  try {
+    await sendEmail({
+      to: user.email,
+      template: 'account-deletion',
+      data: {
+        firstName: user.profile.firstName || 'User',
+        deletionUrl: `${process.env.CLIENT_URL}/v2/confirm-deletion?token=${deletionToken}`,
+        userName: `${user.profile.firstName} ${user.profile.lastName}`.trim()
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Deletion confirmation email sent. Link expires in 24 hours.'
+    });
+  } catch (emailError) {
+    console.error('Failed to send deletion email:', emailError);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send confirmation email. Please try again.'
+    });
+  }
+}));
+
+// @desc    Confirm account deletion (permanent)
+// @route   POST /api/auth/confirm-deletion
+// @access  Public
+router.post('/confirm-deletion', asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      message: 'Deletion token is required'
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    if (decoded.type !== 'account_deletion') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid deletion token'
+      });
+    }
+
+    // Find user
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const userEmail = user.email;
+    const userName = user.profile.firstName || 'User';
+
+    // Delete related data
+    // Note: Add cascade delete for related models as needed
+    // Examples: Properties, Messages, Favorites, etc.
+    
+    // If user is a vendor, delete vendor profile
+    if (user.role === 'agent' && user.vendorProfile) {
+      await Vendor.findByIdAndDelete(user.vendorProfile);
+    }
+
+    // Delete user account permanently
+    await User.findByIdAndDelete(decoded.userId);
+
+    // Send deletion confirmation email
+    try {
+      await sendEmail({
+        to: userEmail,
+        template: 'account-deleted-confirmation',
+        data: {
+          firstName: userName,
+          deletionDate: new Date().toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        }
+      });
+    } catch (emailError) {
+      console.error('Failed to send deletion confirmation:', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Your account has been permanently deleted. All your data has been removed from our servers.'
+    });
+
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Deletion link has expired. Please request a new one.'
+      });
+    }
+    
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid deletion token'
+    });
+  }
+}));
+
 module.exports = router;

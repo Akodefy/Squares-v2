@@ -82,7 +82,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       description: 'Get notified when you receive new messages',
       requiresEmail: true
     }
-    // Commented out as per requirements
+    // Commented out: News & Updates
     // {
     //   key: 'newsUpdates' as keyof NotificationPreferences,
     //   icon: Globe,
