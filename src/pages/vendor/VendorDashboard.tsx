@@ -450,9 +450,13 @@ const VendorDashboard = () => {
                 <Card key={property._id} className="overflow-hidden">
                   <div className="relative">
                     <img
-                      src={property.images[0] || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300&h=200&fit=crop&auto=format"}
+                      src={vendorDashboardService.getImageUrl(property.images?.[0])}
                       alt={property.title}
                       className="w-full h-24 md:h-32 object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300&h=200&fit=crop&auto=format";
+                      }}
                     />
                     <Badge className={`absolute top-1 right-1 md:top-2 md:right-2 text-xs ${vendorDashboardService.getStatusColor(property.status)} text-white`}>
                       {property.status}

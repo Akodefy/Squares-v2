@@ -36,7 +36,7 @@ export interface Property {
   favorites: number;
   rating?: number;
   averageRating?: number;
-  images: string[];
+  images: Array<string | { url?: string; caption?: string; isPrimary?: boolean }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -385,6 +385,18 @@ class VendorDashboardService {
   }
 
   // Utility methods
+  getImageUrl(image: string | { url?: string; caption?: string; isPrimary?: boolean } | undefined): string {
+    if (!image) {
+      return "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop&auto=format";
+    }
+    
+    if (typeof image === 'string') {
+      return image;
+    }
+    
+    return image.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop&auto=format";
+  }
+
   formatPrice(price: number, currency = '₹'): string {
     if (price >= 10000000) {
       return `${currency}${(price / 10000000).toFixed(1)} Cr`;

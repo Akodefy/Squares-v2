@@ -899,8 +899,11 @@ router.delete('/:messageId', asyncHandler(async (req, res) => {
     });
   }
   
-  // Check if user is authorized to delete this message (only sender can delete)
-  if (message.sender.toString() !== req.user.id) {
+  // Check if user is authorized to delete this message (sender or recipient)
+  const isSender = message.sender.toString() === req.user.id;
+  const isRecipient = message.recipient.toString() === req.user.id;
+  
+  if (!isSender && !isRecipient) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to delete this message'
