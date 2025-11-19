@@ -600,13 +600,14 @@ const CustomerSettings = () => {
                     title: 'Marketing Communications',
                     description: 'Promotional emails and marketing content',
                     value: settings.privacy.marketingConsent
-                  },
-                  {
-                    key: 'thirdPartySharing',
-                    title: 'Third-Party Sharing',
-                    description: 'Anonymous data sharing with partners',
-                    value: settings.privacy.thirdPartySharing
                   }
+                  // Commented out as per requirements
+                  // {
+                  //   key: 'thirdPartySharing',
+                  //   title: 'Third-Party Sharing',
+                  //   description: 'Anonymous data sharing with partners',
+                  //   value: settings.privacy.thirdPartySharing
+                  // }
                 ].map((item, index) => (
                   <div key={item.key}>
                     <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} py-2`}>
@@ -619,7 +620,7 @@ const CustomerSettings = () => {
                         onCheckedChange={(checked) => updateSettings('privacy', item.key, checked)}
                       />
                     </div>
-                    {index < 3 && <Separator className="my-3" />}
+                    {index < 2 && <Separator className="my-3" />}
                   </div>
                 ))}
 
@@ -797,56 +798,18 @@ const CustomerSettings = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Currency */}
+                {/* Currency - Fixed to INR only for customer portal */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
                     <span className="font-medium">Currency</span>
                   </div>
-                  <Select 
-                    value={settings.preferences.currency} 
-                    onValueChange={async (value) => {
-                      try {
-                        // Update using global currency utility
-                        globalCurrencyUtils.set(value);
-                        
-                        // Update local state
-                        updateSettings('preferences', 'currency', value);
-                        
-                        // Update context
-                        await setGlobalCurrency(value, true);
-                        
-                        toast({
-                          title: "💰 Currency Updated",
-                          description: `Currency changed to ${value}. Prices will update across the application.`,
-                        });
-                      } catch (error) {
-                        console.error('Error updating currency:', error);
-                        
-                        // Ensure local save even on error
-                        globalCurrencyUtils.set(value);
-                        
-                        toast({
-                          title: "💰 Currency Updated (Offline)",
-                          description: `Currency changed to ${value} locally. Will sync when online.`,
-                          variant: "default"
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="INR">₹ Indian Rupee (INR)</SelectItem>
-                      <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
-                      <SelectItem value="EUR">€ Euro (EUR)</SelectItem>
-                      <SelectItem value="GBP">£ British Pound (GBP)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Prices will display in your selected currency
-                  </p>
+                  <div className="p-3 bg-muted rounded-md border">
+                    <p className="text-sm font-medium">₹ Indian Rupee (INR)</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      All prices are displayed in Indian Rupee
+                    </p>
+                  </div>
                 </div>
                 
                 <Separator />

@@ -366,26 +366,39 @@ class UserService {
 
   async updateUserPreferences(preferencesData: any): Promise<SingleUserResponse> {
     try {
+      // Get current user data first to preserve all fields
+      const currentUserResponse = await this.getCurrentUser();
+      const currentUser = currentUserResponse.data.user;
+      
       // Try to get user ID from stored user data first
-      let userId = null;
-      const storedUser = authService.getStoredUser();
-      if (storedUser && storedUser.id) {
-        userId = storedUser.id;
-      }
-
-      // If no stored user ID, try to get from API
+      let userId = currentUser._id;
+      
       if (!userId) {
-        const currentUserResponse = await this.getCurrentUser();
-        userId = currentUserResponse.data.user._id;
+        const storedUser = authService.getStoredUser();
+        if (storedUser && storedUser.id) {
+          userId = storedUser.id;
+        }
       }
 
       if (!userId) {
         throw new Error("Unable to get user ID. Please log in again.");
       }
       
+      // Deep merge preferences to preserve existing nested objects
+      const mergedData = {
+        profile: {
+          ...currentUser.profile,
+          ...preferencesData.profile,
+          preferences: {
+            ...currentUser.profile?.preferences,
+            ...preferencesData.profile?.preferences
+          }
+        }
+      };
+      
       const response = await this.makeRequest<SingleUserResponse>(`/users/${userId}`, {
         method: "PUT",
-        body: JSON.stringify(preferencesData),
+        body: JSON.stringify(mergedData),
       });
 
       return response;

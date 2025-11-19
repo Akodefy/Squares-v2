@@ -101,9 +101,14 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     if (persist) {
       try {
+        // Fetch current user data to preserve existing preferences
+        const currentUser = await userService.getCurrentUser();
+        const currentPreferences = currentUser.data.user.profile?.preferences || {};
+        
         const settingsData = {
           profile: {
             preferences: {
+              ...currentPreferences,
               currency: newCurrency
             }
           }

@@ -81,15 +81,16 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       title: 'New Message Alerts',
       description: 'Get notified when you receive new messages',
       requiresEmail: true
-    },
-    {
-      key: 'newsUpdates' as keyof NotificationPreferences,
-      icon: Globe,
-      color: 'text-teal-500',
-      title: 'News & Updates',
-      description: 'Real estate market news and platform updates',
-      requiresEmail: true
     }
+    // Commented out as per requirements
+    // {
+    //   key: 'newsUpdates' as keyof NotificationPreferences,
+    //   icon: Globe,
+    //   color: 'text-teal-500',
+    //   title: 'News & Updates',
+    //   description: 'Real estate market news and platform updates',
+    //   requiresEmail: true
+    // }
   ];
 
   const isOptionDisabled = (option: typeof notificationOptions[0]): boolean => {
