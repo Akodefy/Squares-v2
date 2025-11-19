@@ -235,15 +235,26 @@ router.put('/:id', asyncHandler(async (req, res) => {
       }
       
       if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        // Check if source object has any defined values recursively
+        const hasDefinedValues = (obj) => {
+          return Object.values(obj).some(v => {
+            if (v === undefined) return false;
+            if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+              return hasDefinedValues(v);
+            }
+            return true;
+          });
+        };
+        
+        if (!hasDefinedValues(source[key])) {
+          continue; // Skip objects with only undefined values
+        }
+        
         // If both target and source have object values, merge them recursively
         if (result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) {
           result[key] = deepMerge(result[key], source[key]);
         } else {
-          // Only set if source object has at least one defined value
-          const hasDefinedValues = Object.values(source[key]).some(v => v !== undefined);
-          if (hasDefinedValues) {
-            result[key] = source[key];
-          }
+          result[key] = source[key];
         }
       } else {
         result[key] = source[key];
@@ -253,19 +264,42 @@ router.put('/:id', asyncHandler(async (req, res) => {
     return result;
   };
 
+  // Helper function to clean object from undefined values
+  const cleanObject = (obj) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+    
+    const cleaned = {};
+    for (const key in obj) {
+      if (obj[key] === undefined) continue;
+      
+      if (obj[key] !== null && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+        const cleanedNested = cleanObject(obj[key]);
+        if (Object.keys(cleanedNested).length > 0) {
+          cleaned[key] = cleanedNested;
+        }
+      } else {
+        cleaned[key] = obj[key];
+      }
+    }
+    return cleaned;
+  };
+
   // Update fields
   if (profile) {
-    user.profile = deepMerge(user.profile || {}, profile);
+    const cleanedProfile = cleanObject(profile);
+    if (Object.keys(cleanedProfile).length > 0) {
+      user.profile = deepMerge(user.profile || {}, cleanedProfile);
+    }
   }
   
   // Handle preferences if sent separately (for backward compatibility)
   if (preferences !== undefined && typeof preferences === 'object' && preferences !== null) {
-    const hasValidValues = Object.values(preferences).some(value => value !== undefined);
-    if (hasValidValues) {
+    const cleanedPreferences = cleanObject(preferences);
+    if (Object.keys(cleanedPreferences).length > 0) {
       if (!user.profile.preferences) {
         user.profile.preferences = {};
       }
-      user.profile.preferences = deepMerge(user.profile.preferences, preferences);
+      user.profile.preferences = deepMerge(user.profile.preferences, cleanedPreferences);
     }
   }
 
@@ -336,15 +370,26 @@ router.put('/profile', asyncHandler(async (req, res) => {
       }
       
       if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        // Check if source object has any defined values recursively
+        const hasDefinedValues = (obj) => {
+          return Object.values(obj).some(v => {
+            if (v === undefined) return false;
+            if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+              return hasDefinedValues(v);
+            }
+            return true;
+          });
+        };
+        
+        if (!hasDefinedValues(source[key])) {
+          continue; // Skip objects with only undefined values
+        }
+        
         // If both target and source have object values, merge them recursively
         if (result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) {
           result[key] = deepMerge(result[key], source[key]);
         } else {
-          // Only set if source object has at least one defined value
-          const hasDefinedValues = Object.values(source[key]).some(v => v !== undefined);
-          if (hasDefinedValues) {
-            result[key] = source[key];
-          }
+          result[key] = source[key];
         }
       } else {
         result[key] = source[key];
@@ -354,19 +399,42 @@ router.put('/profile', asyncHandler(async (req, res) => {
     return result;
   };
 
+  // Helper function to clean object from undefined values
+  const cleanObject = (obj) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+    
+    const cleaned = {};
+    for (const key in obj) {
+      if (obj[key] === undefined) continue;
+      
+      if (obj[key] !== null && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+        const cleanedNested = cleanObject(obj[key]);
+        if (Object.keys(cleanedNested).length > 0) {
+          cleaned[key] = cleanedNested;
+        }
+      } else {
+        cleaned[key] = obj[key];
+      }
+    }
+    return cleaned;
+  };
+
   // Update fields
   if (profile) {
-    user.profile = deepMerge(user.profile || {}, profile);
+    const cleanedProfile = cleanObject(profile);
+    if (Object.keys(cleanedProfile).length > 0) {
+      user.profile = deepMerge(user.profile || {}, cleanedProfile);
+    }
   }
   
   // Handle preferences if sent separately (for backward compatibility)
   if (preferences !== undefined && typeof preferences === 'object' && preferences !== null) {
-    const hasValidValues = Object.values(preferences).some(value => value !== undefined);
-    if (hasValidValues) {
+    const cleanedPreferences = cleanObject(preferences);
+    if (Object.keys(cleanedPreferences).length > 0) {
       if (!user.profile.preferences) {
         user.profile.preferences = {};
       }
-      user.profile.preferences = deepMerge(user.profile.preferences, preferences);
+      user.profile.preferences = deepMerge(user.profile.preferences, cleanedPreferences);
     }
   }
 
