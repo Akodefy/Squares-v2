@@ -225,43 +225,47 @@ router.put('/:id', asyncHandler(async (req, res) => {
     status
   } = req.body;
 
+  // Helper function to deeply merge objects, filtering out undefined values
+  const deepMerge = (target, source) => {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] === undefined) {
+        continue; // Skip undefined values
+      }
+      
+      if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        // If both target and source have object values, merge them recursively
+        if (result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+          result[key] = deepMerge(result[key], source[key]);
+        } else {
+          // Only set if source object has at least one defined value
+          const hasDefinedValues = Object.values(source[key]).some(v => v !== undefined);
+          if (hasDefinedValues) {
+            result[key] = source[key];
+          }
+        }
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  };
+
   // Update fields
   if (profile) {
-    // Filter out undefined values and handle nested objects properly
-    const filteredProfile = {};
-    Object.keys(profile).forEach(key => {
-      if (profile[key] !== undefined) {
-        if (typeof profile[key] === 'object' && profile[key] !== null) {
-          // For nested objects like address and preferences, only update if they have valid data
-          if (Object.keys(profile[key]).length > 0) {
-            // Check if all values in the object are not undefined
-            const hasValidValues = Object.values(profile[key]).some(value => value !== undefined);
-            if (hasValidValues) {
-              if (user.profile[key] && typeof user.profile[key] === 'object') {
-                filteredProfile[key] = { ...user.profile[key], ...profile[key] };
-              } else {
-                filteredProfile[key] = profile[key];
-              }
-            }
-          }
-        } else {
-          filteredProfile[key] = profile[key];
-        }
-      }
-    });
-    user.profile = { ...user.profile, ...filteredProfile };
+    user.profile = deepMerge(user.profile || {}, profile);
   }
   
   // Handle preferences if sent separately (for backward compatibility)
   if (preferences !== undefined && typeof preferences === 'object' && preferences !== null) {
-    // Only update if preferences has valid data
     const hasValidValues = Object.values(preferences).some(value => value !== undefined);
     if (hasValidValues) {
-      if (user.profile.preferences && typeof user.profile.preferences === 'object') {
-        user.profile.preferences = { ...user.profile.preferences, ...preferences };
-      } else {
-        user.profile.preferences = preferences;
+      if (!user.profile.preferences) {
+        user.profile.preferences = {};
       }
+      user.profile.preferences = deepMerge(user.profile.preferences, preferences);
     }
   }
 
@@ -322,43 +326,47 @@ router.put('/profile', asyncHandler(async (req, res) => {
     user.emailVerified = false; // Reset verification status on email change
   }
 
+  // Helper function to deeply merge objects, filtering out undefined values
+  const deepMerge = (target, source) => {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] === undefined) {
+        continue; // Skip undefined values
+      }
+      
+      if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        // If both target and source have object values, merge them recursively
+        if (result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+          result[key] = deepMerge(result[key], source[key]);
+        } else {
+          // Only set if source object has at least one defined value
+          const hasDefinedValues = Object.values(source[key]).some(v => v !== undefined);
+          if (hasDefinedValues) {
+            result[key] = source[key];
+          }
+        }
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  };
+
   // Update fields
   if (profile) {
-    // Filter out undefined values and handle nested objects properly
-    const filteredProfile = {};
-    Object.keys(profile).forEach(key => {
-      if (profile[key] !== undefined) {
-        if (typeof profile[key] === 'object' && profile[key] !== null) {
-          // For nested objects like address and preferences, only update if they have valid data
-          if (Object.keys(profile[key]).length > 0) {
-            // Check if all values in the object are not undefined
-            const hasValidValues = Object.values(profile[key]).some(value => value !== undefined);
-            if (hasValidValues) {
-              if (user.profile[key] && typeof user.profile[key] === 'object') {
-                filteredProfile[key] = { ...user.profile[key], ...profile[key] };
-              } else {
-                filteredProfile[key] = profile[key];
-              }
-            }
-          }
-        } else {
-          filteredProfile[key] = profile[key];
-        }
-      }
-    });
-    user.profile = { ...user.profile, ...filteredProfile };
+    user.profile = deepMerge(user.profile || {}, profile);
   }
   
   // Handle preferences if sent separately (for backward compatibility)
   if (preferences !== undefined && typeof preferences === 'object' && preferences !== null) {
-    // Only update if preferences has valid data
     const hasValidValues = Object.values(preferences).some(value => value !== undefined);
     if (hasValidValues) {
-      if (user.profile.preferences && typeof user.profile.preferences === 'object') {
-        user.profile.preferences = { ...user.profile.preferences, ...preferences };
-      } else {
-        user.profile.preferences = preferences;
+      if (!user.profile.preferences) {
+        user.profile.preferences = {};
       }
+      user.profile.preferences = deepMerge(user.profile.preferences, preferences);
     }
   }
 
