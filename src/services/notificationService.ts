@@ -252,14 +252,14 @@ class NotificationService {
         pushOptions = {
           title: '📉 Price Drop Alert',
           body: `${data.property?.title} price reduced to ${data.newPrice}`,
-          data: { url: `/property/${data.property?._id}`, type: 'price_drop' }
+          data: { url: `/v2/property/${data.property?._id}`, type: 'price_drop' }
         };
         break;
       case 'new_message':
         pushOptions = {
           title: '💬 New Message',
           body: `New message from ${data.senderName}: ${data.messagePreview?.substring(0, 50)}${data.messagePreview?.length > 50 ? '...' : ''}`,
-          data: { url: '/customer/messages', type: 'new_message' }
+          data: { url: '/v2/customer/messages', type: 'new_message' }
         };
         break;
       case 'news_update':

@@ -31,26 +31,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Eye, Home } from "lucide-react";
 import { authService } from "@/services/authService";
-
-interface Property {
-  _id: string;
-  title: string;
-  type: string;
-  listingType: string;
-  price: number;
-  status: 'pending' | 'available' | 'rejected';
-  owner: {
-    _id: string;
-    name: string;
-    email: string;
-  };
-  address: {
-    city: string;
-    state: string;
-  };
-  createdAt: string;
-  rejectionReason?: string;
-}
+import { ViewPropertyDialog } from "@/components/adminpanel/ViewPropertyDialog";
+import { Property } from "@/services/propertyService";
+import { VirtualTourViewer } from "@/components/property/VirtualTourViewer";
 
 const PropertyApprovals = () => {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -270,7 +253,9 @@ const PropertyApprovals = () => {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{property.owner.name}</div>
+                          <div className="font-medium">
+                            {property.owner.profile?.firstName || ''} {property.owner.profile?.lastName || ''}
+                          </div>
                           <div className="text-sm text-muted-foreground">{property.owner.email}</div>
                         </div>
                       </TableCell>
@@ -379,7 +364,9 @@ const PropertyApprovals = () => {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Owner</Label>
-                  <p className="text-base">{selectedProperty.owner.name}</p>
+                  <p className="text-base">
+                    {selectedProperty.owner.profile?.firstName || ''} {selectedProperty.owner.profile?.lastName || ''}
+                  </p>
                   <p className="text-sm text-muted-foreground">{selectedProperty.owner.email}</p>
                 </div>
                 <div>
@@ -392,6 +379,77 @@ const PropertyApprovals = () => {
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Rejection Reason</Label>
                   <p className="text-base text-red-600 mt-1">{selectedProperty.rejectionReason}</p>
+                </div>
+              )}
+
+              {/* Description */}
+              {selectedProperty.description && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                  <p className="text-base mt-1">{selectedProperty.description}</p>
+                </div>
+              )}
+
+              {/* Images */}
+              {selectedProperty.images && selectedProperty.images.length > 0 && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Images</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                    {selectedProperty.images.map((image, index) => {
+                      const imageUrl = typeof image === 'object' && image.url ? image.url : image;
+                      return (
+                        <img
+                          key={index}
+                          src={typeof imageUrl === 'string' ? imageUrl : ''}
+                          alt={`Property ${index + 1}`}
+                          className="w-full h-32 object-cover rounded"
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Videos */}
+              {selectedProperty.videos && selectedProperty.videos.length > 0 && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Videos</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                    {selectedProperty.videos.map((video, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+                          {video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')) ? (
+                            <iframe
+                              src={video.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                              className="w-full h-full"
+                              allowFullScreen
+                              title={video.caption || `Video ${index + 1}`}
+                            />
+                          ) : video.url ? (
+                            <video
+                              src={video.url}
+                              controls
+                              className="w-full h-full object-contain"
+                              poster={video.thumbnail}
+                            />
+                          ) : null}
+                        </div>
+                        {video.caption && (
+                          <p className="text-xs text-muted-foreground">{video.caption}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Virtual Tour */}
+              {selectedProperty.virtualTour && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Virtual Tour</Label>
+                  <div className="mt-2">
+                    <VirtualTourViewer url={selectedProperty.virtualTour} />
+                  </div>
                 </div>
               )}
             </div>

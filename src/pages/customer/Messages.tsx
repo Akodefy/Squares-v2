@@ -210,9 +210,12 @@ const Messages = () => {
       // Clear typing status before sending
       await messageService.updateActiveStatus(conversationId, 'online');
 
+      // Use placeholder text if only attachments are being sent
+      const messageContent = newMessage.trim() || (attachments.length > 0 ? '[Attachment]' : '');
+
       const sentMessage = await messageService.sendMessage(
         conversationId,
-        newMessage.trim(),
+        messageContent,
         recipientId,
         attachments
       );

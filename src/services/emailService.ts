@@ -291,7 +291,7 @@ class EmailService {
         data: {
           userName,
           propertyList,
-          dashboardUrl: `${window.location.origin}/customer/dashboard`
+          dashboardUrl: `${window.location.origin}/v2/customer/dashboard`
         }
       });
     } catch (error) {
@@ -313,7 +313,7 @@ class EmailService {
           oldPrice,
           newPrice,
           savings,
-          propertyUrl: `${window.location.origin}/property/${property._id}`
+          propertyUrl: `${window.location.origin}/v2/property/${property._id}`
         }
       });
     } catch (error) {
@@ -331,7 +331,7 @@ class EmailService {
           userName,
           senderName,
           messagePreview: messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
-          messagesUrl: `${window.location.origin}/customer/messages`
+          messagesUrl: `${window.location.origin}/v2/customer/messages`
         }
       });
     } catch (error) {
@@ -364,7 +364,7 @@ class EmailService {
         template: this.emailTemplates.welcome.template,
         data: {
           userName,
-          dashboardUrl: `${window.location.origin}/customer/dashboard`
+          dashboardUrl: `${window.location.origin}/v2/customer/dashboard`
         }
       });
     } catch (error) {
@@ -380,7 +380,7 @@ class EmailService {
         template: this.emailTemplates.passwordReset.template,
         data: {
           userName,
-          resetUrl: `${window.location.origin}/reset-password?token=${resetToken}`
+          resetUrl: `${window.location.origin}/v2/reset-password?token=${resetToken}`
         }
       });
     } catch (error) {
@@ -396,7 +396,7 @@ class EmailService {
         template: this.emailTemplates.accountVerification.template,
         data: {
           userName,
-          verificationUrl: `${window.location.origin}/verify-email?token=${verificationToken}`
+          verificationUrl: `${window.location.origin}/v2/verify-email?token=${verificationToken}`
         }
       });
     } catch (error) {

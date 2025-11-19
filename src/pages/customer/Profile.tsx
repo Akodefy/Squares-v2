@@ -638,8 +638,16 @@ const Profile = () => {
                     <Label>Phone</Label>
                     {isEditing ? (
                       <Input
+                        type="tel"
                         value={profile.phone}
-                        onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          if (value.length <= 10) {
+                            setProfile(prev => ({ ...prev, phone: value }));
+                          }
+                        }}
+                        placeholder="10 digit mobile number"
+                        maxLength={10}
                       />
                     ) : (
                       <p className="text-sm">{profile.phone}</p>

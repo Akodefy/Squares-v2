@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CheckCircle, XCircle, Eye, MessageSquare, Calendar, MapPin, Home } from "lucide-react";
+import { VirtualTourViewer } from "@/components/property/VirtualTourViewer";
 
 interface Property {
   _id: string;
@@ -21,6 +22,8 @@ interface Property {
   bathrooms: number;
   area: number;
   images: string[];
+  videos?: Array<{ url?: string; caption?: string; thumbnail?: string }>;
+  virtualTour?: string;
   vendor: {
     name: string;
     email: string;
@@ -244,6 +247,47 @@ const PropertyApproval = () => {
                               </ul>
                             </div>
                           </div>
+
+                          {/* Videos Section */}
+                          {property.videos && property.videos.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold mb-2">Videos</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {property.videos.map((video, index) => (
+                                  <div key={index} className="space-y-2">
+                                    <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+                                      {video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')) ? (
+                                        <iframe
+                                          src={video.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                                          className="w-full h-full"
+                                          allowFullScreen
+                                          title={video.caption || `Video ${index + 1}`}
+                                        />
+                                      ) : video.url ? (
+                                        <video
+                                          src={video.url}
+                                          controls
+                                          className="w-full h-full object-contain"
+                                          poster={video.thumbnail}
+                                        />
+                                      ) : null}
+                                    </div>
+                                    {video.caption && (
+                                      <p className="text-xs text-muted-foreground">{video.caption}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Virtual Tour Section */}
+                          {property.virtualTour && (
+                            <div>
+                              <h4 className="font-semibold mb-2">Virtual Tour</h4>
+                              <VirtualTourViewer url={property.virtualTour} />
+                            </div>
+                          )}
                         </div>
                       </DialogContent>
                     </Dialog>

@@ -162,7 +162,7 @@ const PropertyDetails: React.FC = () => {
   };
 
   const handleShare = async () => {
-    const publicUrl = `${window.location.origin}/property/${id}`;
+    const publicUrl = `${window.location.origin}/v2/property/${id}`;
     
     if (navigator.share && property) {
       try {

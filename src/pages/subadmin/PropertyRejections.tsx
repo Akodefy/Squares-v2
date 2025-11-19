@@ -15,6 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeEvent } from "@/contexts/RealtimeContext";
 import { fetchWithAuth, handleApiResponse } from "@/utils/apiUtils";
+import { VirtualTourViewer } from "@/components/property/VirtualTourViewer";
 
 interface Property {
   _id: string;
@@ -33,6 +34,8 @@ interface Property {
   bathrooms: number;
   status: 'pending' | 'available' | 'rejected';
   images: string[];
+  videos?: Array<{ url?: string; caption?: string; thumbnail?: string }>;
+  virtualTour?: string;
   owner: {
     _id: string;
     name: string;
@@ -372,6 +375,43 @@ const PropertyRejections = () => {
                       />
                     ))}
                   </div>
+                </div>
+              )}
+              {selectedProperty.videos && selectedProperty.videos.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Videos</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedProperty.videos.map((video, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+                          {video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')) ? (
+                            <iframe
+                              src={video.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                              className="w-full h-full"
+                              allowFullScreen
+                              title={video.caption || `Video ${index + 1}`}
+                            />
+                          ) : (
+                            <video
+                              src={video.url}
+                              controls
+                              className="w-full h-full object-contain"
+                              poster={video.thumbnail}
+                            />
+                          )}
+                        </div>
+                        {video.caption && (
+                          <p className="text-xs text-muted-foreground">{video.caption}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedProperty.virtualTour && (
+                <div>
+                  <h4 className="font-semibold mb-2">Virtual Tour</h4>
+                  <VirtualTourViewer url={selectedProperty.virtualTour} />
                 </div>
               )}
             </div>

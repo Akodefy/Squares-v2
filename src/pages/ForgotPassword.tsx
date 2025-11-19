@@ -163,11 +163,12 @@ const ForgotPassword = () => {
     const hasUpperCase = /[A-Z]/.test(newPassword);
     const hasLowerCase = /[a-z]/.test(newPassword);
     const hasNumber = /[0-9]/.test(newPassword);
+    const hasSpecial = /[!@#$%^&*]/.test(newPassword);
     
-    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecial) {
       toast({
         title: "Weak Password",
-        description: "Password must contain uppercase, lowercase, and numbers",
+        description: "Password must contain uppercase, lowercase, number, and special character (!@#$%^&*)",
         variant: "destructive",
       });
       return;

@@ -57,10 +57,21 @@ const Signup = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
+    // Validate password requirements
+    if (formData.password.length < 8) {
       toast({
         title: "Error",
-        description: "Password must be at least 6 characters",
+        description: "Password must be at least 8 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])/;
+    if (!passwordRegex.test(formData.password)) {
+      toast({
+        title: "Error",
+        description: "Password must contain uppercase, lowercase, number, and special character (!@#$%^&*)",
         variant: "destructive",
       });
       return;
@@ -293,6 +304,9 @@ const Signup = () => {
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       required
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Must be 8+ characters with uppercase, lowercase, number, and special character (!@#$%^&*)
+                    </p>
                   </div>
 
                   <div className="space-y-2">

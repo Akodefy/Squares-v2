@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle, XCircle, Eye, Search, Filter, MapPin, Home, Users } from "lucide-react";
 import { fetchWithAuth, handleApiResponse } from "@/utils/apiUtils";
+import { VirtualTourViewer } from "@/components/property/VirtualTourViewer";
 
 interface Property {
   _id: string;
@@ -22,6 +24,8 @@ interface Property {
   bathrooms: number;
   area: number;
   images: string[];
+  videos?: Array<{ url?: string; caption?: string; thumbnail?: string }>;
+  virtualTour?: string;
   vendor: {
     name: string;
     email: string;
@@ -37,6 +41,8 @@ const PropertyReview = () => {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const fetchProperties = async () => {
     setLoading(true);
@@ -209,6 +215,10 @@ const PropertyReview = () => {
                           variant="outline"
                           size="sm"
                           className="flex items-center gap-2"
+                          onClick={() => {
+                            setSelectedProperty(property);
+                            setIsViewDialogOpen(true);
+                          }}
                         >
                           <Eye className="w-4 h-4" />
                           View Details
@@ -267,6 +277,104 @@ const PropertyReview = () => {
           </Button>
         </div>
       )}
+
+      {/* View Property Details Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedProperty?.title}</DialogTitle>
+          </DialogHeader>
+          
+          {selectedProperty && (
+            <div className="space-y-4">
+              {/* Images */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedProperty.images && selectedProperty.images.map((image, index) => (
+                  <img 
+                    key={index} 
+                    src={image} 
+                    alt={`Property ${index + 1}`}
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                ))}
+              </div>
+
+              {/* Description */}
+              <div>
+                <h4 className="font-semibold mb-2">Description</h4>
+                <p className="text-muted-foreground">{selectedProperty.description}</p>
+              </div>
+
+              {/* Property Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold">Property Details</h4>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li>Type: {selectedProperty.propertyType}</li>
+                    <li>Bedrooms: {selectedProperty.bedrooms}</li>
+                    <li>Bathrooms: {selectedProperty.bathrooms}</li>
+                    <li>Area: {selectedProperty.area} sq ft</li>
+                    <li>Price: ₹{selectedProperty.price.toLocaleString()}</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Vendor Information</h4>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li>Name: {selectedProperty.vendor.name}</li>
+                    <li>Email: {selectedProperty.vendor.email}</li>
+                  </ul>
+                  <h4 className="font-semibold mt-3">Location</h4>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li>{selectedProperty.location.address}</li>
+                    <li>{selectedProperty.location.city}, {selectedProperty.location.state}</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Videos Section */}
+              {selectedProperty.videos && selectedProperty.videos.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Videos</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedProperty.videos.map((video, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+                          {video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')) ? (
+                            <iframe
+                              src={video.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                              className="w-full h-full"
+                              allowFullScreen
+                              title={video.caption || `Video ${index + 1}`}
+                            />
+                          ) : video.url ? (
+                            <video
+                              src={video.url}
+                              controls
+                              className="w-full h-full object-contain"
+                              poster={video.thumbnail}
+                            />
+                          ) : null}
+                        </div>
+                        {video.caption && (
+                          <p className="text-xs text-muted-foreground">{video.caption}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Virtual Tour Section */}
+              {selectedProperty.virtualTour && (
+                <div>
+                  <h4 className="font-semibold mb-2">Virtual Tour</h4>
+                  <VirtualTourViewer url={selectedProperty.virtualTour} />
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

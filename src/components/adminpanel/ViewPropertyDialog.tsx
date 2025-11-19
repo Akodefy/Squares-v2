@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, Home, Bed, Bath, Maximize, IndianRupee } from "lucide-react";
 import { getOwnerDisplayName, isAdminUser } from "@/utils/propertyUtils";
+import { VirtualTourViewer } from "@/components/property/VirtualTourViewer";
 
 interface ViewPropertyDialogProps {
   property: Property | null;
@@ -171,6 +172,53 @@ export const ViewPropertyDialog = ({ property, open, onOpenChange }: ViewPropert
                     </div>
                   ))}
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* Videos */}
+          {property.videos && property.videos.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-2">Videos</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {property.videos.map((video, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+                        {video.url.includes('youtube.com') || video.url.includes('youtu.be') ? (
+                          <iframe
+                            src={video.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                            className="w-full h-full"
+                            allowFullScreen
+                            title={video.caption || `Video ${index + 1}`}
+                          />
+                        ) : (
+                          <video
+                            src={video.url}
+                            controls
+                            className="w-full h-full object-contain"
+                            poster={video.thumbnail}
+                          />
+                        )}
+                      </div>
+                      {video.caption && (
+                        <p className="text-sm text-muted-foreground">{video.caption}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Virtual Tour */}
+          {property.virtualTour && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-2">Virtual Tour</h3>
+                <VirtualTourViewer url={property.virtualTour} />
               </div>
             </>
           )}

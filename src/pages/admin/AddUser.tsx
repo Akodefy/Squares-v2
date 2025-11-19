@@ -29,7 +29,10 @@ const userSchema = z.object({
   last_name: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().regex(/^[0-9]{10}$/, "Must be 10 digits"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])/, 
+      "Password must contain uppercase, lowercase, number, and special character (!@#$%^&*)"),
   confirm_password: z.string(),
   role: z.enum(["customer", "agent", "admin", "subadmin", "superadmin"]),
   status: z.enum(["active", "inactive", "suspended", "pending"]),

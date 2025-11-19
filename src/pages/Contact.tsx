@@ -270,7 +270,7 @@ const Contact = () => {
                 <div>
                   <h3 className="font-semibold mb-1">Email</h3>
                   <p className="text-sm text-muted-foreground">
-                    support@BuildHomeMart.com
+                    info@BuildHomeMart.com
                   </p>
                 </div>
               </div>
@@ -285,7 +285,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Phone</h3>
-                  <p className="text-sm text-muted-foreground">+91 98765 43210</p>
+                  <p className="text-sm text-muted-foreground">+91 90807 20215</p>
                 </div>
               </div>
             </CardContent>
@@ -300,9 +300,9 @@ const Contact = () => {
                 <div>
                   <h3 className="font-semibold mb-1">Office</h3>
                   <p className="text-sm text-muted-foreground">
-                    123 Business Park
+                    No : 8B/16, Arumugam North Street,
                     <br />
-                    Mumbai, Maharashtra 400001
+                    Thirumangalam, Madurai, Tamil Nadu - 625706, India.
                   </p>
                 </div>
               </div>

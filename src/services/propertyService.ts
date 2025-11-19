@@ -39,6 +39,11 @@ export interface Property {
     caption?: string;
     isPrimary: boolean;
   }>;
+  videos?: Array<{
+    url: string;
+    caption?: string;
+    thumbnail?: string;
+  }>;
   virtualTour?: string;
   owner: {
     _id: string;

@@ -1,4 +1,5 @@
 import { toast } from "@/hooks/use-toast";
+import { uploadService } from "@/services/uploadService";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.buildhomemartsquares.com/api";
 
@@ -221,6 +222,14 @@ class MessageService {
 
   async sendMessage(conversationId: string, content: string, recipientId?: string, attachments?: Array<{type: 'image' | 'document'; url: string; name: string; size?: number}>): Promise<Message> {
     try {
+      if (!conversationId) {
+        throw new Error('Conversation ID is required');
+      }
+      
+      if (!content?.trim() && (!attachments || attachments.length === 0)) {
+        throw new Error('Message content or attachments are required');
+      }
+
       // If recipientId is not provided, we need to extract it from the conversationId
       let recipient = recipientId;
       
@@ -244,7 +253,7 @@ class MessageService {
         body: JSON.stringify({ 
           conversationId,
           recipientId: recipient,
-          content,
+          content: content.trim(),
           attachments: attachments || []
         }),
       });
@@ -270,8 +279,6 @@ class MessageService {
   }
 
   async uploadAttachment(file: File): Promise<{type: 'image' | 'document'; url: string; name: string; size: number}> {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.buildhomemartsquares.com";
-    
     try {
       // Validate file size (max 10MB)
       const maxSize = 10 * 1024 * 1024; // 10MB
@@ -280,35 +287,18 @@ class MessageService {
       }
 
       // Validate file type
-      const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       const documentTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       
       const isImage = imageTypes.includes(file.type);
       const isDocument = documentTypes.includes(file.type);
       
       if (!isImage && !isDocument) {
-        throw new Error("File type not supported. Please upload images (jpg, png, gif) or documents (pdf, doc, docx)");
+        throw new Error("File type not supported. Please upload images (jpg, png, gif, webp) or documents (pdf, doc, docx)");
       }
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'messages');
-
-      const token = localStorage.getItem("token");
-      
-      const response = await fetch(`${API_BASE_URL}/upload/single`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to upload file');
-      }
+      // Use uploadService for file upload
+      const result = await uploadService.uploadSingle(file, 'messages');
 
       return {
         type: isImage ? 'image' : 'document',
@@ -318,6 +308,7 @@ class MessageService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to upload file";
+      console.error(`Failed to upload ${file.name}:`, errorMessage);
       toast({
         title: "Upload Error",
         description: errorMessage,
