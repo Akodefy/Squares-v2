@@ -9,6 +9,7 @@ import { useTheme } from "next-themes";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import UnifiedProfileDropdown from "@/components/shared/UnifiedProfileDropdown";
+import { toast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,18 @@ const Navbar = () => {
     { label: "Agricultural Land", value: "land" },
     { label: "Farm House", value: "house" },
   ];
+
+  const handlePostPropertyClick = () => {
+    if (isAuthenticated && user?.role === 'customer') {
+      toast({
+        title: "Vendor Portal Required",
+        description: "Contact the Squares team for vendor access to post properties",
+        variant: "default",
+      });
+      return;
+    }
+    navigate('/v2/vendor/login');
+  };
 
   const handlePropertyTypeClick = (listingType: string, propertyType?: string) => {
     const searchParams = new URLSearchParams();
@@ -155,10 +168,10 @@ const Navbar = () => {
                     Sell <ChevronDown className="h-3 w-3" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56">
-                    <DropdownMenuItem onClick={() => navigate('/vendor/login')}>
+                    <DropdownMenuItem onClick={handlePostPropertyClick}>
                       Post Property for Free
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/vendor/properties')}>
+                    <DropdownMenuItem onClick={() => navigate('/v2/vendor/login')}>
                       My Listed Properties
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -203,14 +216,12 @@ const Navbar = () => {
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-2 xs:gap-3 sm:gap-4 mr-2 xs:mr-0">
-              <Link to="/vendor/login" className="hidden md:block">
-                <Button
-                  variant="ghost"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4"
-                >
-                  Post Property
-                </Button>
-              </Link>
+              <Button 
+                onClick={handlePostPropertyClick}
+                className="hidden md:block bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4"
+              >
+                Post Property
+              </Button>
               
               {isAuthenticated ? (
                 <UnifiedProfileDropdown />
@@ -343,20 +354,24 @@ const Navbar = () => {
               {/* Sell Section */}
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">Sell</p>
-                <Link
-                  to="/vendor/login"
+                <button
+                  onClick={() => {
+                    handlePostPropertyClick();
+                    setMobileMenuOpen(false);
+                  }}
                   className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
                 >
                   Post Property for Free
-                </Link>
-                <Link
-                  to="/vendor/login"
-                  className="block py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-3 rounded-md text-center"
-                  onClick={() => setMobileMenuOpen(false)}
+                </button>
+                <button
+                  onClick={() => {
+                    handlePostPropertyClick();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-3 rounded-md text-center w-full"
                 >
                   Post Property
-                </Link>
+                </button>
 
                 <Link
                   to="/vendor/properties"

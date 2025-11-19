@@ -84,7 +84,7 @@ const AddUser = () => {
         title: "Success",
         description: "User created successfully.",
       });
-      navigate("/admin/users");
+      navigate("/v2/admin/users");
     } catch (error) {
       console.error("Failed to create user:", error);
       toast({
@@ -270,7 +270,7 @@ const AddUser = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/admin/users")}
+                onClick={() => navigate("/v2/admin/users")}
               >
                 Cancel
               </Button>

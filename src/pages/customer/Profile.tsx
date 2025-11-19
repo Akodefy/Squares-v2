@@ -505,7 +505,7 @@ const Profile = () => {
               Edit Profile
             </Button>
           )}
-          <Button variant="outline" onClick={() => window.location.href = '/customer/settings'} className={isMobile ? 'w-full' : ''}>
+          <Button variant="outline" onClick={() => window.location.href = '/v2/customer/settings'} className={isMobile ? 'w-full' : ''}>
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </Button>

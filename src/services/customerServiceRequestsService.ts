@@ -367,12 +367,8 @@ class CustomerServiceRequestsService {
 
   // Utility methods
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    const { currencyUtils } = require('@/utils/currencyUtils');
+    return currencyUtils.format(amount);
   }
 
   getServiceTypeLabel(serviceType: string): string {

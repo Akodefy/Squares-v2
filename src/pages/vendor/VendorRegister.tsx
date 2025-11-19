@@ -45,6 +45,11 @@ const VendorRegister = () => {
   const [otpExpiry, setOtpExpiry] = useState<number>(0);
   const [profileSubmitted, setProfileSubmitted] = useState(false);
 
+  // Auto-scroll to top on component mount and step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [currentStep, otpStep]);
+
   // Validation states
   const [phoneValidation, setPhoneValidation] = useState<{
     checking: boolean;
@@ -754,7 +759,7 @@ const VendorRegister = () => {
         
         // Redirect to login after successful registration
         setTimeout(() => {
-          navigate("/vendor/login");
+          navigate("/v2/vendor/login");
         }, 3000);
       }
       

@@ -519,7 +519,7 @@ const AddProperty = () => {
         description: "Property created successfully by admin.",
       });
 
-      navigate("/admin/properties");
+      navigate("/v2/admin/properties");
     } catch (error) {
       console.error("Error submitting property:", error);
       
@@ -1554,7 +1554,7 @@ const AddProperty = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/properties")} className="mt-1">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/v2/admin/properties")} className="mt-1">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>

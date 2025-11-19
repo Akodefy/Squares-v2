@@ -266,6 +266,7 @@ class PlanService {
     const period = plan.billingPeriod === 'monthly' ? '/month' : 
                    plan.billingPeriod === 'yearly' ? '/year' : '';
     
+    // Use toLocaleString without hardcoded locale
     return `${symbol}${plan.price.toLocaleString()}${period}`;
   }
 

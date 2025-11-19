@@ -66,7 +66,7 @@ const VendorLogin = () => {
             title: "Login Successful",
             description: "Welcome to your vendor dashboard!",
           });
-          navigate("/vendor/dashboard");
+          navigate("/v2/vendor/dashboard");
         } else {
           toast({
             title: "Access Denied",

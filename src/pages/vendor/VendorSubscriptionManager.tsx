@@ -266,7 +266,7 @@ const VendorSubscriptionManager: React.FC = () => {
           </div>
         </div>
         {!subscription && (
-          <Button onClick={() => navigate('/vendor/subscription-plans')}>
+          <Button onClick={() => navigate('/v2/vendor/subscription-plans')}>
             <Plus className="w-4 h-4 mr-2" />
             Get Started
           </Button>
@@ -385,13 +385,13 @@ const VendorSubscriptionManager: React.FC = () => {
             <div className="flex space-x-4">
               <Button 
                 variant="outline"
-                onClick={() => navigate('/vendor/subscription-plans')}
+                onClick={() => navigate('/v2/vendor/subscription-plans')}
               >
                 Upgrade Plan
               </Button>
               <Button 
                 variant="outline"
-                onClick={() => navigate('/vendor/billing')}
+                onClick={() => navigate('/v2/vendor/billing')}
               >
                 View Billing
               </Button>
@@ -404,7 +404,7 @@ const VendorSubscriptionManager: React.FC = () => {
             <Crown className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">No Active Subscription</h2>
             <p className="text-gray-600 mb-6">Choose a subscription plan to get started with premium features</p>
-            <Button onClick={() => navigate('/vendor/subscription-plans')}>
+            <Button onClick={() => navigate('/v2/vendor/subscription-plans')}>
               Choose Plan
             </Button>
           </CardContent>

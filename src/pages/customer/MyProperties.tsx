@@ -243,12 +243,6 @@ const MyProperties = () => {
             <BarChart3 className="w-4 h-4 mr-2" />
             Analytics
           </Button>
-          <Button asChild>
-            <Link to="/customer/post-property">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Property
-            </Link>
-          </Button>
         </div>
       </div>
 
@@ -557,7 +551,7 @@ const MyProperties = () => {
                         <BarChart3 className="w-4 h-4 mr-2" />
                         Analytics
                       </Button>
-                        {property.status === 'available' && (
+                        {property.status === 'active' && (
                         <Button size="sm" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
                           <TrendingUp className="w-4 h-4 mr-2" />
                           Promote
@@ -600,11 +594,15 @@ const MyProperties = () => {
             </p>
             <div className="flex gap-2 justify-center">
               {properties.length === 0 ? (
-                <Button asChild>
-                  <Link to="/customer/post-property">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Your First Property
-                  </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStatusFilter("all");
+                    setTypeFilter("all");
+                  }}
+                >
+                  Clear Filters
                 </Button>
               ) : (
                 <Button 
@@ -626,5 +624,4 @@ const MyProperties = () => {
   );
 };
 
-export default MyProperties;
 export default MyProperties;

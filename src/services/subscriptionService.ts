@@ -314,6 +314,7 @@ class SubscriptionService {
 
   formatAmount(subscription: Subscription): string {
     const symbol = subscription.currency === 'INR' ? '₹' : subscription.currency === 'USD' ? '$' : '€';
+    // Use toLocaleString without hardcoded locale
     return `${symbol}${subscription.amount.toLocaleString()}`;
   }
 

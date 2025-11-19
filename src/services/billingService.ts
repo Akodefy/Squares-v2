@@ -637,12 +637,8 @@ class BillingService {
 
   // Utility methods
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    const { currencyUtils } = require('@/utils/currencyUtils');
+    return currencyUtils.format(amount).replace(/[^\d.,]/g, ''); // Remove currency symbol for PDF
   }
 
   formatDate(dateString: string): string {

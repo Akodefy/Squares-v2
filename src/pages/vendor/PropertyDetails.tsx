@@ -59,7 +59,7 @@ const PropertyDetails = () => {
         description: "Failed to load property details",
         variant: "destructive",
       });
-      navigate('/vendor/properties');
+      navigate('/v2/vendor/properties');
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ const PropertyDetails = () => {
           title: "Success",
           description: "Property deleted successfully",
         });
-        navigate('/vendor/properties');
+        navigate('/v2/vendor/properties');
       } catch (error) {
         console.error('Failed to delete property:', error);
         toast({
@@ -162,7 +162,7 @@ const PropertyDetails = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/vendor/properties')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/v2/vendor/properties')}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>

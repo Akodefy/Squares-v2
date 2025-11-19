@@ -95,6 +95,13 @@ const PublicPropertyDetails: React.FC = () => {
     loadProperty();
   }, [loadProperty]);
 
+  // Redirect authenticated users to customer property page
+  useEffect(() => {
+    if (isAuthenticated && id && !loading) {
+      navigate(`/customer/property/${id}`, { replace: true });
+    }
+  }, [isAuthenticated, id, loading, navigate]);
+
   const handleAuthRequired = (action: string) => {
     toast({
       title: "Login Required",
@@ -235,22 +242,44 @@ const PublicPropertyDetails: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pt-20 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Feature Access Notice for Authenticated Users */}
+        {isAuthenticated && (
+          <Card className="border-blue-500 bg-blue-50 dark:bg-blue-950">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Star className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-blue-900 dark:text-blue-100">Unlock All Features</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Save to favorites, send messages, compare properties, and access detailed analytics
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={() => navigate(`/customer/property/${id}`)} className="bg-blue-600 hover:bg-blue-700">
+                  View Full Details
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Login Notice for Non-Authenticated Users */}
         {!isAuthenticated && (
           <Card className="border-primary bg-primary/5">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <LogIn className="w-5 h-5 text-primary" />
                   <div>
-                    <p className="font-medium">Login to unlock all features</p>
+                    <p className="font-medium">Login for Full Access</p>
                     <p className="text-sm text-muted-foreground">
-                      Save favorites, send messages, and access more property details
+                      Contact owner, save favorites, compare properties, and more
                     </p>
                   </div>
                 </div>
-                <Button onClick={() => navigate('/login', { state: { from: `/property/${id}` } })}>
-                  Login
+                <Button onClick={() => handleAuthRequired('access all features')}>
+                  Login Now
                 </Button>
               </div>
             </CardContent>
@@ -511,18 +540,17 @@ const PublicPropertyDetails: React.FC = () => {
                         className="w-full" 
                         onClick={() => handleAuthRequired('contact the owner')}
                       >
-                        <LogIn className="w-4 h-4 mr-2" />
+                        <Phone className="w-4 h-4 mr-2" />
                         Login to Contact
                       </Button>
-                      {!checkingEnterprise && isEnterpriseProperty && (
-                        <Button 
-                          className="w-full bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => setShowEnterpriseDialog(true)}
-                        >
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          WhatsApp Contact
-                        </Button>
-                      )}
+                      <Button 
+                        variant="outline"
+                        className="w-full" 
+                        onClick={() => handleAuthRequired('send message')}
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Login to Message
+                      </Button>
                     </>
                   ) : (
                     <>
@@ -531,7 +559,15 @@ const PublicPropertyDetails: React.FC = () => {
                         onClick={() => navigate(`/customer/property/${id}`)}
                       >
                         <Phone className="w-4 h-4 mr-2" />
-                        View Full Details
+                        View Contact Details
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        className="w-full" 
+                        onClick={() => navigate(`/customer/property/${id}`)}
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Send Message
                       </Button>
                     </>
                   )}

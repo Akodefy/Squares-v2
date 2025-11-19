@@ -147,11 +147,8 @@ const AddonServices = () => {
   };
 
   const formatPrice = (price: number, currency: string = 'INR') => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: currency,
-      maximumFractionDigits: 0,
-    }).format(price);
+    const { currencyUtils } = require('@/utils/currencyUtils');
+    return currencyUtils.format(price);
   };
 
   if (loading && vendorAddons.length === 0) {

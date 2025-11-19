@@ -73,16 +73,16 @@ export const VendorNotificationCenter: React.FC = () => {
           }
           break;
         case 'view_leads':
-          navigate('/vendor/leads');
+          navigate('/v2/vendor/leads');
           break;
         case 'view_messages':
-          navigate('/vendor/messages');
+          navigate('/v2/vendor/messages');
           break;
         case 'view_dashboard':
-          navigate('/vendor/dashboard');
+          navigate('/v2/vendor/dashboard');
           break;
         case 'view_inquiries':
-          navigate('/vendor/inquiries');
+          navigate('/v2/vendor/inquiries');
           break;
         default:
           break;
@@ -93,7 +93,7 @@ export const VendorNotificationCenter: React.FC = () => {
   };
 
   const handleViewAllNotifications = () => {
-    navigate('/vendor/notifications');
+    navigate('/v2/vendor/notifications');
     setOpen(false);
   };
 

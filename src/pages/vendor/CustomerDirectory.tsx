@@ -92,7 +92,7 @@ const CustomerDirectory = () => {
   };
 
   const handleMessageCustomer = (customer: Customer) => {
-    navigate("/vendor/messages", {
+    navigate("/v2/vendor/messages", {
       state: {
         recipientId: customer._id,
         recipientName: `${customer.profile.firstName} ${customer.profile.lastName}`,

@@ -43,6 +43,14 @@ export interface EmailTemplate {
     subject: string;
     template: string;
   };
+  accountDeactivation: {
+    subject: string;
+    template: string;
+  };
+  accountDeletion: {
+    subject: string;
+    template: string;
+  };
 }
 
 class EmailService {
@@ -213,6 +221,82 @@ class EmailService {
           </div>
           <div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
             <p>This email was sent from ${this.supportEmail}</p>
+          </div>
+        </div>
+      `
+    },
+    accountDeactivation: {
+      subject: 'Confirm Account Deactivation - BuildHomeMart Squares',
+      template: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #f59e0b; padding: 20px; text-align: center;">
+            <h1 style="color: white; margin: 0;">Account Deactivation Request ⚠️</h1>
+          </div>
+          <div style="padding: 20px;">
+            <p>Hi {{userName}},</p>
+            <p>We received a request to temporarily deactivate your BuildHomeMart Squares account.</p>
+            <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <h3 style="margin: 0 0 15px 0; color: #92400e;">What happens when you deactivate:</h3>
+              <ul style="margin: 0; padding-left: 20px; color: #78350f;">
+                <li>Your profile will be hidden from other users</li>
+                <li>You won't receive any notifications</li>
+                <li>Your data remains safe and secure</li>
+                <li>You can reactivate anytime by logging in</li>
+              </ul>
+            </div>
+            <p>To confirm deactivation, click the button below:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{{deactivationUrl}}" style="background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Confirm Deactivation</a>
+            </div>
+            <p style="font-size: 14px; color: #6b7280;">
+              This link will expire in 24 hours. If you didn't request this, please ignore this email and your account will remain active.
+            </p>
+          </div>
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
+            <p>Need help? Contact us at ${this.supportEmail}</p>
+          </div>
+        </div>
+      `
+    },
+    accountDeletion: {
+      subject: 'Confirm Permanent Account Deletion - BuildHomeMart Squares',
+      template: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #dc2626; padding: 20px; text-align: center;">
+            <h1 style="color: white; margin: 0;">Permanent Account Deletion 🗑️</h1>
+          </div>
+          <div style="padding: 20px;">
+            <p>Hi {{userName}},</p>
+            <p>We received a request to <strong>permanently delete</strong> your BuildHomeMart Squares account.</p>
+            <div style="background: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+              <h3 style="margin: 0 0 15px 0; color: #991b1b;">⚠️ This action is PERMANENT and cannot be undone</h3>
+              <p style="margin: 0 0 10px 0; color: #7f1d1d; font-weight: bold;">All of the following will be permanently deleted:</p>
+              <ul style="margin: 0; padding-left: 20px; color: #7f1d1d;">
+                <li>Your profile and account information</li>
+                <li>All property listings and favorites</li>
+                <li>Messages and conversation history</li>
+                <li>Reviews and ratings you've provided</li>
+                <li>All saved preferences and settings</li>
+              </ul>
+            </div>
+            <p style="font-weight: bold; color: #dc2626;">
+              Are you absolutely sure you want to proceed?
+            </p>
+            <p>To confirm permanent deletion, click the button below:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{{deletionUrl}}" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Confirm Permanent Deletion</a>
+            </div>
+            <p style="font-size: 14px; color: #6b7280;">
+              This link will expire in 24 hours. If you didn't request this, please ignore this email and your account will remain active.
+            </p>
+            <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                <strong>Changed your mind?</strong> Consider deactivating instead. You can always reactivate your account later.
+              </p>
+            </div>
+          </div>
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
+            <p>Need help or have questions? Contact us at ${this.supportEmail}</p>
           </div>
         </div>
       `
@@ -401,6 +485,55 @@ class EmailService {
       });
     } catch (error) {
       console.error('Failed to send verification email:', error);
+    }
+  }
+
+  async sendAccountDeactivationEmail(userEmail: string, userName?: string): Promise<void> {
+    try {
+      const deactivationToken = Math.random().toString(36).substring(2, 15);
+      
+      await this.sendEmail({
+        to: userEmail,
+        subject: (this.emailTemplates as any).accountDeactivation.subject,
+        template: (this.emailTemplates as any).accountDeactivation.template,
+        data: {
+          userName: userName || 'User',
+          deactivationUrl: `${window.location.origin}/v2/confirm-deactivation?token=${deactivationToken}`
+        }
+      });
+      
+      toast({
+        title: "📧 Confirmation Email Sent",
+        description: "Check your email to confirm account deactivation",
+      });
+    } catch (error) {
+      console.error('Failed to send account deactivation email:', error);
+      throw error;
+    }
+  }
+
+  async sendAccountDeletionEmail(userEmail: string, userName?: string): Promise<void> {
+    try {
+      const deletionToken = Math.random().toString(36).substring(2, 15);
+      
+      await this.sendEmail({
+        to: userEmail,
+        subject: (this.emailTemplates as any).accountDeletion.subject,
+        template: (this.emailTemplates as any).accountDeletion.template,
+        data: {
+          userName: userName || 'User',
+          deletionUrl: `${window.location.origin}/v2/confirm-deletion?token=${deletionToken}`
+        }
+      });
+      
+      toast({
+        title: "📧 Confirmation Email Sent",
+        description: "Check your email to confirm permanent account deletion",
+        variant: "destructive"
+      });
+    } catch (error) {
+      console.error('Failed to send account deletion email:', error);
+      throw error;
     }
   }
 

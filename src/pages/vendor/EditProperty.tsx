@@ -172,7 +172,7 @@ const EditProperty = () => {
         description: "Failed to load property details",
         variant: "destructive",
       });
-      navigate('/vendor/properties');
+      navigate('/v2/vendor/properties');
     } finally {
       setLoading(false);
     }
@@ -397,7 +397,7 @@ const EditProperty = () => {
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold mb-2">Property Not Found</h2>
         <p className="text-muted-foreground mb-4">The property you're trying to edit doesn't exist.</p>
-        <Button onClick={() => navigate('/vendor/properties')}>
+        <Button onClick={() => navigate('/v2/vendor/properties')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Properties
         </Button>
@@ -410,7 +410,7 @@ const EditProperty = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/vendor/properties')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/v2/vendor/properties')}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
@@ -884,7 +884,7 @@ const EditProperty = () => {
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => navigate('/vendor/properties')}
+              onClick={() => navigate('/v2/vendor/properties')}
             >
               Cancel
             </Button>

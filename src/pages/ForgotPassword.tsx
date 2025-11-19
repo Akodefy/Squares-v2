@@ -24,6 +24,11 @@ const ForgotPassword = () => {
   const [canResend, setCanResend] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
+  // Auto-scroll to top on step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [step]);
+
   // Timer for resend OTP cooldown (2 minutes = 120 seconds)
   useEffect(() => {
     if (resendTimer > 0) {
@@ -469,7 +474,7 @@ const ForgotPassword = () => {
                     </p>
                   </div>
                   <div className="space-y-3">
-                    <Button onClick={() => navigate("/login")} className="w-full">
+                    <Button onClick={() => navigate("/v2/login")} className="w-full">
                       Go to Login
                     </Button>
                     <p className="text-xs text-muted-foreground">

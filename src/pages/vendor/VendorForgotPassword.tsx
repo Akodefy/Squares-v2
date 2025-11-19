@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -27,6 +27,11 @@ const VendorForgotPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [expiryMinutes, setExpiryMinutes] = useState(10);
+
+  // Auto-scroll to top on step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [step]);
 
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,7 +297,7 @@ const VendorForgotPassword = () => {
                       Your password has been successfully reset.
                     </p>
                   </div>
-                  <Button onClick={() => navigate("/vendor/login")} className="w-full">
+                  <Button onClick={() => navigate("/v2/vendor/login")} className="w-full">
                     Go to Vendor Login
                   </Button>
                 </div>

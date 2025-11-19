@@ -79,19 +79,19 @@ export const CustomerNotificationCenter: React.FC = () => {
           }
           break;
         case 'view_properties':
-          navigate('/customer/search');
+          navigate('/v2/customer/search');
           break;
         case 'view_messages':
-          navigate('/customer/messages');
+          navigate('/v2/customer/messages');
           break;
         case 'view_dashboard':
-          navigate('/customer/dashboard');
+          navigate('/v2/customer/dashboard');
           break;
         case 'view_favorites':
-          navigate('/customer/favorites');
+          navigate('/v2/customer/favorites');
           break;
         case 'view_services':
-          navigate('/customer/services');
+          navigate('/v2/customer/services');
           break;
         default:
           break;
@@ -103,7 +103,7 @@ export const CustomerNotificationCenter: React.FC = () => {
 
   const handleViewAllNotifications = () => {
     // Since CustomerNotifications.tsx is empty, navigate to messages or dashboard for now
-    navigate('/customer/messages');
+    navigate('/v2/customer/messages');
     setOpen(false);
   };
 

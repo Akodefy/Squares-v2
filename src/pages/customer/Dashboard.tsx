@@ -255,12 +255,6 @@ const Dashboard = () => {
               <span className="text-responsive-sm">Search Properties</span>
             </Button>
           </Link>
-          <Link to="/customer/post-property">
-            <Button variant="outline" className="btn-responsive w-full sm:w-auto touch-friendly">
-              <Plus className="w-4 h-4 mr-2" />
-              <span className="text-responsive-sm">Post Property</span>
-            </Button>
-          </Link>
         </div>
       </div>
 
@@ -377,10 +371,10 @@ const Dashboard = () => {
                 )}
               </Button>
             </Link>
-            <Link to="/customer/my-properties">
+            <Link to="/customer/owned-properties">
               <Button variant="outline" className="w-full justify-start">
                 <Home className="w-4 h-4 mr-2" />
-                My Properties ({quickStats.propertiesCount})
+                My Owned Properties ({quickStats.propertiesCount})
               </Button>
             </Link>
             <Link to="/customer/services">

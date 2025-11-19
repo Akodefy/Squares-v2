@@ -64,7 +64,7 @@ const UnifiedProfileDropdown = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/v2/login");
   };
 
   const displayName = user?.profile ? 

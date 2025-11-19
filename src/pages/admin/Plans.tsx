@@ -142,7 +142,7 @@ const Plans = () => {
               Manage subscription plans and pricing
             </p>
           </div>
-          <Button onClick={() => navigate("/admin/plans/create")} className="w-full sm:w-auto">
+          <Button onClick={() => navigate("/v2/admin/plans/create")} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Create Plan</span>
             <span className="sm:hidden">Create</span>

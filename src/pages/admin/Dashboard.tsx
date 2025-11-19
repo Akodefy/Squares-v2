@@ -53,7 +53,7 @@ const Dashboard = () => {
       icon: DollarSign,
       color: "text-emerald-500 dark:text-emerald-400",
       bgColor: "bg-emerald-500/10",
-      onClick: () => navigate('/admin/revenue-details'),
+      onClick: () => navigate('/v2/admin/revenue-details'),
     },
     {
       title: "Total Users",
@@ -62,7 +62,7 @@ const Dashboard = () => {
       icon: Users,
       color: "text-blue-500 dark:text-blue-400",
       bgColor: "bg-blue-500/10",
-      onClick: () => navigate('/admin/users-details'),
+      onClick: () => navigate('/v2/admin/users-details'),
     },
     {
       title: "Total Properties",
@@ -71,7 +71,7 @@ const Dashboard = () => {
       icon: TrendingUp,
       color: "text-accent",
       bgColor: "bg-accent/10",
-      onClick: () => navigate('/admin/properties-details'),
+      onClick: () => navigate('/v2/admin/properties-details'),
     },
     {
       title: "Engagement Rate",
@@ -80,7 +80,7 @@ const Dashboard = () => {
       icon: Activity,
       color: "text-primary",
       bgColor: "bg-primary/10",
-      onClick: () => navigate('/admin/engagement-details'),
+      onClick: () => navigate('/v2/admin/engagement-details'),
     },
   ];
 

@@ -230,19 +230,8 @@ class CustomerDashboardService {
 
   // Helper methods
   formatPrice(price: number, listingType: 'sale' | 'rent' | 'lease'): string {
-    if (listingType === 'rent') {
-      return `₹${price.toLocaleString('en-IN')}/month`;
-    } else if (listingType === 'lease') {
-      return `₹${price.toLocaleString('en-IN')}/year`;
-    } else {
-      if (price >= 10000000) {
-        return `₹${(price / 10000000).toFixed(1)} Cr`;
-      } else if (price >= 100000) {
-        return `₹${(price / 100000).toFixed(1)} Lac`;
-      } else {
-        return `₹${price.toLocaleString('en-IN')}`;
-      }
-    }
+    const { currencyUtils } = require('@/utils/currencyUtils');
+    return currencyUtils.formatPrice(price, listingType);
   }
 
   formatTimeAgo(dateString: string): string {

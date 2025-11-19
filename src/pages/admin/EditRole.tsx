@@ -45,7 +45,7 @@ const EditRole = () => {
           description: "Failed to load role data.",
           variant: "destructive",
         });
-        navigate("/admin/roles");
+        navigate("/v2/admin/roles");
       } finally {
         setLoading(false);
       }
@@ -77,7 +77,7 @@ const EditRole = () => {
         isActive: role.isActive,
         level: role.level
       });
-      navigate("/admin/roles");
+      navigate("/v2/admin/roles");
     } catch (error) {
       console.error("Failed to update role:", error);
     } finally {
@@ -169,7 +169,7 @@ const EditRole = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/roles")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/v2/admin/roles")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
@@ -184,7 +184,7 @@ const EditRole = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/admin/roles")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/v2/admin/roles")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
@@ -306,7 +306,7 @@ const EditRole = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate("/admin/roles")}
+            onClick={() => navigate("/v2/admin/roles")}
             disabled={saving}
           >
             Cancel

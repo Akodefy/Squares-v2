@@ -20,7 +20,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   // Get the intended destination from location state
-  const from = location.state?.from?.pathname || null;
+  const from = location.state?.from || null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,14 +58,22 @@ const Login = () => {
           authService.clearAuthData();
           // Redirect to vendor login
           setTimeout(() => {
-            navigate("/vendor/login");
+            navigate("/v2/vendor/login");
           }, 1500);
           return;
         }
         
         // If user was trying to access a specific route, redirect there
         if (from) {
-          navigate(from, { replace: true });
+          // Convert public property route to customer property route
+          if (from.startsWith('/property/')) {
+            const propertyId = from.replace('/property/', '');
+            console.log('Login: Redirecting to customer property view:', propertyId);
+            navigate(`/customer/property/${propertyId}`, { replace: true });
+          } else {
+            console.log('Login: Redirecting to intended destination:', from);
+            navigate(from, { replace: true });
+          }
         } else {
           // Otherwise redirect based on user role
           if (user.role === 'superadmin') {

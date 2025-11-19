@@ -361,7 +361,7 @@ const Roles = () => {
             </p>
           </div>
           <Button
-            onClick={() => navigate('/admin/roles/add')}
+            onClick={() => navigate('/v2/admin/roles/add')}
             className="flex items-center gap-2 w-full md:w-auto"
             size="sm"
           >

@@ -61,7 +61,7 @@ const EditUser = () => {
           description: "User ID is required",
           variant: "destructive",
         });
-        navigate("/admin/users");
+        navigate("/v2/admin/users");
         return;
       }
 
@@ -89,7 +89,7 @@ const EditUser = () => {
           description: "Failed to load user data",
           variant: "destructive",
         });
-        navigate("/admin/users");
+        navigate("/v2/admin/users");
       } finally {
         setLoading(false);
       }
@@ -120,7 +120,7 @@ const EditUser = () => {
         title: "Success",
         description: "User updated successfully.",
       });
-      navigate("/admin/users");
+      navigate("/v2/admin/users");
     } catch (error) {
       console.error("Failed to update user:", error);
       toast({
@@ -262,7 +262,7 @@ const EditUser = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/admin/users")}
+                onClick={() => navigate("/v2/admin/users")}
               >
                 Cancel
               </Button>

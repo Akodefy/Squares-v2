@@ -84,6 +84,16 @@ const userSchema = new mongoose.Schema({
       default: null
     },
     preferences: {
+      currency: {
+        type: String,
+        enum: ['INR', 'USD', 'EUR', 'GBP'],
+        default: 'INR'
+      },
+      language: {
+        type: String,
+        enum: ['en', 'hi', 'mr', 'ta', 'te', 'kn', 'ml', 'bn', 'pa'],
+        default: 'en'
+      },
       notifications: {
         email: { type: Boolean, default: true },
         sms: { type: Boolean, default: false },

@@ -24,16 +24,16 @@ const CustomerProfileDropdown = () => {
   }, []);
 
   const handleProfile = () => {
-    navigate("/customer/profile");
+    navigate("/v2/customer/profile");
   };
 
   const handleSettings = () => {
-    navigate("/customer/settings");
+    navigate("/v2/customer/settings");
   };
 
   const handleLogout = () => {
     authService.logout();
-    navigate("/login");
+    navigate("/v2/login");
   };
 
   // Get user display name and initials

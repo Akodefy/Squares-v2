@@ -248,6 +248,22 @@ const vendorSchema = new mongoose.Schema({
 
   // Business Settings and Preferences
   settings: {
+    preferences: {
+      language: {
+        type: String,
+        enum: ['en', 'hi', 'mr', 'ta', 'te', 'kn', 'ml', 'bn', 'pa'],
+        default: 'en'
+      },
+      currency: {
+        type: String,
+        enum: ['INR', 'USD', 'EUR', 'GBP'],
+        default: 'INR'
+      },
+      timezone: {
+        type: String,
+        default: 'Asia/Kolkata'
+      }
+    },
     notifications: {
       emailNotifications: {
         type: Boolean,

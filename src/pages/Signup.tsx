@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,11 @@ import { authService } from "@/services/authService";
 
 const Signup = () => {
   const navigate = useNavigate();
+  
+  // Auto-scroll to top on step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, []);
   const [step, setStep] = useState<"form" | "otp" | "success">("form");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -117,6 +122,7 @@ const Signup = () => {
       if (otpResponse.success) {
         setStep("otp");
         setOtpExpiry(otpResponse.expiryMinutes || 10);
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
       }
     } catch (error) {
       console.error("OTP sending error:", error);
@@ -178,13 +184,14 @@ const Signup = () => {
 
       if (response.success) {
         setStep("success");
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
         toast({
           title: "Registration Successful!",
           description: "Your account has been created successfully. Redirecting to login...",
         });
         // Auto-redirect to login after 3 seconds
         setTimeout(() => {
-          navigate("/login");
+          navigate("/v2/login");
         }, 3000);
       }
     } catch (error) {
@@ -437,7 +444,7 @@ const Signup = () => {
                     </p>
                   </div>
                   <Button 
-                    onClick={() => navigate("/login")} 
+                    onClick={() => navigate("/v2/login")} 
                     className="w-full"
                   >
                     Continue to Login

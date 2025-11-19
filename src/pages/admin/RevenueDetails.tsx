@@ -128,7 +128,7 @@ const RevenueDetails = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate('/admin/dashboard')}>
+        <Button variant="ghost" onClick={() => navigate('/v2/admin/dashboard')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Button>

@@ -31,7 +31,7 @@ const EditClient = () => {
           description: "Failed to load client data.",
           variant: "destructive",
         });
-        navigate("/admin/clients");
+        navigate("/v2/admin/clients");
       } finally {
         setLoading(false);
       }

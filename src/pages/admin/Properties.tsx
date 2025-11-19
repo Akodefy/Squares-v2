@@ -414,7 +414,7 @@ const Properties = () => {
             Manage property listings and details
           </p>
         </div>
-        <Button onClick={() => navigate("/admin/properties/add")} className="w-full sm:w-auto">
+        <Button onClick={() => navigate("/v2/admin/properties/add")} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           <span className="hidden sm:inline">Add Property</span>
           <span className="sm:hidden">Add</span>

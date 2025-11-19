@@ -18,7 +18,7 @@ const Users = () => {
           <h1 className={`font-bold ${isMobile ? 'text-2xl' : 'text-3xl'}`}>Users</h1>
           <p className="text-muted-foreground mt-1">View and manage system users</p>
         </div>
-        <Button onClick={() => navigate("/admin/users/add")} className={isMobile ? 'w-full' : ''}>
+        <Button onClick={() => navigate("/v2/admin/users/add")} className={isMobile ? 'w-full' : ''}>
           <Plus className="h-4 w-4 mr-2" />
           Add User
         </Button>

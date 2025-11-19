@@ -61,7 +61,7 @@ const AddRole = () => {
         isSystemRole: false,
       });
 
-      navigate("/admin/roles");
+      navigate("/v2/admin/roles");
     } catch (error) {
       console.error("Failed to create role:", error);
     } finally {
@@ -129,7 +129,7 @@ const AddRole = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/admin/roles")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/v2/admin/roles")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
@@ -235,7 +235,7 @@ const AddRole = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate("/admin/roles")}
+            onClick={() => navigate("/v2/admin/roles")}
             disabled={saving}
           >
             Cancel

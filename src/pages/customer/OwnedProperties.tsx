@@ -852,7 +852,7 @@ const OwnedProperties = () => {
                   className="w-full"
                   onClick={() => {
                     setContactDialogOpen(false);
-                    navigate('/customer/messages');
+                    navigate('/v2/customer/messages');
                   }}
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />

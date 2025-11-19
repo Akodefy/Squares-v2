@@ -1540,7 +1540,11 @@ router.put('/settings', requireVendorRole, asyncHandler(async (req, res) => {
     const updatedSettings = {
       notifications: vendor.settings.notifications,
       autoResponder: vendor.settings.autoResponder,
-      preferences: vendor.settings.preferences || { language: 'en', timezone: 'Asia/Kolkata', currency: 'INR' },
+      preferences: vendor.settings.preferences || { 
+        language: 'en', 
+        timezone: 'Asia/Kolkata', 
+        currency: 'INR' 
+      },
       privacy: vendor.settings.privacy,
       meta: {
         lastUpdated: new Date().toISOString(),

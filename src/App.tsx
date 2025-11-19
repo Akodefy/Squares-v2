@@ -12,6 +12,8 @@ import CustomerRoutes from "@/routes/CustomerRoutes";
 import VendorRoutes from "@/routes/VendorRoutes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 // Lazy load vendor components
 const VendorLogin = lazy(() => import("@/pages/vendor/VendorLogin"));
@@ -24,40 +26,43 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <RealtimeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter basename="/v2">
-            <Routes>
-              <Route path="/*" element={<UserRoutes />} />
-              <Route path="/admin/*" element={<AdminRoutes />} />
-              <Route path="/subadmin/*" element={<SubAdminRoutes />} />
-              <Route path="/customer/*" element={<CustomerRoutes />} />
-              
-              {/* Vendor Authentication Routes (outside protection) */}
-              <Route path="/vendor/login" element={
-                <Suspense fallback={<div>Loading...</div>}>
-                  <VendorLogin />
-                </Suspense>
-              } />
-              <Route path="/vendor/register" element={
-                <Suspense fallback={<div>Loading...</div>}>
-                  <VendorRegister />
-                </Suspense>
-              } />
-              <Route path="/vendor/forgot-password" element={
-                <Suspense fallback={<div>Loading...</div>}>
-                  <VendorForgotPassword />
-                </Suspense>
-              } />
-              
-              {/* Protected Vendor Routes */}
-              <Route path="/vendor/*" element={<VendorRoutes />} />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <CurrencyProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter basename="/v2">
+              <ScrollToTop />
+              <Routes>
+                <Route path="/*" element={<UserRoutes />} />
+                <Route path="/admin/*" element={<AdminRoutes />} />
+                <Route path="/subadmin/*" element={<SubAdminRoutes />} />
+                <Route path="/customer/*" element={<CustomerRoutes />} />
+                
+                {/* Vendor Authentication Routes (outside protection) */}
+                <Route path="/vendor/login" element={
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <VendorLogin />
+                  </Suspense>
+                } />
+                <Route path="/vendor/register" element={
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <VendorRegister />
+                  </Suspense>
+                } />
+                <Route path="/vendor/forgot-password" element={
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <VendorForgotPassword />
+                  </Suspense>
+                } />
+                
+                {/* Protected Vendor Routes */}
+                <Route path="/vendor/*" element={<VendorRoutes />} />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </CurrencyProvider>
       </RealtimeProvider>
     </AuthProvider>
   </QueryClientProvider>

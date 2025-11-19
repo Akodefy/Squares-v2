@@ -10,15 +10,12 @@ import {
   Shield, 
   Mail,
   Palette,
-  Globe,
   Key,
-  Download,
   Trash2,
   AlertTriangle,
   Save,
   RefreshCw,
   User,
-  Languages,
   DollarSign,
   CheckCircle,
   XCircle,
@@ -37,6 +34,7 @@ import { NotificationSettings, type NotificationPreferences } from "@/components
 import { PasswordChangeDialog } from "@/components/PasswordChangeDialog";
 import { useTheme } from "next-themes";
 import { useRealtime, useRealtimeEvent } from "@/contexts/RealtimeContext";
+import { useCurrency, globalCurrencyUtils } from "@/contexts/CurrencyContext";
 
 // Dynamic Settings Configuration - Remove overlaps with Profile page
 interface SettingsConfig {
@@ -61,11 +59,8 @@ interface SecuritySettings {
 }
 
 interface UserPreferences {
-  language: string;
   currency: string;
-  timezone: string;
   autoSave: boolean;
-  emailDigest: "daily" | "weekly" | "monthly" | "never";
   theme: string;
 }
 
@@ -77,6 +72,18 @@ const CustomerSettings = () => {
   const [saving, setSaving] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  
+  // Safe currency context access with fallback
+  let currencyContext: any = null;
+  try {
+    currencyContext = useCurrency();
+  } catch (error) {
+    console.warn('Currency context not available, using fallback');
+  }
+  const { currency: globalCurrency, setCurrency: setGlobalCurrency } = currencyContext || {
+    currency: 'INR',
+    setCurrency: () => {}
+  };
   
   // Consolidated settings state - removed profile data overlap
   const [settings, setSettings] = useState<SettingsConfig>({
@@ -101,11 +108,8 @@ const CustomerSettings = () => {
       sessionTimeout: "30"
     },
     preferences: {
-      language: "en",
       currency: "INR", 
-      timezone: "Asia/Kolkata",
       autoSave: true,
-      emailDigest: "weekly",
       theme: theme || "system"
     }
   });
@@ -154,13 +158,21 @@ const CustomerSettings = () => {
     try {
       setLoading(true);
       
+      // Get localStorage currency (highest priority)
+      const localCurrency = localStorage.getItem('app_currency_preference');
+      
       // Load from local storage first
       const savedSettings = localStorage.getItem('userSettings');
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         setSettings(prevSettings => ({
           ...prevSettings,
-          ...parsedSettings
+          ...parsedSettings,
+          preferences: {
+            ...parsedSettings.preferences,
+            // Override with localStorage currency if it exists
+            currency: localCurrency || parsedSettings.preferences?.currency || prevSettings.preferences.currency
+          }
         }));
         setTheme(parsedSettings.preferences?.theme || theme);
       }
@@ -171,7 +183,7 @@ const CustomerSettings = () => {
         if (response.success && response.data.user.profile?.preferences) {
           const apiPrefs = response.data.user.profile.preferences as any;
           
-          // Merge server data with local settings
+          // Merge server data with local settings, but NEVER override local currency preference
           const mergedSettings: SettingsConfig = {
             notifications: { 
               ...settings.notifications, 
@@ -187,14 +199,19 @@ const CustomerSettings = () => {
             },
             preferences: { 
               ...settings.preferences,
-              language: apiPrefs.language || settings.preferences.language,
-              currency: apiPrefs.currency || settings.preferences.currency,
+              // Local currency ALWAYS takes precedence
+              currency: localCurrency || settings.preferences.currency,
               theme: apiPrefs.theme || settings.preferences.theme
             }
           };
           
           setSettings(mergedSettings);
-          localStorage.setItem('userSettings', JSON.stringify(mergedSettings));
+          // Don't save merged settings to localStorage - keep user's manual currency choice
+          const settingsToSave = { ...mergedSettings };
+          if (localCurrency) {
+            settingsToSave.preferences.currency = localCurrency;
+          }
+          localStorage.setItem('userSettings', JSON.stringify(settingsToSave));
         }
       } catch (apiError) {
         console.log("Using local settings - server unavailable");
@@ -239,7 +256,6 @@ const CustomerSettings = () => {
       const settingsData: any = {
         profile: {
           preferences: {
-            language: settings.preferences.language,
             currency: settings.preferences.currency,
             theme: theme,
             notifications: {
@@ -256,9 +272,7 @@ const CustomerSettings = () => {
               marketingConsent: settings.privacy.marketingConsent,
               thirdPartySharing: settings.privacy.thirdPartySharing
             },
-            autoSave: settings.preferences.autoSave,
-            emailDigest: settings.preferences.emailDigest,
-            timezone: settings.preferences.timezone
+            autoSave: settings.preferences.autoSave
           }
         }
       };
@@ -491,7 +505,7 @@ const CustomerSettings = () => {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-6">
-        <TabsList className={`grid w-full grid-cols-4 ${isMobile ? 'gap-1' : 'gap-2'}`}>
+        <TabsList className={`grid w-full grid-cols-3 ${isMobile ? 'gap-1' : 'gap-2'}`}>
           <TabsTrigger value="notifications" className={`flex items-center gap-2 ${isMobile ? 'text-xs' : ''}`}>
             <Bell className="w-4 h-4" />
             {isMobile ? 'Notifs' : 'Notifications'}
@@ -503,10 +517,6 @@ const CustomerSettings = () => {
           <TabsTrigger value="security" className={`flex items-center gap-2 ${isMobile ? 'text-xs' : ''}`}>
             <Shield className="w-4 h-4" />
             Security
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className={`flex items-center gap-2 ${isMobile ? 'text-xs' : ''}`}>
-            <Palette className="w-4 h-4" />
-            {isMobile ? 'Display' : 'Display'}
           </TabsTrigger>
         </TabsList>
 
@@ -650,6 +660,7 @@ const CustomerSettings = () => {
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-6">
           <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
+            {/* Security Settings Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -771,76 +782,21 @@ const CustomerSettings = () => {
                     <li>Regular password changes</li>
                   </ul>
                 </div>
-
-                {/* Account Deletion Notice */}
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-800">Delete Your Account</p>
-                      <p className="text-xs text-red-700">Permanently remove your account</p>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="border-red-300 text-red-700 hover:bg-red-100"
-                      onClick={() => {
-                        // Navigate to preferences tab -> advanced section
-                        const preferencesTab = document.querySelector('[data-value="preferences"]') as HTMLElement;
-                        preferencesTab?.click();
-                      }}
-                    >
-                      View Options →
-                    </Button>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
 
-        {/* Display & Preferences Tab */}
-        <TabsContent value="preferences" className="space-y-6">
+          {/* Display Preferences - Moved from preferences tab */}
           <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
-            {/* Language & Display */}
+            {/* Display & Appearance */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Globe className="w-5 h-5" />
-                  Language & Region
+                  <Palette className="w-5 h-5" />
+                  Display & Appearance
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Language */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Languages className="w-4 h-4" />
-                    <span className="font-medium">Language</span>
-                  </div>
-                  <Select 
-                    value={settings.preferences.language} 
-                    onValueChange={(value) => {
-                      updateSettings('preferences', 'language', value);
-                      toast({
-                        title: "🌐 Language Updated",
-                        description: "Interface language changed",
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="hi">हिन्दी (Hindi)</SelectItem>
-                      <SelectItem value="bn">বাংলা (Bengali)</SelectItem>
-                      <SelectItem value="ta">தமிழ் (Tamil)</SelectItem>
-                      <SelectItem value="te">తెలుగు (Telugu)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <Separator />
-                
                 {/* Currency */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -849,18 +805,48 @@ const CustomerSettings = () => {
                   </div>
                   <Select 
                     value={settings.preferences.currency} 
-                    onValueChange={(value) => updateSettings('preferences', 'currency', value)}
+                    onValueChange={async (value) => {
+                      try {
+                        // Update using global currency utility
+                        globalCurrencyUtils.set(value);
+                        
+                        // Update local state
+                        updateSettings('preferences', 'currency', value);
+                        
+                        // Update context
+                        await setGlobalCurrency(value, true);
+                        
+                        toast({
+                          title: "💰 Currency Updated",
+                          description: `Currency changed to ${value}. Prices will update across the application.`,
+                        });
+                      } catch (error) {
+                        console.error('Error updating currency:', error);
+                        
+                        // Ensure local save even on error
+                        globalCurrencyUtils.set(value);
+                        
+                        toast({
+                          title: "💰 Currency Updated (Offline)",
+                          description: `Currency changed to ${value} locally. Will sync when online.`,
+                          variant: "default"
+                        });
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="INR">₹ Indian Rupee</SelectItem>
-                      <SelectItem value="USD">$ US Dollar</SelectItem>
-                      <SelectItem value="EUR">€ Euro</SelectItem>
-                      <SelectItem value="GBP">£ British Pound</SelectItem>
+                      <SelectItem value="INR">₹ Indian Rupee (INR)</SelectItem>
+                      <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
+                      <SelectItem value="EUR">€ Euro (EUR)</SelectItem>
+                      <SelectItem value="GBP">£ British Pound (GBP)</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Prices will display in your selected currency
+                  </p>
                 </div>
                 
                 <Separator />
@@ -877,7 +863,7 @@ const CustomerSettings = () => {
                       setTheme(value);
                       updateSettings('preferences', 'theme', value);
                       toast({
-                        title: "Theme Updated",
+                        title: "🎨 Theme Updated",
                         description: `Switched to ${value} mode`,
                       });
                     }}
@@ -891,33 +877,14 @@ const CustomerSettings = () => {
                       <SelectItem value="system">💻 System Default</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <Separator />
-                
-                {/* Timezone */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4" />
-                    <span className="font-medium">Timezone</span>
-                  </div>
-                  <Select 
-                    value={settings.preferences.timezone} 
-                    onValueChange={(value) => updateSettings('preferences', 'timezone', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Asia/Kolkata">🇮🇳 India (IST)</SelectItem>
-                      <SelectItem value="UTC">🌍 UTC</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose your preferred color scheme
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* General Preferences */}
+            {/* General Preferences & Account Management */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -946,99 +913,137 @@ const CustomerSettings = () => {
 
                 <Separator />
 
-                {/* Email Digest */}
-                <div className="space-y-2">
-                  <p className="font-medium">Email Digest</p>
-                  <Select 
-                    value={settings.preferences.emailDigest} 
-                    onValueChange={(value: "daily" | "weekly" | "monthly" | "never") => 
-                      updateSettings('preferences', 'emailDigest', value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">📧 Daily</SelectItem>
-                      <SelectItem value="weekly">📬 Weekly</SelectItem>
-                      <SelectItem value="monthly">📮 Monthly</SelectItem>
-                      <SelectItem value="never">🚫 Never</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Frequency of summary emails
-                  </p>
-                </div>
-
-                <Separator />
-
-                {/* Data Management */}
-                <div className="space-y-3">
-                  <p className="font-medium">Your Data</p>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={exportData}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download My Data
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      localStorage.removeItem('dynamicUserSettings');
-                      toast({
-                        title: "Cache Cleared",
-                        description: "Stored data cleared. Please refresh the page.",
-                      });
-                    }}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Clear Stored Data
-                  </Button>
-                </div>
-
-                <Separator />
-
                 {/* Account Management */}
                 <div className="space-y-3">
                   <p className="font-medium text-destructive">Account Management</p>
 
-                  <Button variant="outline" size="sm" className="w-full">
-                    <AlertTriangle className="w-4 h-4 mr-2" />
-                    Temporarily Deactivate
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+                      >
+                        <AlertTriangle className="w-4 h-4 mr-2" />
+                        Deactivate Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                          <AlertTriangle className="w-5 h-5 text-orange-600" />
+                          Deactivate Your Account?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-3">
+                          <p>
+                            Your account will be temporarily disabled. You can reactivate it anytime by logging back in.
+                          </p>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-sm font-medium text-blue-800 mb-1">What happens when you deactivate:</p>
+                            <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+                              <li>Your profile will be hidden from vendors</li>
+                              <li>You won't receive notifications</li>
+                              <li>Your data remains safe and secure</li>
+                              <li>You can reactivate anytime by logging in</li>
+                            </ul>
+                          </div>
+                          <p className="text-sm font-medium">
+                            A confirmation email will be sent to your registered email address with instructions to complete the deactivation.
+                          </p>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
+                        <AlertDialogCancel className={isMobile ? 'w-full' : ''}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={async () => {
+                            try {
+                              const user = await userService.getCurrentUser();
+                              const userEmail = user?.data?.user?.email || 'your email';
+                              const userName = user?.data?.user?.profile ? `${user.data.user.profile.firstName} ${user.data.user.profile.lastName}`.trim() : '';
+                              
+                              // Send deactivation email
+                              await emailService.sendAccountDeactivationEmail(userEmail, userName);
+                              
+                              toast({
+                                title: "📧 Confirmation Email Sent",
+                                description: `Check ${userEmail} and click the link to complete account deactivation`,
+                              });
+                            } catch (error) {
+                              toast({
+                                title: "Request Failed",
+                                description: "Unable to process deactivation. Please try again.",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                          className={`bg-orange-600 text-white hover:bg-orange-700 ${isMobile ? 'w-full' : ''}`}
+                        >
+                          Send Confirmation Email
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" className="w-full">
                         <Trash2 className="w-4 h-4 mr-2" />
-                        Permanently Delete Account
+                        Delete Account Permanently
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                           <AlertTriangle className="w-5 h-5 text-destructive" />
-                          Delete Account Permanently?
+                          Permanently Delete Account?
                         </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete your account, including all your properties, messages, and saved data.
-                          You'll receive a confirmation email at support@buildhomemartsquares.com
+                        <AlertDialogDescription className="space-y-3">
+                          <p className="font-semibold text-red-600">
+                            ⚠️ This action cannot be undone. All your data will be permanently removed from our servers.
+                          </p>
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <p className="text-sm font-medium text-red-800 mb-1">What will be deleted:</p>
+                            <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
+                              <li>Your profile and account information</li>
+                              <li>All property listings and favorites</li>
+                              <li>Messages and conversation history</li>
+                              <li>Reviews and ratings you've provided</li>
+                              <li>All saved preferences and settings</li>
+                            </ul>
+                          </div>
+                          <p className="text-sm font-medium">
+                            A confirmation link will be sent to your registered email address. You must click the link within 24 hours to complete the deletion process.
+                          </p>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
                         <AlertDialogCancel className={isMobile ? 'w-full' : ''}>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={deleteAccount}
+                          onClick={async () => {
+                            try {
+                              const user = await userService.getCurrentUser();
+                              const userEmail = user?.data?.user?.email || 'your email';
+                              const userName = user?.data?.user?.profile ? `${user.data.user.profile.firstName} ${user.data.user.profile.lastName}`.trim() : '';
+                              
+                              // Send deletion confirmation email
+                              await emailService.sendAccountDeletionEmail(userEmail, userName);
+                              
+                              toast({
+                                title: "📧 Confirmation Email Sent",
+                                description: `Check ${userEmail} and click the link to confirm permanent deletion. Link expires in 24 hours.`,
+                                variant: "destructive"
+                              });
+                            } catch (error) {
+                              toast({
+                                title: "Request Failed",
+                                description: "Unable to process deletion request. Please contact support.",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
                           className={`bg-destructive text-destructive-foreground hover:bg-destructive/90 ${isMobile ? 'w-full' : ''}`}
                         >
-                          Yes, Delete Forever
+                          Send Confirmation Email
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

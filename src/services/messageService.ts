@@ -758,17 +758,8 @@ class MessageService {
   }
 
   formatPrice(price: number, listingType: 'sale' | 'rent'): string {
-    if (listingType === 'rent') {
-      return `₹${price.toLocaleString('en-IN')}/month`;
-    } else {
-      if (price >= 10000000) {
-        return `₹${(price / 10000000).toFixed(1)} Cr`;
-      } else if (price >= 100000) {
-        return `₹${(price / 100000).toFixed(1)} L`;
-      } else {
-        return `₹${price.toLocaleString('en-IN')}`;
-      }
-    }
+    const { currencyUtils } = require('@/utils/currencyUtils');
+    return currencyUtils.formatPrice(price, listingType);
   }
 
   getPriorityColor(priority?: 'low' | 'medium' | 'high' | 'urgent'): string {

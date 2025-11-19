@@ -55,7 +55,8 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   }, [property.vendor?._id, property.owner?._id]);
 
   const handleViewDetails = () => {
-    // Allow viewing without login - will be a public route
+    // Navigate to public property preview - allows viewing basic details
+    // If authenticated, will auto-redirect to customer property page with full features
     navigate(`/property/${property._id}`);
   };
 

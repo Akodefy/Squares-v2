@@ -72,7 +72,7 @@ const EditPlan = () => {
           description: "Failed to load plan data.",
           variant: "destructive",
         });
-        navigate("/admin/plans");
+        navigate("/v2/admin/plans");
       } finally {
         setLoading(false);
       }
@@ -88,7 +88,7 @@ const EditPlan = () => {
     try {
       setSaving(true);
       await planService.updatePlan(id, plan);
-      navigate("/admin/plans");
+      navigate("/v2/admin/plans");
     } catch (error) {
       console.error("Failed to update plan:", error);
     } finally {
@@ -129,7 +129,7 @@ const EditPlan = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/admin/plans")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/v2/admin/plans")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
@@ -442,7 +442,7 @@ const EditPlan = () => {
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Changes
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate("/admin/plans")}>
+          <Button type="button" variant="outline" onClick={() => navigate("/v2/admin/plans")}>
             Cancel
           </Button>
         </div>

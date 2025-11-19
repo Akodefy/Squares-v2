@@ -398,13 +398,8 @@ class VendorDashboardService {
   }
 
   formatPrice(price: number, currency = '₹'): string {
-    if (price >= 10000000) {
-      return `${currency}${(price / 10000000).toFixed(1)} Cr`;
-    } else if (price >= 100000) {
-      return `${currency}${(price / 100000).toFixed(1)} L`;
-    } else {
-      return `${currency}${price.toLocaleString('en-IN')}`;
-    }
+    const { currencyUtils } = require('@/utils/currencyUtils');
+    return currencyUtils.format(price);
   }
 
   formatPercentageChange(value: string): { value: string; isPositive: boolean } {
