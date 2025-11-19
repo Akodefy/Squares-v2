@@ -56,7 +56,7 @@ import { uploadService } from "@/services/uploadService";
 
 const profileSchema = z.object({
   first_name: z.string().min(2, "First name must be at least 2 characters"),
-  last_name: z.string().min(2, "Last name must be at least 2 characters"),
+  last_name: z.string().optional(),
   email: z.string().email("Invalid email address"),
   phone: z.string().regex(/^[0-9]{10}$/, "Must be 10 digits"),
   birthday: z.date().optional(),

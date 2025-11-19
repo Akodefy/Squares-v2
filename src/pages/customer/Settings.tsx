@@ -636,7 +636,7 @@ const CustomerSettings = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => window.location.href = '/customer/profile'}
+                    onClick={() => window.location.href = '/v2/customer/profile'}
                     className={`border-blue-300 text-blue-700 hover:bg-blue-100 ${isMobile ? 'w-full' : ''}`}
                   >
                     Go to Profile →

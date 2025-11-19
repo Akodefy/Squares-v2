@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from "@/components/ui/select";
 import { PincodeAutocomplete } from "@/components/PincodeAutocomplete";
 import { locaService } from "@/services/locaService";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -929,7 +929,7 @@ const Profile = () => {
                     </p>
                   </div>
                 </div>
-                <Button onClick={() => window.location.href = '/customer/settings'} className={isMobile ? 'w-full' : ''}>
+                <Button onClick={() => window.location.href = '/v2/customer/settings'} className={isMobile ? 'w-full' : ''}>
                   Go to Settings
                 </Button>
               </div>

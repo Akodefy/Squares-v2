@@ -251,7 +251,7 @@ const PasswordTest = () => {
             </div>
             <Button 
               variant="outline" 
-              onClick={() => window.location.href = '/customer/settings'}
+              onClick={() => window.location.href = '/v2/customer/settings'}
             >
               Go to Settings Page
             </Button>

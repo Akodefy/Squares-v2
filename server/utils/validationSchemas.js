@@ -16,10 +16,8 @@ const registerSchema = Joi.object({
     'string.max': 'First name cannot exceed 50 characters',
     'any.required': 'First name is required'
   }),
-  lastName: Joi.string().min(2).max(50).required().messages({
-    'string.min': 'Last name must be at least 2 characters long',
-    'string.max': 'Last name cannot exceed 50 characters',
-    'any.required': 'Last name is required'
+  lastName: Joi.string().max(50).optional().allow('').messages({
+    'string.max': 'Last name cannot exceed 50 characters'
   }),
   phone: Joi.string().pattern(new RegExp('^[+]?[1-9]\\d{1,14}$')).required().messages({
     'string.pattern.base': 'Please provide a valid phone number',
@@ -223,8 +221,7 @@ const profileUpdateSchema = Joi.object({
     'string.min': 'First name must be at least 2 characters long',
     'string.max': 'First name cannot exceed 50 characters'
   }),
-  lastName: Joi.string().min(2).max(50).messages({
-    'string.min': 'Last name must be at least 2 characters long',
+  lastName: Joi.string().max(50).optional().allow('').messages({
     'string.max': 'Last name cannot exceed 50 characters'
   }),
   phone: Joi.string().pattern(new RegExp('^[+]?[1-9]\\d{1,14}$')).messages({

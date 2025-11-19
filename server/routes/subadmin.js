@@ -440,9 +440,12 @@ router.patch('/support/tickets/:id',
         ticket.resolution = response;
         ticket.resolvedBy = req.user.id;
         ticket.resolvedAt = new Date();
+        // Auto-close ticket when marked as resolved
+        ticket.status = 'closed';
+      } else {
+        ticket.status = status;
       }
 
-      ticket.status = status;
       await ticket.save();
 
       await ticket.populate('user', 'email profile');

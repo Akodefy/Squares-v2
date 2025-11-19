@@ -741,7 +741,7 @@ const VendorBilling: React.FC = () => {
                       <Button variant="outline" onClick={() => window.location.href = '/v2/vendor/subscription-plans'} className={`${isMobile ? 'w-full h-11' : ''}`}>
                         Change Plan
                       </Button>
-                      <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>
+                      <Button variant="outline" onClick={() => window.location.href = '/v2/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>
                         Manage Subscription
                       </Button>
                     </div>
@@ -754,7 +754,7 @@ const VendorBilling: React.FC = () => {
                   <p className="text-muted-foreground mb-4">
                     Choose a plan to get started with our services
                   </p>
-                  <Button onClick={() => window.location.href = '/vendor/subscription-plans'}>
+                  <Button onClick={() => window.location.href = '/v2/vendor/subscription-plans'}>
                     <Plus className="w-4 h-4 mr-2" />
                     Choose Plan
                   </Button>
@@ -1026,7 +1026,7 @@ const VendorBilling: React.FC = () => {
                     <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mb-4`}>
                       Usage resets on your billing cycle date: {billingStats.nextBillingDate}
                     </p>
-                    <Button variant="outline" onClick={() => window.location.href = '/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>
+                    <Button variant="outline" onClick={() => window.location.href = '/v2/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>
                       Upgrade Plan
                     </Button>
                   </div>
