@@ -627,5 +627,22 @@
     "createdAt": "2025-11-19T12:14:34.978Z",
     "updatedAt": "2025-11-19T12:14:34.978Z",
     "__v": 0
+  },
+  {
+    "_id": "691ed1e70bd0341bdc2159da",
+    "conversationId": "6909834d404a2c48e422ea56_691dac4ff7579fd2e46893f4",
+    "sender": "691dac4ff7579fd2e46893f4",
+    "recipient": "6909834d404a2c48e422ea56",
+    "message": "hi",
+    "type": "general",
+    "status": "unread",
+    "priority": "medium",
+    "property": "690b370d1677e6ff7ec3e8e7",
+    "read": false,
+    "attachments": [],
+    "typingUsers": [],
+    "createdAt": "2025-11-20T08:31:35.462Z",
+    "updatedAt": "2025-11-20T08:31:35.462Z",
+    "__v": 0
   }
 ]

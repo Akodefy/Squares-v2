@@ -654,6 +654,57 @@ class BillingService {
     }
   }
 
+  // Get corrected revenue statistics for admin
+  async getRevenueStats(): Promise<{
+    totalPaidRevenue: number;
+    monthlyPaidRevenue: number;
+    activePaidRevenue: number;
+    cancelledPaidRevenue: number;
+    expiredPaidRevenue: number;
+    addonPaidRevenue: number;
+    grandTotalRevenue: number;
+  }> {
+    try {
+      const response = await this.makeRequest<{
+        success: boolean;
+        data: {
+          totalPaidRevenue: number;
+          monthlyPaidRevenue: number;
+          activePaidRevenue: number;
+          cancelledPaidRevenue: number;
+          expiredPaidRevenue: number;
+          addonPaidRevenue: number;
+          grandTotalRevenue: number;
+        };
+      }>("/subscriptions/revenue-stats");
+
+      if (response.success && response.data) {
+        return response.data;
+      }
+
+      return {
+        totalPaidRevenue: 0,
+        monthlyPaidRevenue: 0,
+        activePaidRevenue: 0,
+        cancelledPaidRevenue: 0,
+        expiredPaidRevenue: 0,
+        addonPaidRevenue: 0,
+        grandTotalRevenue: 0,
+      };
+    } catch (error) {
+      console.error("Failed to fetch revenue stats:", error);
+      return {
+        totalPaidRevenue: 0,
+        monthlyPaidRevenue: 0,
+        activePaidRevenue: 0,
+        cancelledPaidRevenue: 0,
+        expiredPaidRevenue: 0,
+        addonPaidRevenue: 0,
+        grandTotalRevenue: 0,
+      };
+    }
+  }
+
   // Utility methods
   formatCurrency(amount: number): string {
     return amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

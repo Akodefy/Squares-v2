@@ -326,7 +326,51 @@
     "priceHistory": [],
     "featureHistory": [],
     "createdAt": "2025-10-31T16:41:26.038Z",
-    "updatedAt": "2025-11-19T21:08:21.811Z",
+    "updatedAt": "2025-11-20T10:01:27.251Z",
+    "__v": 0
+  },
+  {
+    "_id": "691ef21e0bd0341bdc2165cf",
+    "identifier": "lite",
+    "name": "Lite",
+    "description": "property listing\nphotoshoot",
+    "price": 899,
+    "currency": "INR",
+    "billingPeriod": "monthly",
+    "features": [
+      {
+        "name": "Relationship manager",
+        "description": "will support to take calls",
+        "enabled": true,
+        "_id": "691ef21e0bd0341bdc2165d0"
+      }
+    ],
+    "limits": {
+      "properties": 20,
+      "featuredListings": 0,
+      "photos": 10,
+      "videoTours": 3,
+      "leads": 6,
+      "posters": 0,
+      "topRated": true,
+      "verifiedBadge": false,
+      "messages": 100
+    },
+    "isActive": false,
+    "isPopular": false,
+    "sortOrder": 0,
+    "priceHistory": [
+      {
+        "price": 899,
+        "changedAt": "2025-11-20T10:49:02.814Z",
+        "changedBy": "68f8857275b9205ce27f8ea5",
+        "reason": "Initial price",
+        "_id": "691ef21e0bd0341bdc2165d1"
+      }
+    ],
+    "featureHistory": [],
+    "createdAt": "2025-11-20T10:49:02.819Z",
+    "updatedAt": "2025-11-20T10:50:51.036Z",
     "__v": 0
   }
 ]

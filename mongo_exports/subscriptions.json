@@ -407,7 +407,7 @@
     "addons": [
       "68f9e724d75eb0a6ce4ee963"
     ],
-    "status": "active",
+    "status": "cancelled",
     "startDate": "2025-11-10T16:39:52.952Z",
     "endDate": "2025-12-10T16:39:52.952Z",
     "amount": 8998,
@@ -424,8 +424,9 @@
     "lastPaymentDate": "2025-11-10T16:39:52.971Z",
     "paymentHistory": [],
     "createdAt": "2025-11-10T16:39:52.974Z",
-    "updatedAt": "2025-11-13T08:13:38.082Z",
-    "__v": 0
+    "updatedAt": "2025-11-20T08:52:54.281Z",
+    "__v": 0,
+    "cancellationReason": "Payment timeout - Payment not completed within time limit"
   },
   {
     "_id": "69146b32ac46b277b9073ba9",
@@ -500,6 +501,31 @@
     "paymentHistory": [],
     "createdAt": "2025-11-19T21:08:21.786Z",
     "updatedAt": "2025-11-19T21:08:21.786Z",
+    "__v": 0
+  },
+  {
+    "_id": "691ee6f70bd0341bdc215ff2",
+    "user": "68f8b1214f4741e752f0e18b",
+    "plan": "6904e6b618522f63a0653bc0",
+    "addons": [],
+    "status": "active",
+    "startDate": "2025-11-20T10:01:27.206Z",
+    "endDate": "2025-12-20T10:01:27.206Z",
+    "amount": 4999,
+    "currency": "INR",
+    "paymentMethod": "razorpay",
+    "transactionId": "pay_RhxCxAjsx7Dl6G_monthly_0addons",
+    "paymentDetails": {
+      "razorpayOrderId": "order_RhxCiTDM8WoDI7",
+      "razorpayPaymentId": "pay_RhxCxAjsx7Dl6G",
+      "razorpaySignature": "02593092fc233eb5fec0a3be4772b67e2f2c374c9e48eb445e4cd328cf6a4172"
+    },
+    "autoRenew": true,
+    "renewalAttempts": 0,
+    "lastPaymentDate": "2025-11-20T10:01:27.225Z",
+    "paymentHistory": [],
+    "createdAt": "2025-11-20T10:01:27.228Z",
+    "updatedAt": "2025-11-20T10:01:27.228Z",
     "__v": 0
   }
 ]

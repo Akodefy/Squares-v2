@@ -659,11 +659,11 @@
     "owner": "68fa18a0c9fa98e30aa7a7ac",
     "vendor": "68ff5d3d2f4e2406a9c90815",
     "agent": "68fa18a0c9fa98e30aa7a7ac",
-    "views": 3,
+    "views": 5,
     "featured": false,
     "verified": true,
     "createdAt": "2025-11-02T10:46:06.899Z",
-    "updatedAt": "2025-11-12T10:48:58.115Z",
+    "updatedAt": "2025-11-20T10:23:47.758Z",
     "__v": 0,
     "approvedAt": "2025-11-09T13:35:41.684Z",
     "approvedBy": "6909834d404a2c48e422ea56",
@@ -957,11 +957,11 @@
     "owner": "68f8b1214f4741e752f0e18b",
     "vendor": "68ff5d3d2f4e2406a9c90807",
     "agent": "68f8b1214f4741e752f0e18b",
-    "views": 29,
+    "views": 30,
     "featured": false,
     "verified": true,
     "createdAt": "2025-11-05T08:37:52.281Z",
-    "updatedAt": "2025-11-19T14:16:24.428Z",
+    "updatedAt": "2025-11-20T08:05:06.469Z",
     "__v": 0,
     "approvedAt": "2025-11-05T10:14:05.194Z",
     "approvedBy": "68f8857275b9205ce27f8ea5"
@@ -1328,5 +1328,59 @@
     "__v": 0,
     "approvedAt": "2025-11-19T11:12:20.956Z",
     "approvedBy": "68f8857275b9205ce27f8ea5"
+  },
+  {
+    "_id": "691ed11d0bd0341bdc215987",
+    "title": "Dtcp Plots for sale",
+    "description": "Dtcp plots in affortable budget",
+    "type": "plot",
+    "status": "pending",
+    "listingType": "sale",
+    "price": 120000,
+    "area": {
+      "builtUp": 2800,
+      "plot": 2000,
+      "unit": "sqft"
+    },
+    "bedrooms": 0,
+    "bathrooms": 0,
+    "facing": "north-west",
+    "priceNegotiable": true,
+    "availability": "residential",
+    "possession": "yes",
+    "roadWidth": "30",
+    "cornerPlot": "yes",
+    "address": {
+      "street": "TAMIL NADU",
+      "district": "COIMBATORE",
+      "city": "Saravanampatti SO",
+      "state": "TAMIL NADU",
+      "pincode": "641035"
+    },
+    "amenities": [
+      "Garden/Park",
+      "Water Supply",
+      "CCTV Surveillance",
+      "24/7 Security",
+      "Security"
+    ],
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dm87kok62/image/upload/v1763627292/ninety-nine-acres/property_images/dod2uailr11kj9tpkjgn.jpg",
+        "caption": "WhatsApp Image 2025-10-18 at 12.41.48 PM (1).jpeg",
+        "isPrimary": true,
+        "_id": "691ed11d0bd0341bdc215988"
+      }
+    ],
+    "videos": [],
+    "virtualTour": "https://youtu.be/vtHbGk6XGZA",
+    "owner": "691dac4ff7579fd2e46893f4",
+    "views": 0,
+    "featured": false,
+    "verified": false,
+    "ownerType": "admin",
+    "createdAt": "2025-11-20T08:28:13.484Z",
+    "updatedAt": "2025-11-20T08:28:13.484Z",
+    "__v": 0
   }
 ]

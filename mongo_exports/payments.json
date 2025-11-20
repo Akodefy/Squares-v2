@@ -146,5 +146,53 @@
     "updatedAt": "2025-11-19T21:29:19.849Z",
     "__v": 0,
     "failureReason": "Payment timeout - exceeded Razorpay's 15-minute limit (17 minutes elapsed)"
+  },
+  {
+    "_id": "691ed3220bd0341bdc215ad8",
+    "user": "68f8b1214f4741e752f0e18b",
+    "subscription": "69121558cc913a5defa4c0c5",
+    "razorpayOrderId": "order_RhvlqC7uf9jojS",
+    "amount": 2999,
+    "currency": "INR",
+    "status": "cancelled",
+    "paymentMethod": "razorpay",
+    "paymentGateway": "razorpay",
+    "type": "addon_purchase",
+    "description": "Payment for 1 Addon(s)",
+    "metadata": {
+      "addons": [
+        "68f9e724d75eb0a6ce4ee960"
+      ]
+    },
+    "expiresAt": "2025-11-20T08:51:50.768Z",
+    "createdAt": "2025-11-20T08:36:50.770Z",
+    "updatedAt": "2025-11-20T08:52:54.228Z",
+    "__v": 0,
+    "failureReason": "Payment timeout - exceeded Razorpay's 15-minute limit (16 minutes elapsed)"
+  },
+  {
+    "_id": "691ee6da0bd0341bdc215fe2",
+    "user": "68f8b1214f4741e752f0e18b",
+    "razorpayOrderId": "order_RhxCiTDM8WoDI7",
+    "amount": 4999,
+    "currency": "INR",
+    "status": "paid",
+    "paymentMethod": "razorpay",
+    "paymentGateway": "razorpay",
+    "type": "subscription_purchase",
+    "description": "Payment for Subscription - ENTERPRISE PLAN - ₹4999",
+    "metadata": {
+      "planId": "enterprise",
+      "planName": "ENTERPRISE PLAN - ₹4999",
+      "billingCycle": "monthly",
+      "addons": []
+    },
+    "expiresAt": "2025-11-20T10:15:58.932Z",
+    "createdAt": "2025-11-20T10:00:58.935Z",
+    "updatedAt": "2025-11-20T10:01:27.242Z",
+    "__v": 0,
+    "razorpayPaymentId": "pay_RhxCxAjsx7Dl6G",
+    "razorpaySignature": "02593092fc233eb5fec0a3be4772b67e2f2c374c9e48eb445e4cd328cf6a4172",
+    "subscription": "691ee6f70bd0341bdc215ff2"
   }
 ]

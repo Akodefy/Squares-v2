@@ -48,6 +48,15 @@ export interface Subscription {
   paymentMethod?: string;
   autoRenew: boolean;
   paymentHistory?: PaymentHistoryItem[];
+  // Additional fields from actual database structure
+  transactionId?: string;
+  paymentDetails?: {
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+    razorpaySignature?: string;
+  };
+  lastPaymentDate?: string;
+  renewalAttempts?: number;
   createdAt: string;
   updatedAt: string;
 }

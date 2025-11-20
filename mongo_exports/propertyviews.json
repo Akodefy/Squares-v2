@@ -10299,5 +10299,68 @@
     "createdAt": "2025-11-20T08:00:24.380Z",
     "updatedAt": "2025-11-20T08:00:24.380Z",
     "__v": 0
+  },
+  {
+    "_id": "691ecbb20bd0341bdc2157da",
+    "property": "690b0ce0f246ac25f86790d5",
+    "viewer": null,
+    "sessionId": "::ffff:127.0.0.1-1763625906460",
+    "ipAddress": "::ffff:127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "referrer": "https://buildhomemartsquares.com/",
+    "viewedAt": "2025-11-20T08:05:06.460Z",
+    "viewDuration": 0,
+    "interactions": {
+      "clickedPhone": false,
+      "clickedEmail": false,
+      "clickedWhatsApp": false,
+      "viewedGallery": false,
+      "sharedProperty": false
+    },
+    "createdAt": "2025-11-20T08:05:06.461Z",
+    "updatedAt": "2025-11-20T08:05:06.461Z",
+    "__v": 0
+  },
+  {
+    "_id": "691eec170bd0341bdc216139",
+    "property": "6907366ebe0a9bb173048ad1",
+    "viewer": null,
+    "sessionId": "::ffff:127.0.0.1-1763634199904",
+    "ipAddress": "::ffff:127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "referrer": "https://buildhomemartsquares.com/",
+    "viewedAt": "2025-11-20T10:23:19.904Z",
+    "viewDuration": 0,
+    "interactions": {
+      "clickedPhone": false,
+      "clickedEmail": false,
+      "clickedWhatsApp": false,
+      "viewedGallery": false,
+      "sharedProperty": false
+    },
+    "createdAt": "2025-11-20T10:23:19.905Z",
+    "updatedAt": "2025-11-20T10:23:19.905Z",
+    "__v": 0
+  },
+  {
+    "_id": "691eec330bd0341bdc216147",
+    "property": "6907366ebe0a9bb173048ad1",
+    "viewer": null,
+    "sessionId": "::ffff:127.0.0.1-1763634227751",
+    "ipAddress": "::ffff:127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "referrer": "https://buildhomemartsquares.com/",
+    "viewedAt": "2025-11-20T10:23:47.751Z",
+    "viewDuration": 0,
+    "interactions": {
+      "clickedPhone": false,
+      "clickedEmail": false,
+      "clickedWhatsApp": false,
+      "viewedGallery": false,
+      "sharedProperty": false
+    },
+    "createdAt": "2025-11-20T10:23:47.751Z",
+    "updatedAt": "2025-11-20T10:23:47.751Z",
+    "__v": 0
   }
 ]
