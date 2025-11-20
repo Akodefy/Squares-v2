@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 const PasswordTest = () => {
+  const navigate = useNavigate();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [lastPasswordChange, setLastPasswordChange] = useState<string | null>(null);
 
@@ -251,7 +253,7 @@ const PasswordTest = () => {
             </div>
             <Button 
               variant="outline" 
-              onClick={() => window.location.href = '/v2/customer/settings'}
+              onClick={() => navigate('/customer/settings')}
             >
               Go to Settings Page
             </Button>

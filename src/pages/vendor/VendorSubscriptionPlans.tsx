@@ -273,7 +273,7 @@ const VendorSubscriptionPlans: React.FC = () => {
           console.warn('Failed to refresh subscription data:', refreshError);
         }
         
-        navigate("/v2/vendor/subscription-manager");
+        navigate("/vendor/subscription-manager");
       } else {
         throw new Error(result.message || 'Payment failed');
       }
@@ -427,7 +427,7 @@ const VendorSubscriptionPlans: React.FC = () => {
             <p className="text-gray-600 mb-6">You currently have the best subscription plan available.</p>
             <Button 
               variant="outline" 
-              onClick={() => navigate('/v2/vendor/subscription-manager')}
+              onClick={() => navigate('/vendor/subscription-manager')}
             >
               Manage Current Plan
             </Button>

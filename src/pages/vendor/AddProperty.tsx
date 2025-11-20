@@ -562,7 +562,7 @@ const AddProperty = () => {
         description: "Property submitted successfully. It will be live after admin verification.",
       });
 
-      navigate("/v2/vendor/properties");
+      navigate("/vendor/properties");
     } catch (error) {
       let errorMessage = "Failed to submit property. Please try again.";
       if (error instanceof Error) {
@@ -1869,7 +1869,7 @@ const AddProperty = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/v2/vendor/properties")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/vendor/properties")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
@@ -1985,7 +1985,7 @@ const AddProperty = () => {
                 >
                   Fix Multiple Subscriptions
                 </Button>
-                <Button variant="outline" onClick={() => navigate("/v2/vendor/properties")}>
+                <Button variant="outline" onClick={() => navigate("/vendor/properties")}>
                   Back to Properties
                 </Button>
               </div>

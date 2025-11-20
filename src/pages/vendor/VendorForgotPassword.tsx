@@ -297,7 +297,7 @@ const VendorForgotPassword = () => {
                       Your password has been successfully reset.
                     </p>
                   </div>
-                  <Button onClick={() => navigate("/v2/vendor/login")} className="w-full">
+                  <Button onClick={() => navigate("/vendor/login")} className="w-full">
                     Go to Vendor Login
                   </Button>
                 </div>

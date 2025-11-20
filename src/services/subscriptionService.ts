@@ -130,7 +130,7 @@ class SubscriptionService {
         if (response.status === 401) {
           console.error('Authentication failed - redirecting to login');
           authService.logout();
-          window.location.href = '/v2/login';
+          window.location.href = '/login';
           throw new Error('Authentication required');
         }
         

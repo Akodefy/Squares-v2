@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -54,6 +55,7 @@ import 'jspdf-autotable';
 import autoTable from 'jspdf-autotable';
 
 const VendorAnalytics = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [timeframe, setTimeframe] = useState<'7days' | '30days' | '90days' | '1year'>("30days");
@@ -1234,7 +1236,7 @@ const VendorAnalytics = () => {
                 You haven't added any properties yet. Add your first property to start tracking performance analytics.
               </p>
               <Button 
-                onClick={() => window.location.href = '/v2/vendor/properties/add'} 
+                onClick={() => navigate('/vendor/properties/add')} 
                 className="mt-2"
               >
                 Add Your First Property

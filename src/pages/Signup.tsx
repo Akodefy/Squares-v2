@@ -191,7 +191,7 @@ const Signup = () => {
         });
         // Auto-redirect to login after 3 seconds
         setTimeout(() => {
-          navigate("/v2/login");
+          navigate("/login");
         }, 3000);
       }
     } catch (error) {
@@ -375,8 +375,8 @@ const Signup = () => {
 
                   <p className="text-center text-sm text-muted-foreground">
                     Already have an account?{" "}
-                    <a href="/v2/login" className="text-primary font-medium hover:underline">
-                      Sign in
+                                        <a href="/login" className="text-primary font-medium hover:underline">
+                      Login here
                     </a>
                   </p>
                 </form>
@@ -444,7 +444,7 @@ const Signup = () => {
                     </p>
                   </div>
                   <Button 
-                    onClick={() => navigate("/v2/login")} 
+                                        onClick={() => navigate("/login")} 
                     className="w-full"
                   >
                     Continue to Login

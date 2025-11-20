@@ -24,23 +24,22 @@ const CustomerProfileDropdown = () => {
   }, []);
 
   const handleProfile = () => {
-    navigate("/v2/customer/profile");
+    navigate("/customer/profile");
   };
 
   const handleSettings = () => {
-    navigate("/v2/customer/settings");
+    navigate("/customer/settings");
   };
 
   const handleLogout = () => {
     authService.logout();
-    navigate("/v2/login");
+    navigate("/login");
   };
 
-  // Get user display name and initials
   const displayName = user?.profile ? 
-    `${user.profile.firstName} ${user.profile.lastName}` : 
-    "Guest User";
-  const userEmail = user?.email || "guest@example.com";
+    `${user.profile.firstName || ''} ${user.profile.lastName || ''}`.trim() || user?.email : 
+    user?.email || 'Guest User';
+  const userEmail = user?.email || '';
   const initials = user?.profile ? 
     `${user.profile.firstName?.[0] || ''}${user.profile.lastName?.[0] || ''}`.toUpperCase() : 
     "GU";

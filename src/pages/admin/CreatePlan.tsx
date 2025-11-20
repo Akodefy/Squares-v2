@@ -70,7 +70,7 @@ const CreatePlan = () => {
     try {
       setSaving(true);
       await planService.createPlan(plan);
-      navigate("/v2/admin/plans");
+      navigate("/admin/plans");
     } catch (error) {
       console.error("Failed to create plan:", error);
     } finally {
@@ -91,7 +91,7 @@ const CreatePlan = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/v2/admin/plans")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/admin/plans")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
@@ -506,7 +506,7 @@ const CreatePlan = () => {
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Plan
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate("/v2/admin/plans")}>
+          <Button type="button" variant="outline" onClick={() => navigate("/admin/plans")}>
             Cancel
           </Button>
         </div>

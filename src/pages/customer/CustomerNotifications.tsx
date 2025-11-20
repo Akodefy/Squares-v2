@@ -87,19 +87,19 @@ const CustomerNotifications: React.FC = () => {
           }
           break;
         case 'view_properties':
-          navigate('/v2/customer/search');
+          navigate('/customer/search');
           break;
         case 'view_messages':
-          navigate('/v2/customer/messages');
+                    navigate('/customer/messages');
           break;
         case 'view_dashboard':
-          navigate('/v2/customer/dashboard');
+          navigate('/customer/dashboard');
           break;
         case 'view_favorites':
-          navigate('/v2/customer/favorites');
+          navigate('/customer/favorites');
           break;
         case 'view_services':
-          navigate('/v2/customer/services');
+          navigate('/customer/services');
           break;
         default:
           break;

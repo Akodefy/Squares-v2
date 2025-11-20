@@ -96,7 +96,7 @@ const PropertyDetails: React.FC = () => {
           description: "Property not found",
           variant: "destructive",
         });
-        navigate('/v2/customer/search');
+        navigate('/customer/search');
       }
     } catch (error) {
       console.error('Error loading property:', error);
@@ -105,7 +105,7 @@ const PropertyDetails: React.FC = () => {
         description: "Failed to load property details",
         variant: "destructive",
       });
-      navigate('/v2/customer/search');
+      navigate('/customer/search');
     } finally {
       setLoading(false);
     }

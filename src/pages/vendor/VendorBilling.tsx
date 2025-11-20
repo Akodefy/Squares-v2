@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ import { billingService, VendorSubscription, Payment, BillingStats, Invoice } fr
 import ExportUtils from "@/utils/exportUtils";
 
 const VendorBilling: React.FC = () => {
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState(true);
   const [subscription, setSubscription] = useState<VendorSubscription | null>(null);
@@ -734,10 +736,10 @@ const VendorBilling: React.FC = () => {
 
                   <div className="pt-4 border-t">
                     <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
-                      <Button variant="outline" onClick={() => window.location.href = '/v2/vendor/subscription-plans'} className={`${isMobile ? 'w-full h-11' : ''}`}>
+                      <Button variant="outline" onClick={() => navigate('/vendor/subscription-plans')} className={`${isMobile ? 'w-full h-11' : ''}`}>
                         Change Plan
                       </Button>
-                      <Button variant="outline" onClick={() => window.location.href = '/v2/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>
+                      <Button variant="outline" onClick={() => navigate('/vendor/subscription-manager')} className={`${isMobile ? 'w-full h-11' : ''}`}>
                         Manage Subscription
                       </Button>
                     </div>
@@ -750,7 +752,7 @@ const VendorBilling: React.FC = () => {
                   <p className="text-muted-foreground mb-4">
                     Choose a plan to get started with our services
                   </p>
-                  <Button onClick={() => window.location.href = '/v2/vendor/subscription-plans'}>
+                  <Button onClick={() => navigate('/vendor/subscription-plans')}>
                     <Plus className="w-4 h-4 mr-2" />
                     Choose Plan
                   </Button>
@@ -1022,7 +1024,7 @@ const VendorBilling: React.FC = () => {
                     <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mb-4`}>
                       Usage resets on your billing cycle date: {billingStats.nextBillingDate}
                     </p>
-                    <Button variant="outline" onClick={() => window.location.href = '/v2/vendor/subscription-manager'} className={`${isMobile ? 'w-full h-11' : ''}`}>
+                    <Button variant="outline" onClick={() => navigate('/vendor/subscription-manager')} className={`${isMobile ? 'w-full h-11' : ''}`}>
                       Upgrade Plan
                     </Button>
                   </div>

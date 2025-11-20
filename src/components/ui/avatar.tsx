@@ -18,9 +18,39 @@ Avatar.displayName = AvatarPrimitive.Root.displayName;
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image ref={ref} className={cn("aspect-square h-full w-full", className)} {...props} />
-));
+>(({ className, onError, ...props }, ref) => {
+  const [errored, setErrored] = React.useState(false);
+  const src = (props as any).src;
+
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setErrored(true);
+    if (typeof onError === 'function') onError(e as any);
+  };
+
+  // Reset errored flag when src changes
+  React.useEffect(() => {
+    if (src) {
+      setErrored(false);
+    }
+  }, [src]);
+
+  // Do not render an <img> with empty src — let AvatarFallback show instead
+  if (!src) return null;
+
+  return (
+    <AvatarPrimitive.Image
+      ref={ref}
+      // hide image when it fails so AvatarFallback is shown
+      className={cn(
+        "aspect-square h-full w-full",
+        className,
+        errored ? 'hidden' : ''
+      )}
+      onError={handleError}
+      {...props}
+    />
+  );
+});
 AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 
 const AvatarFallback = React.forwardRef<

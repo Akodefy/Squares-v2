@@ -52,19 +52,23 @@ const UnifiedProfileDropdown = () => {
   };
 
   const handleSupport = () => {
-    if (isVendor || isSuperAdmin || isAdmin || isSubAdmin) {
-      toast({
-        title: "Support",
-        description: "Support feature coming soon. Please contact admin for assistance.",
-      });
+    // Route support clicks to the appropriate pages per role
+    if (isSuperAdmin || isAdmin) {
+      navigate('/admin/support-tickets');
+    } else if (isSubAdmin) {
+      navigate('/subadmin/support-tickets');
+    } else if (isVendor) {
+      // Vendors can create/track tickets via the public TrackSupport page
+      navigate('/track-support');
     } else {
+      // Customers -> contact page or track support
       navigate('/contact');
     }
   };
 
   const handleLogout = () => {
     logout();
-    navigate("/v2/login");
+    navigate("/login");
   };
 
   const displayName = user?.profile ? 

@@ -88,7 +88,7 @@ const EditProperty = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/v2/admin/properties")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/properties")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
@@ -120,7 +120,7 @@ const EditProperty = () => {
   return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/v2/admin/properties")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/properties")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>

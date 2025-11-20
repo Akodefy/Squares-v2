@@ -224,7 +224,7 @@ const ReviewsRatings = () => {
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
-          <Button onClick={() => navigate('/v2/customer/owned-properties')}>
+          <Button onClick={() => navigate('/customer/owned-properties')}>
             <Home className="w-4 h-4 mr-2" />
             View Properties
           </Button>
@@ -403,7 +403,7 @@ const ReviewsRatings = () => {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => navigate('/v2/customer/owned-properties')}
+                        onClick={() => navigate('/customer/owned-properties')}
                       >
                         <Edit3 className="w-4 h-4 mr-2" />
                         Edit Review
@@ -461,7 +461,7 @@ const ReviewsRatings = () => {
             </p>
             <div className="flex gap-2 justify-center">
               {reviews.length === 0 ? (
-                <Button onClick={() => navigate('/v2/customer/owned-properties')}>
+                <Button onClick={() => navigate('/customer/owned-properties')}>
                   <Home className="w-4 h-4 mr-2" />
                   View Owned Properties
                 </Button>

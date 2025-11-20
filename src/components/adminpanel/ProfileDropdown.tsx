@@ -16,16 +16,16 @@ const ProfileDropdown = () => {
   const { user, logout } = useAuth();
 
   const handleProfile = () => {
-    navigate("/v2/admin/profile");
+    navigate("/admin/profile");
   };
 
   const handleSettings = () => {
-    navigate("/v2/admin/settings");
+    navigate("/admin/settings");
   };
 
   const handleLogout = () => {
     logout();
-    navigate("/v2/login");
+    navigate("login");
   };
 
   // Get user display name and initials

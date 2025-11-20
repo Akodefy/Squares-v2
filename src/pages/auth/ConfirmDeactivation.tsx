@@ -32,7 +32,7 @@ const ConfirmDeactivation = () => {
           setTimeout(() => {
             localStorage.clear();
             sessionStorage.clear();
-            navigate('/v2/login');
+            navigate('/login');
           }, 3000);
         } else {
           setStatus('error');
@@ -83,14 +83,14 @@ const ConfirmDeactivation = () => {
 
           <div className="flex flex-col gap-2">
             {status === 'success' && (
-              <Button onClick={() => navigate('/v2/login')} className="w-full">
+              <Button onClick={() => navigate('/login')} className="w-full">
                 Go to Login
               </Button>
             )}
             
             {status === 'error' && (
               <>
-                <Button onClick={() => navigate('/v2/customer/settings')} className="w-full">
+                <Button onClick={() => navigate('/customer/settings')} className="w-full">
                   Back to Settings
                 </Button>
                 <Button 

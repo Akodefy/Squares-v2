@@ -32,7 +32,7 @@ const ConfirmDeletion = () => {
           setTimeout(() => {
             localStorage.clear();
             sessionStorage.clear();
-            navigate('/v2');
+            navigate('/');
           }, 5000);
         } else {
           setStatus('error');
@@ -83,7 +83,7 @@ const ConfirmDeletion = () => {
 
           <div className="flex flex-col gap-2">
             {status === 'success' && (
-              <Button onClick={() => navigate('/v2')} className="w-full">
+              <Button onClick={() => navigate('/')} className="w-full">
                 <Home className="w-4 h-4 mr-2" />
                 Go to Home
               </Button>
@@ -91,12 +91,12 @@ const ConfirmDeletion = () => {
             
             {status === 'error' && (
               <>
-                <Button onClick={() => navigate('/v2/customer/settings')} className="w-full">
+                <Button onClick={() => navigate('/customer/settings')} className="w-full">
                   Back to Settings
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => navigate('/v2')} 
+                  onClick={() => navigate('/')} 
                   className="w-full"
                 >
                   <Home className="w-4 h-4 mr-2" />

@@ -93,16 +93,7 @@ const VendorProfilePage: React.FC = () => {
   const [locationLoading, setLocationLoading] = useState({
     states: false,
     districts: false,
-    cities: false,
-    pincode: false
-  });
-
-  // Store selected location names for display
-  const [selectedLocationNames, setSelectedLocationNames] = useState({
-    country: 'India',
-    state: '',
-    district: '',
-    city: ''
+    cities: false
   });
   
   // Vendor settings state
@@ -137,42 +128,31 @@ const VendorProfilePage: React.FC = () => {
         [key]: value
       }
     }));
-    
-    try {
-      await syncSettingRealtime(category, key, value);
-    } catch (error) {
-      console.error('Failed to sync setting:', error);
-    }
-  }, [vendorData]);
-
-  useEffect(() => {
-    loadVendorProfile();
-    loadVendorSettings();
-    initializeLocationService();
   }, []);
 
-  // Initialize locaService on component mount
+  // Initialize on mount - single effect
   useEffect(() => {
-    const initLocaService = async () => {
-      setLocationLoading(prev => ({ ...prev, states: true }));
+    const init = async () => {
       try {
+        // Initialize location service
+        setLocationLoading(prev => ({ ...prev, states: true }));
         await locaService.initialize();
         const statesList = locaService.getStates();
         setStates(statesList);
-        console.log(`Loaded ${statesList.length} states from loca.json`);
+        
+        // Load profile and settings
+        await Promise.all([
+          loadVendorProfile(),
+          loadVendorSettings()
+        ]);
       } catch (error) {
-        console.error("Error initializing loca service:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load location data. Please refresh the page.",
-          variant: "destructive",
-        });
+        console.error("Initialization error:", error);
       } finally {
         setLocationLoading(prev => ({ ...prev, states: false }));
       }
     };
 
-    initLocaService();
+    init();
   }, []);
 
   // Load districts when state changes
@@ -182,39 +162,8 @@ const VendorProfilePage: React.FC = () => {
       return;
     }
 
-    setLocationLoading(prev => ({ ...prev, districts: true }));
-    try {
-      const districtsList = locaService.getDistricts(formData.profile.address.state);
-      setDistricts(districtsList);
-      console.log(`Loaded ${districtsList.length} districts for ${formData.profile.address.state}`);
-      
-      // Only clear dependent fields if the current district is not in the new list
-      // Don't clear when just loading districts for the first time
-      if (formData.profile.address.district) {
-        const currentDistrict = formData.profile.address.district;
-        const districtExists = districtsList.some(d => 
-          d.toLowerCase() === currentDistrict.toLowerCase() || 
-          d === currentDistrict
-        );
-        
-        if (!districtExists) {
-          console.log(`District "${currentDistrict}" not found in list, clearing...`);
-          updateFormField("profile.address.district", "");
-          updateFormField("profile.address.city", "");
-        } else {
-          console.log(`District "${currentDistrict}" found in list, keeping...`);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading districts:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load districts. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLocationLoading(prev => ({ ...prev, districts: false }));
-    }
+    const districtsList = locaService.getDistricts(formData.profile.address.state);
+    setDistricts(districtsList);
   }, [formData?.profile?.address?.state]);
 
   // Load cities when district changes
@@ -224,58 +173,19 @@ const VendorProfilePage: React.FC = () => {
       return;
     }
 
-    setLocationLoading(prev => ({ ...prev, cities: true }));
-    try {
-      const citiesList = locaService.getCities(formData.profile.address.state, formData.profile.address.district);
-      setCities(citiesList);
-      console.log(`Loaded ${citiesList.length} cities for ${formData.profile.address.district}`);
-      
-      // Clear city if it's not in the new list
-      if (formData.profile.address.city && !citiesList.includes(formData.profile.address.city)) {
-        updateFormField("profile.address.city", "");
-      }
-      
-      setSelectedLocationNames(prev => ({ ...prev, city: "" }));
-    } catch (error) {
-      console.error("Error loading cities:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load cities. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLocationLoading(prev => ({ ...prev, cities: false }));
-    }
+    const citiesList = locaService.getCities(formData.profile.address.state, formData.profile.address.district);
+    setCities(citiesList);
   }, [formData?.profile?.address?.state, formData?.profile?.address?.district]);
 
-  // Update selectedLocationNames when form data changes
+  // Auto-save settings with debounce
   useEffect(() => {
-    if (formData?.profile?.address?.state) {
-      setSelectedLocationNames(prev => ({ ...prev, state: formData.profile.address.state }));
-    }
-  }, [formData?.profile?.address?.state]);
+    if (isLoading) return;
 
-  useEffect(() => {
-    if (formData?.profile?.address?.district) {
-      setSelectedLocationNames(prev => ({ ...prev, district: formData.profile.address.district }));
-    }
-  }, [formData?.profile?.address?.district]);
+    const timeoutId = setTimeout(() => {
+      saveVendorSettings();
+    }, 1500);
 
-  useEffect(() => {
-    if (formData?.profile?.address?.city) {
-      setSelectedLocationNames(prev => ({ ...prev, city: formData.profile.address.city }));
-    }
-  }, [formData?.profile?.address?.city]);
-
-  // Auto-save when settings change
-  useEffect(() => {
-    if (!isLoading) {
-      const timeoutId = setTimeout(() => {
-        saveVendorSettings();
-      }, 1500);
-
-      return () => clearTimeout(timeoutId);
-    }
+    return () => clearTimeout(timeoutId);
   }, [vendorSettings, isLoading]);
 
   const loadVendorProfile = async () => {
@@ -475,40 +385,6 @@ const VendorProfilePage: React.FC = () => {
 
 
 
-  // Update setting
-  const syncSettingRealtime = async (category: keyof VendorSettingsConfig, key: string, value: any) => {
-    try {
-      setIsSaving(true);
-      
-      await vendorService.updateVendorPreferences(`${category}.${key}`, value);
-      
-      const settingName = key.replace(/([A-Z])/g, ' $1').toLowerCase();
-      const statusText = typeof value === 'boolean' ? (value ? 'enabled' : 'disabled') : 'updated';
-      
-      setLastSyncTime(new Date().toISOString());
-      
-      // If auto-response is being enabled/disabled, test the integration
-      if (key === 'autoResponseEnabled' && value === true) {
-        await testAutoResponseIntegration();
-      }
-      
-      toast({
-        title: `Setting Updated`,
-        description: `${settingName} ${statusText}`,
-      });
-      
-    } catch (error) {
-      console.error('Save failed:', error);
-      toast({
-        title: "Setting Saved",
-        description: "Your preference has been saved",
-        variant: "default"
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   // Test auto-response integration with message service
   const testAutoResponseIntegration = async () => {
     try {
@@ -595,17 +471,6 @@ const VendorProfilePage: React.FC = () => {
       delete (window as any).vendorAutoResponseHandler;
     };
   }, [vendorSettings.business.autoResponseEnabled, vendorSettings.business.autoResponseMessage]);
-
-  // Initialize location service
-  const initializeLocationService = async () => {
-    try {
-      if (!locaService.isReady()) {
-        await locaService.initialize();
-      }
-    } catch (error) {
-      console.error("Failed to initialize location service:", error);
-    }
-  };
 
   // Validate location data consistency
   const validateLocationData = () => {
@@ -734,79 +599,77 @@ const VendorProfilePage: React.FC = () => {
     setIsEditing(false);
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle avatar file selection and upload (persist immediately like customer profile)
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate image file
     const validation = uploadService.validateImageFile(file);
     if (!validation.valid) {
-      toast({
-        title: "Invalid File",
-        description: validation.error,
-        variant: "destructive"
-      });
+      toast({ title: 'Invalid File', description: validation.error, variant: 'destructive' });
       return;
     }
 
     try {
       setUploadingAvatar(true);
-      
+
+      // Compress and upload
       const compressedFile = await uploadService.compressImage(file);
       const avatarUrl = await uploadService.uploadAvatar(compressedFile);
-      
-      updateFormField("profile.avatar", avatarUrl);
-      
-      const updateData = {
-        profile: {
-          ...formData?.profile,
-          avatar: avatarUrl
-        }
-      };
-      
-      const updatedProfile = await vendorService.updateVendorProfile(updateData);
-      setVendorData(updatedProfile);
-      setFormData(updatedProfile);
-      
-      toast({
-        title: "Success",
-        description: "Profile picture updated successfully!",
-      });
-      
+
+      console.log('uploaded avatarUrl:', avatarUrl);
+
+      // Update profile with new avatar
+      if (formData) {
+        const updatedProfile = await vendorService.updateVendorProfile({ 
+          profile: { 
+            avatar: avatarUrl 
+          } as any 
+        });
+
+        // Update states with the new avatar from the server response
+        setVendorData(updatedProfile);
+        setFormData(updatedProfile);
+
+        toast({ 
+          title: 'Success', 
+          description: 'Profile picture updated successfully!' 
+        });
+      }
     } catch (error) {
       console.error('Avatar upload error:', error);
-      toast({
-        title: "Upload Failed",
-        description: "Failed to upload profile picture. Please try again.",
-        variant: "destructive"
+      toast({ 
+        title: 'Upload Failed', 
+        description: 'Failed to upload profile picture. Please try again.', 
+        variant: 'destructive' 
       });
     } finally {
       setUploadingAvatar(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const updateFormField = (path: string, value: any) => {
-    if (!formData) return;
+  const updateFormField = useCallback((path: string, value: any) => {
+    setFormData(prev => {
+      if (!prev) return prev;
 
-    const pathArray = path.split(".");
-    const newFormData = { ...formData };
-    let current: any = newFormData;
+      const pathArray = path.split(".");
+      const newFormData = { ...prev };
+      let current: any = newFormData;
 
-    for (let i = 0; i < pathArray.length - 1; i++) {
-      if (!current[pathArray[i]]) {
-        current[pathArray[i]] = {};
+      for (let i = 0; i < pathArray.length - 1; i++) {
+        if (!current[pathArray[i]]) {
+          current[pathArray[i]] = {};
+        }
+        current[pathArray[i]] = { ...current[pathArray[i]] };
+        current = current[pathArray[i]];
       }
-      current = current[pathArray[i]];
-    }
-    current[pathArray[pathArray.length - 1]] = value;
+      current[pathArray[pathArray.length - 1]] = value;
 
-    console.log(`Updated ${path} to:`, value);
-    console.log('Full address after update:', newFormData.profile?.address);
-    
-    setFormData(newFormData);
-  };
+      return newFormData;
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -883,8 +746,12 @@ const VendorProfilePage: React.FC = () => {
         <CardContent className="p-6">
           <div className={`flex items-start ${isMobile ? 'flex-col space-y-4' : 'space-x-6'}`}>
             <div className="relative">
-              <Avatar className={`${isMobile ? 'h-20 w-20' : 'h-24 w-24'} ${isMobile ? 'mx-auto' : ''}`}>
-                <AvatarImage src={formData.profile.avatar || ""} />
+              <Avatar 
+                className={`${isMobile ? 'h-20 w-20' : 'h-24 w-24'} ${isMobile ? 'mx-auto' : ''}`}
+              >
+                <AvatarImage 
+                  src={formData.profile.avatar || undefined}
+                />
                 <AvatarFallback className={`${isMobile ? 'text-base' : 'text-lg'}`}>
                   {formData.profile.firstName.charAt(0)}
                   {formData.profile.lastName.charAt(0)}
@@ -894,7 +761,7 @@ const VendorProfilePage: React.FC = () => {
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/webp"
-                onChange={handleAvatarUpload}
+                onChange={handleAvatarChange}
                 className="hidden"
               />
               <Button
@@ -913,7 +780,7 @@ const VendorProfilePage: React.FC = () => {
             </div>
 
             <div className="flex-1 space-y-4">
-              <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:'}grid-cols-2 gap-4`}>
+              <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-2'} gap-4`}>
                 <div>
                   <Label htmlFor="firstName">First Name</Label>
                   {isEditing ? (
@@ -1563,8 +1430,8 @@ const VendorProfilePage: React.FC = () => {
             }}
           />
 
-          {/* Auto-Response Section */}
-          <Card>
+          {/* Auto-Response Section - commented out per request */}
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" />
@@ -1610,7 +1477,7 @@ const VendorProfilePage: React.FC = () => {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Password Change Section */}
           <Card className="mb-6">

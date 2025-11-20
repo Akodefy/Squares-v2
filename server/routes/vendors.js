@@ -363,6 +363,7 @@ router.put('/profile', requireVendorRole, asyncHandler(async (req, res) => {
     if (profile.lastName) user.profile.lastName = profile.lastName;
     if (profile.phone) user.profile.phone = profile.phone;
     if (profile.bio !== undefined) user.profile.bio = profile.bio;
+    if (profile.avatar !== undefined) user.profile.avatar = profile.avatar;
     
     // Handle preferences update with proper defaults
     if (profile.preferences) {

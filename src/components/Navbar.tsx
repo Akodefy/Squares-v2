@@ -67,7 +67,7 @@ const Navbar = () => {
       });
       return;
     }
-    navigate('/v2/vendor/login');
+    navigate('/vendor/login');
   };
 
   const handlePropertyTypeClick = (listingType: string, propertyType?: string) => {
@@ -171,7 +171,7 @@ const Navbar = () => {
                     <DropdownMenuItem onClick={handlePostPropertyClick}>
                       Post Property for Free
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/v2/vendor/login')}>
+                    <DropdownMenuItem onClick={() => navigate('/vendor/login')}>
                       My Listed Properties
                     </DropdownMenuItem>
                   </DropdownMenuContent>

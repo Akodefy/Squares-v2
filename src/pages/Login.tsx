@@ -58,7 +58,7 @@ const Login = () => {
           authService.clearAuthData();
           // Redirect to vendor login
           setTimeout(() => {
-            navigate("/v2/vendor/login");
+            navigate("/vendor/login");
           }, 1500);
           return;
         }

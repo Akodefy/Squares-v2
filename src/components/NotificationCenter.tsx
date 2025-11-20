@@ -92,17 +92,17 @@ export const NotificationCenter: React.FC = () => {
       switch (notification.data.action) {
         case 'view_property':
           if (notification.data.propertyId) {
-            window.location.href = `/v2/property/${notification.data.propertyId}`;
+            window.location.href = `/property/${notification.data.propertyId}`;
           }
           break;
         case 'new_message':
-          window.location.href = '/v2/dashboard/messages';
+          window.location.href = '/dashboard/messages';
           break;
         case 'property_update':
-          window.location.href = '/v2/dashboard';
+          window.location.href = '/dashboard';
           break;
         case 'service_update':
-          window.location.href = '/v2/dashboard/services';
+          window.location.href = '/dashboard/services';
           break;
         default:
           break;

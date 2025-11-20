@@ -474,7 +474,7 @@ const ForgotPassword = () => {
                     </p>
                   </div>
                   <div className="space-y-3">
-                    <Button onClick={() => navigate("/v2/login")} className="w-full">
+                    <Button onClick={() => navigate("/login")} className="w-full">
                       Go to Login
                     </Button>
                     <p className="text-xs text-muted-foreground">

@@ -759,7 +759,7 @@ const VendorRegister = () => {
         
         // Redirect to login after successful registration
         setTimeout(() => {
-          navigate("/v2/vendor/login");
+          navigate("/vendor/login");
         }, 3000);
       }
       

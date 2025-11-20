@@ -106,6 +106,7 @@ export const VendorNotificationSettings: React.FC<VendorNotificationSettingsProp
       description: 'General business communications and updates',
       isCore: true
     },
+    /*
     {
       key: 'smsNotifications' as keyof VendorBusinessPreferences,
       icon: Smartphone,
@@ -122,6 +123,7 @@ export const VendorNotificationSettings: React.FC<VendorNotificationSettingsProp
       description: 'Instant notifications when you receive new property inquiries',
       requiresBusiness: true
     },
+    */
     {
       key: 'weeklyReports' as keyof VendorBusinessPreferences,
       icon: TrendingUp,
@@ -260,8 +262,8 @@ export const VendorNotificationSettings: React.FC<VendorNotificationSettingsProp
         </CardContent>
       </Card>
 
-      {/* Test Buttons Section */}
-      {showTestButtons && (
+      {/* Test Buttons Section commented out per request */}
+      {/* {showTestButtons && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -297,7 +299,7 @@ export const VendorNotificationSettings: React.FC<VendorNotificationSettingsProp
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
     </div>
   );
 };
