@@ -280,8 +280,7 @@ class AnalyticsService {
       return '₹0';
     }
     
-    const { currencyUtils } = require('@/utils/currencyUtils');
-    return currencyUtils.format(amount);
+    return `₹${amount.toLocaleString('en-IN')}`;
   }
 
   formatNumber(num: number | undefined | null): string {

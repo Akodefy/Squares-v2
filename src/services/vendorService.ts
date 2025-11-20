@@ -16,7 +16,6 @@ export interface VendorProfile {
     bio?: string;
     preferences?: {
       language: string;
-      currency: string;
       notifications: {
         email: boolean;
         push: boolean;
@@ -52,7 +51,7 @@ export interface VendorProfile {
       businessType?: string;
       experience: number;
       website?: string;
-      specializations: string[];
+      // specializations: string[];
       serviceAreas: string[];
       certifications: Array<{
         name: string;
@@ -96,7 +95,6 @@ export interface UpdateVendorData {
     bio?: string;
     preferences?: {
       language?: string;
-      currency?: string;
       notifications?: {
         email?: boolean;
         push?: boolean;
@@ -131,7 +129,7 @@ export interface UpdateVendorData {
       companyName?: string;
       experience?: number;
       website?: string;
-      specializations?: string[];
+      // specializations?: string[];
       serviceAreas?: string[];
       certifications?: Array<{
         name: string;

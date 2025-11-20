@@ -147,8 +147,7 @@ const AddonServices = () => {
   };
 
   const formatPrice = (price: number, currency: string = 'INR') => {
-    const { currencyUtils } = require('@/utils/currencyUtils');
-    return currencyUtils.format(price);
+    return `₹${price.toLocaleString('en-IN')}`;
   };
 
   if (loading && vendorAddons.length === 0) {

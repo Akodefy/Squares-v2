@@ -200,7 +200,6 @@ const VendorProfilePage: React.FC = () => {
           ...profile.profile,
           preferences: {
             language: profile.profile.preferences?.language || 'en',
-            currency: profile.profile.preferences?.currency || 'INR',
             notifications: {
               email: profile.profile.preferences?.notifications?.email ?? true,
               push: profile.profile.preferences?.notifications?.push ?? true,
@@ -546,7 +545,6 @@ const VendorProfilePage: React.FC = () => {
           bio: formData.profile.bio,
           preferences: {
             language: formData.profile.preferences?.language || 'en',
-            currency: formData.profile.preferences?.currency || 'INR',
             notifications: {
               email: formData.profile.preferences?.notifications?.email ?? true,
               push: formData.profile.preferences?.notifications?.push ?? true,
@@ -863,10 +861,10 @@ const VendorProfilePage: React.FC = () => {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`${isMobile ? 'flex flex-col h-auto gap-2' : 'grid w-full grid-cols-4'}`}>
+        <TabsList className={`${isMobile ? 'flex flex-col h-auto gap-2' : 'grid w-full grid-cols-3'}`}>
           <TabsTrigger value="profile" className={isMobile ? 'w-full justify-start' : ''}>Personal Info</TabsTrigger>
           <TabsTrigger value="company" className={isMobile ? 'w-full justify-start' : ''}>Company Details</TabsTrigger>
-          <TabsTrigger value="specializations" className={isMobile ? 'w-full justify-start' : ''}>Specializations</TabsTrigger>
+          {/* <TabsTrigger value="specializations" className={isMobile ? 'w-full justify-start' : ''}>Specializations</TabsTrigger> */}
           <TabsTrigger value="notifications" className={isMobile ? 'w-full justify-start' : ''}>Settings</TabsTrigger>
         </TabsList>
 
@@ -1297,7 +1295,7 @@ const VendorProfilePage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="specializations" className="space-y-6">
+        {/* <TabsContent value="specializations" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -1400,7 +1398,7 @@ const VendorProfilePage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Settings Tab */}
         <TabsContent value="notifications" className="space-y-6">

@@ -367,8 +367,7 @@ class CustomerServiceRequestsService {
 
   // Utility methods
   formatCurrency(amount: number): string {
-    const { currencyUtils } = require('@/utils/currencyUtils');
-    return currencyUtils.format(amount);
+    return `₹${amount.toLocaleString('en-IN')}`;
   }
 
   getServiceTypeLabel(serviceType: string): string {

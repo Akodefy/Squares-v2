@@ -12,7 +12,6 @@ import CustomerRoutes from "@/routes/CustomerRoutes";
 import VendorRoutes from "@/routes/VendorRoutes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
-import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { ScrollToTop } from "@/components/ScrollToTop";
 
 // Lazy load vendor components
@@ -30,10 +29,9 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <RealtimeProvider>
-        <CurrencyProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
             <BrowserRouter basename="/v2">
               <ScrollToTop />
               <Routes>
@@ -78,7 +76,6 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
-        </CurrencyProvider>
       </RealtimeProvider>
     </AuthProvider>
   </QueryClientProvider>

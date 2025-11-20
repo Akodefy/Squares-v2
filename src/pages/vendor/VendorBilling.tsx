@@ -142,8 +142,7 @@ const VendorBilling: React.FC = () => {
   };
 
   const formatAmount = (amount: number, currency: string = 'INR') => {
-    const { currencyUtils } = require('@/utils/currencyUtils');
-    return currencyUtils.format(amount);
+    return `₹${amount.toLocaleString('en-IN')}`;
   };
 
   const formatDate = (dateString: string) => {

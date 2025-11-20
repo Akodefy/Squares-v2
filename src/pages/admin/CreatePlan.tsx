@@ -290,20 +290,6 @@ const CreatePlan = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="photos">Photos per Property</Label>
-                <Input
-                  id="photos"
-                  type="number"
-                  min="0"
-                  value={plan.limits.photos}
-                  onChange={(e) => setPlan({ 
-                    ...plan, 
-                    limits: { ...plan.limits, photos: parseInt(e.target.value) || 0 } 
-                  })}
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="videoTours">Video Tours</Label>
                 <Input
                   id="videoTours"

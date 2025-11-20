@@ -1,6 +1,5 @@
 import { toast } from "@/hooks/use-toast";
 import { reviewsService } from "./reviewsService";
-import { currencyUtils } from "@/utils/currencyUtils";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.buildhomemartsquares.com/api";
 
@@ -399,8 +398,9 @@ class VendorDashboardService {
   }
 
   formatPrice(price: number, currency = '₹'): string {
-    // Use the ESM-imported currencyUtils instead of require()
-    return currencyUtils.format(price, currency);
+    if (price >= 10000000) return `₹${(price / 10000000).toFixed(1)} Cr`;
+    if (price >= 100000) return `₹${(price / 100000).toFixed(1)} Lac`;
+    return `₹${price.toLocaleString('en-IN')}`;
   }
 
   formatPercentageChange(value: string): { value: string; isPositive: boolean } {

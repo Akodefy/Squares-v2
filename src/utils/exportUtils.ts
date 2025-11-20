@@ -295,9 +295,8 @@ class ExportUtils {
    * Format currency for export
    */
   static formatCurrency(amount: number | null | undefined, currency = 'INR'): string {
-    const { currencyUtils } = require('./currencyUtils');
     const safeAmount = amount || 0;
-    return currencyUtils.format(safeAmount);
+    return `₹${safeAmount.toLocaleString('en-IN')}`;
   }
 
   /**

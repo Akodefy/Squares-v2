@@ -17,7 +17,6 @@ import {
   Save,
   RefreshCw,
   User,
-  DollarSign,
   CheckCircle,
   XCircle,
   Settings as SettingsIcon,
@@ -34,7 +33,6 @@ import { NotificationSettings, type NotificationPreferences } from "@/components
 import { PasswordChangeDialog } from "@/components/PasswordChangeDialog";
 import { useTheme } from "next-themes";
 import { useRealtime, useRealtimeEvent } from "@/contexts/RealtimeContext";
-import { useCurrency, globalCurrencyUtils } from "@/contexts/CurrencyContext";
 
 // Dynamic Settings Configuration - Remove overlaps with Profile page
 interface SettingsConfig {
@@ -59,7 +57,6 @@ interface SecuritySettings {
 }
 
 interface UserPreferences {
-  currency: string;
   autoSave: boolean;
   theme: string;
 }
@@ -73,18 +70,6 @@ const CustomerSettings = () => {
   const [saving, setSaving] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  
-  // Safe currency context access with fallback
-  let currencyContext: any = null;
-  try {
-    currencyContext = useCurrency();
-  } catch (error) {
-    console.warn('Currency context not available, using fallback');
-  }
-  const { currency: globalCurrency, setCurrency: setGlobalCurrency } = currencyContext || {
-    currency: 'INR',
-    setCurrency: () => {}
-  };
   
   // Consolidated settings state - removed profile data overlap
   const [settings, setSettings] = useState<SettingsConfig>({
@@ -109,7 +94,6 @@ const CustomerSettings = () => {
       sessionTimeout: "30"
     },
     preferences: {
-      currency: "INR", 
       autoSave: true,
       theme: theme || "system"
     }
@@ -159,9 +143,6 @@ const CustomerSettings = () => {
     try {
       setLoading(true);
       
-      // Get localStorage currency (highest priority)
-      const localCurrency = localStorage.getItem('app_currency_preference');
-      
       // Load from local storage first
       const savedSettings = localStorage.getItem('userSettings');
       if (savedSettings) {
@@ -170,9 +151,7 @@ const CustomerSettings = () => {
           ...prevSettings,
           ...parsedSettings,
           preferences: {
-            ...parsedSettings.preferences,
-            // Override with localStorage currency if it exists
-            currency: localCurrency || parsedSettings.preferences?.currency || prevSettings.preferences.currency
+            ...parsedSettings.preferences
           }
         }));
         setTheme(parsedSettings.preferences?.theme || theme);
@@ -184,7 +163,7 @@ const CustomerSettings = () => {
         if (response.success && response.data.user.profile?.preferences) {
           const apiPrefs = response.data.user.profile.preferences as any;
           
-          // Merge server data with local settings, but NEVER override local currency preference
+          // Merge server data with local settings
           const mergedSettings: SettingsConfig = {
             notifications: { 
               ...settings.notifications, 
@@ -200,19 +179,12 @@ const CustomerSettings = () => {
             },
             preferences: { 
               ...settings.preferences,
-              // Local currency ALWAYS takes precedence
-              currency: localCurrency || settings.preferences.currency,
               theme: apiPrefs.theme || settings.preferences.theme
             }
           };
           
           setSettings(mergedSettings);
-          // Don't save merged settings to localStorage - keep user's manual currency choice
-          const settingsToSave = { ...mergedSettings };
-          if (localCurrency) {
-            settingsToSave.preferences.currency = localCurrency;
-          }
-          localStorage.setItem('userSettings', JSON.stringify(settingsToSave));
+          localStorage.setItem('userSettings', JSON.stringify(mergedSettings));
         }
       } catch (apiError) {
         console.log("Using local settings - server unavailable");
@@ -257,7 +229,6 @@ const CustomerSettings = () => {
       const settingsData: any = {
         profile: {
           preferences: {
-            currency: settings.preferences.currency,
             theme: theme,
             notifications: {
               email: settings.notifications.email,
@@ -799,22 +770,6 @@ const CustomerSettings = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Currency - Fixed to INR only */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    <span className="font-medium">Currency</span>
-                  </div>
-                  <div className="p-3 bg-muted rounded-md border">
-                    <p className="text-sm font-medium">₹ Indian Rupee (INR)</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      All prices are displayed in Indian Rupees
-                    </p>
-                  </div>
-                </div>
-                
-                <Separator />
-                
                 {/* Theme */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">

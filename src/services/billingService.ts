@@ -637,8 +637,7 @@ class BillingService {
 
   // Utility methods
   formatCurrency(amount: number): string {
-    const { currencyUtils } = require('@/utils/currencyUtils');
-    return currencyUtils.format(amount).replace(/[^\d.,]/g, ''); // Remove currency symbol for PDF
+    return amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   formatDate(dateString: string): string {

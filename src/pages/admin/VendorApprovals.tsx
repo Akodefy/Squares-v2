@@ -79,7 +79,7 @@ interface VendorApplication {
   };
   professionalInfo?: {
     experience: number;
-    specializations: string[];
+    // specializations: string[];
     serviceAreas: Array<{
       city: string;
       state: string;

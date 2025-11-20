@@ -406,8 +406,7 @@ class VendorServicesService {
 
   // Utility methods
   formatCurrency(amount: number): string {
-    const { currencyUtils } = require('@/utils/currencyUtils');
-    return currencyUtils.format(amount);
+    return `₹${amount.toLocaleString('en-IN')}`;
   }
 
   formatDuration(minutes: number): string {

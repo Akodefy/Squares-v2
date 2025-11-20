@@ -116,8 +116,7 @@ const Promotions = () => {
   };
 
   const formatPrice = (price: number) => {
-    const { currencyUtils } = require('@/utils/currencyUtils');
-    return currencyUtils.format(price);
+    return `₹${price.toLocaleString('en-IN')}`;
   };
 
   const calculateCTR = (clicks: number, impressions: number) => {
