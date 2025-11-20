@@ -62,13 +62,15 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "http://localhost:8001",
+  "http://localhost:3002/v2/",
+  "http://localhost:3002/v2",
 ].filter(Boolean);
 
 // Add additional origins from environment variable
 const additionalOriginsEnv = process.env.ADDITIONAL_ALLOWED_ORIGINS;
 let additionalOrigins = [
   "https://squares-v2.onrender.com",
-  "https://api.buildhomemartsquares.com",
+  "http://localhost:3001",
 ];
 
 if (additionalOriginsEnv) {

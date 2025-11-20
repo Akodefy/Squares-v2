@@ -541,4 +541,100 @@ router.patch('/:id/renew', authenticateToken, async (req, res) => {
   }
 });
 
+// @desc    Upgrade subscription to a higher plan
+// @route   PATCH /api/subscriptions/:id/upgrade
+// @access  Private
+router.patch('/:id/upgrade', authenticateToken, async (req, res) => {
+  try {
+    const { newPlanId } = req.body;
+    
+    if (!newPlanId) {
+      return res.status(400).json({
+        success: false,
+        message: 'New plan ID is required'
+      });
+    }
+
+    const subscription = await Subscription.findById(req.params.id)
+      .populate('plan');
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subscription not found'
+      });
+    }
+
+    // Check if user can upgrade this subscription
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin' && 
+        subscription.user.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    // Get the new plan
+    const newPlan = await Plan.findById(newPlanId);
+    if (!newPlan || !newPlan.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: 'New plan not found or not active'
+      });
+    }
+
+    // Validate upgrade - new plan should cost more than current plan
+    if (newPlan.price <= subscription.plan.price) {
+      return res.status(400).json({
+        success: false,
+        message: 'Can only upgrade to a higher-priced plan'
+      });
+    }
+
+    // Update subscription plan and amount
+    subscription.plan = newPlanId;
+    subscription.amount = newPlan.price;
+    subscription.updatedAt = new Date();
+    
+    // Add upgrade to payment history
+    if (!subscription.paymentHistory) {
+      subscription.paymentHistory = [];
+    }
+    subscription.paymentHistory.push({
+      type: 'upgrade',
+      amount: newPlan.price,
+      date: new Date(),
+      paymentMethod: 'upgrade'
+    });
+
+    await subscription.save();
+
+    // Update plan subscriber counts
+    await Plan.findByIdAndUpdate(subscription.plan, {
+      $inc: { subscriberCount: -1 }
+    });
+    await Plan.findByIdAndUpdate(newPlanId, {
+      $inc: { subscriberCount: 1 }
+    });
+
+    await subscription.populate([
+      { path: 'user', select: 'name email phone' },
+      { path: 'plan', select: 'name description price billingPeriod' }
+    ]);
+
+    res.json({
+      success: true,
+      data: { subscription },
+      message: 'Subscription upgraded successfully'
+    });
+  } catch (error) {
+    console.error('Upgrade subscription error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upgrade subscription',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;

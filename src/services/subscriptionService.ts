@@ -100,7 +100,7 @@ export interface SubscriptionStatsResponse {
 }
 
 class SubscriptionService {
-  private baseUrl = import.meta.env.VITE_API_URL || 'https://api.buildhomemartsquares.com/api';
+  private baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
@@ -277,6 +277,31 @@ class SubscriptionService {
       return response;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to renew subscription";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  // Upgrade subscription to a higher plan
+  async upgradeSubscription(currentSubscriptionId: string, newPlanId: string): Promise<SingleSubscriptionResponse> {
+    try {
+      const response = await this.makeRequest<SingleSubscriptionResponse>(`/subscriptions/${currentSubscriptionId}/upgrade`, {
+        method: "PATCH",
+        body: JSON.stringify({ newPlanId }),
+      });
+
+      toast({
+        title: "Success",
+        description: "Subscription upgraded successfully!",
+      });
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to upgrade subscription";
       toast({
         title: "Error",
         description: errorMessage,

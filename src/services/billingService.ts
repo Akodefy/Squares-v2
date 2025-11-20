@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ExportUtils from '@/utils/exportUtils';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.buildhomemartsquares.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 export interface SubscriptionPlan {
   _id: string;
@@ -225,6 +225,29 @@ class BillingService {
         variant: "destructive",
       });
       return { success: false, message: errorMessage };
+    }
+  }
+
+  // Check if upgrades are available for current subscription
+  async getUpgradeOptions(): Promise<SubscriptionPlan[]> {
+    try {
+      const currentSubscription = await this.getCurrentSubscription();
+      if (!currentSubscription) {
+        return [];
+      }
+
+      const plans = await this.getSubscriptionPlans();
+      const currentPrice = currentSubscription.amount || 0;
+      const billingCycle = currentSubscription.billingCycle || 'monthly';
+      
+      // Return only plans that cost more than current plan
+      return plans.filter(plan => {
+        const planPrice = billingCycle === 'yearly' ? plan.price.yearly : plan.price.monthly;
+        return planPrice > currentPrice;
+      });
+    } catch (error) {
+      console.error("Failed to get upgrade options:", error);
+      return [];
     }
   }
 
