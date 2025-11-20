@@ -49,7 +49,7 @@ const EnterprisePropertyContactDialog: React.FC<EnterprisePropertyContactDialogP
             <h4 className="font-semibold text-gray-900 line-clamp-2">{property.title}</h4>
             <div className="flex items-center text-sm text-gray-600">
               <MapPin className="w-4 h-4 mr-1" />
-              {property.address.city}, {property.address.state}
+              {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
             </div>
             <div className="flex items-center text-sm text-gray-600">
               <IndianRupee className="w-4 h-4 mr-1" />

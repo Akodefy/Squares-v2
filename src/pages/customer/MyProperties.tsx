@@ -215,8 +215,11 @@ const MyProperties = () => {
 
   // Filter properties
   const filteredProperties = properties.filter(property => {
+    const locationString = property.address.district 
+      ? `${property.address.city}, ${property.address.district}, ${property.address.state}` 
+      : `${property.address.city}, ${property.address.state}`;
     const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         `${property.address.city}, ${property.address.state}`.toLowerCase().includes(searchQuery.toLowerCase());
+                         locationString.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || property.status === statusFilter;
     const matchesType = typeFilter === 'all' || property.type === typeFilter;
     
@@ -423,7 +426,7 @@ const MyProperties = () => {
                         <div className="flex items-center gap-4 text-muted-foreground text-sm mb-2">
                           <span className="flex items-center gap-1">
                             <MapPin className="w-4 h-4" />
-                            {property.address.city}, {property.address.state}
+                            {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />

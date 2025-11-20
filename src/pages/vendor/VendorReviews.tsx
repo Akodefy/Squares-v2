@@ -57,6 +57,7 @@ interface PropertyReview {
     title: string;
     address: {
       city: string;
+      district?: string;
       state: string;
       street?: string;
     };
@@ -412,7 +413,7 @@ const VendorReviews = () => {
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                           <MapPin className="w-4 h-4" />
-                          {review.property.address.city}, {review.property.address.state}
+                          {review.property.address.district ? `${review.property.address.city}, ${review.property.address.district}, ${review.property.address.state}` : `${review.property.address.city}, ${review.property.address.state}`}
                         </div>
                       </div>
                     )}

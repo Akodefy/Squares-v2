@@ -138,7 +138,9 @@ const MyFavorites: React.FC = () => {
     // Handle address being an object or string
     const addressStr = typeof property.address === 'string' 
       ? property.address 
-      : `${property.address.street || ''} ${property.address.city || ''} ${property.address.state || ''}`.trim();
+      : property.address.district
+        ? `${property.address.street || ''} ${property.address.city || ''} ${property.address.district || ''} ${property.address.state || ''}`.trim()
+        : `${property.address.street || ''} ${property.address.city || ''} ${property.address.state || ''}`.trim();
     
     const cityStr = typeof property.city === 'string' 
       ? property.city 
@@ -393,7 +395,9 @@ const MyFavorites: React.FC = () => {
                               <span className="text-sm">
                                 {typeof property.address === 'string'
                                   ? property.address
-                                  : `${property.address.street || ''}, ${property.address.city || ''}, ${property.address.state || ''}`}
+                                  : property.address.district
+                                    ? `${property.address.street || ''}, ${property.address.city || ''}, ${property.address.district || ''}, ${property.address.state || ''}`
+                                    : `${property.address.street || ''}, ${property.address.city || ''}, ${property.address.state || ''}`}
                               </span>
                             </div>
                           </div>

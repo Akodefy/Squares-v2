@@ -48,12 +48,13 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     }
     // Admin users: show all properties (no status filter)
 
-    // Apply search filter (searches in title, description, city, state, locality)
+    // Apply search filter (searches in title, description, city, district, state, locality)
     if (search) {
       queryFilter.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
         { 'address.city': { $regex: search, $options: 'i' } },
+        { 'address.district': { $regex: search, $options: 'i' } },
         { 'address.state': { $regex: search, $options: 'i' } },
         { 'address.locality': { $regex: search, $options: 'i' } },
         { 'address.locationName': { $regex: search, $options: 'i' } }

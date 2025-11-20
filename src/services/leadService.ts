@@ -22,6 +22,7 @@ export interface Lead {
     address: {
       locality: string;
       city: string;
+      district?: string;
       state: string;
     };
   };

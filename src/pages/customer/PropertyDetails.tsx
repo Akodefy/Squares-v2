@@ -270,6 +270,7 @@ const PropertyDetails: React.FC = () => {
     if (address.street) parts.push(address.street);
     if (address.locationName) parts.push(address.locationName);
     if (address.city) parts.push(address.city);
+    if (address.district) parts.push(address.district);
     if (address.state) parts.push(address.state);
     if (address.pincode) parts.push(address.pincode);
     return parts.join(', ');

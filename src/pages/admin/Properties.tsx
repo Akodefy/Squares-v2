@@ -242,7 +242,7 @@ const Properties = () => {
         <div>
           <div className="font-medium">{property.title}</div>
           <div className="text-sm text-muted-foreground">
-            {property.address.city}, {property.address.state}
+            {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
           </div>
         </div>
       )

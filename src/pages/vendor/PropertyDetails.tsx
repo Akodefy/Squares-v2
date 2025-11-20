@@ -120,9 +120,7 @@ const PropertyDetails = () => {
 
   const getLocationString = (property: Property) => {
     const parts = [];
-    if (property.address.street) parts.push(property.address.street);
     if (property.address.locationName) parts.push(property.address.locationName);
-    if (property.address.taluk) parts.push(property.address.taluk);
     if (property.address.city) parts.push(property.address.city);
     if (property.address.district) parts.push(property.address.district);
     if (property.address.state) parts.push(property.address.state);

@@ -441,7 +441,7 @@ const PropertySearch = () => {
                           <div className="flex items-center text-sm text-muted-foreground mt-1">
                             <MapPin className="h-3 w-3 mr-1" />
                             <span className="line-clamp-1">
-                              {property.address.city}, {property.address.state}
+                              {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
                             </span>
                           </div>
                         </div>

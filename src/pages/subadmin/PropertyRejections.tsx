@@ -43,6 +43,7 @@ interface Property {
   };
   address: {
     city: string;
+    district?: string;
     state: string;
     street: string;
     zipCode: string;
@@ -200,7 +201,7 @@ const PropertyRejections = () => {
                       <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{property.address.city}, {property.address.state}</span>
+                          <span className="truncate">{property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}</span>
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 flex-shrink-0" />

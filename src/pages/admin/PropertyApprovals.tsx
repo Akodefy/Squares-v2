@@ -270,7 +270,7 @@ const PropertyApprovals = () => {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {property.address.city}, {property.address.state}
+                          {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -360,7 +360,7 @@ const PropertyApprovals = () => {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Location</Label>
-                  <p className="text-base">{selectedProperty.address.city}, {selectedProperty.address.state}</p>
+                  <p className="text-base">{selectedProperty.address.district ? `${selectedProperty.address.city}, ${selectedProperty.address.district}, ${selectedProperty.address.state}` : `${selectedProperty.address.city}, ${selectedProperty.address.state}`}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Owner</Label>

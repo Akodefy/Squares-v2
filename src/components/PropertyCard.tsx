@@ -29,7 +29,9 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   const primaryImage = propertyService.getPrimaryImage(property);
   const formattedPrice = propertyService.formatPrice(property.price, property.listingType);
   const formattedArea = propertyService.formatArea(property.area);
-  const location = `${property.address.city}, ${property.address.state}`;
+  const location = property.address.district 
+    ? `${property.address.city}, ${property.address.district}, ${property.address.state}` 
+    : `${property.address.city}, ${property.address.state}`;
 
   // Check if property is from enterprise vendor
   useEffect(() => {

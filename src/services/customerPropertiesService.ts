@@ -20,6 +20,7 @@ export interface CustomerProperty {
     street: string;
     locality: string;
     city: string;
+    district?: string;
     state: string;
     pincode: string;
     coordinates?: {

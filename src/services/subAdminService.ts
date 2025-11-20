@@ -14,6 +14,7 @@ interface Property {
   };
   address: {
     city: string;
+    district?: string;
     state: string;
   };
   createdAt: string;

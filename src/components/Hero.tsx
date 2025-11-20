@@ -49,6 +49,7 @@ const Hero = () => {
     const [states, setStates] = useState<string[]>([]);
     const [districts, setDistricts] = useState<string[]>([]);
     const [cities, setCities] = useState<string[]>([]);
+    const [locaInitialized, setLocaInitialized] = useState(false);
     
     // Increased debounce delay to reduce API calls and prevent rate limiting
     const debouncedSearchQuery = useDebounce(searchQuery, 800);
@@ -191,15 +192,28 @@ const Hero = () => {
       }
     }, []);
 
-    // Initialize states on mount
+    // Initialize loca service and load states on mount
     useEffect(() => {
-      const loadedStates = locaService.getStates();
-      setStates(loadedStates);
+      const initLocaService = async () => {
+        try {
+          if (!locaService.isReady()) {
+            await locaService.initialize();
+          }
+          setLocaInitialized(true);
+          const loadedStates = locaService.getStates();
+          setStates(loadedStates);
+        } catch (error) {
+          console.error('Failed to initialize loca service:', error);
+          setStates([]);
+        }
+      };
+
+      initLocaService();
     }, []);
 
     // Load districts when state changes
     useEffect(() => {
-      if (selectedState) {
+      if (selectedState && locaInitialized) {
         const loadedDistricts = locaService.getDistricts(selectedState);
         setDistricts(loadedDistricts);
         // reset dependent selects to empty string (controlled)
@@ -211,11 +225,11 @@ const Hero = () => {
         setSelectedDistrict("");
         setCities([]);
       }
-    }, [selectedState]);
+    }, [selectedState, locaInitialized]);
 
     // Load cities when district changes
     useEffect(() => {
-      if (selectedState && selectedDistrict) {
+      if (selectedState && selectedDistrict && locaInitialized) {
         const loadedCities = locaService.getCities(selectedState, selectedDistrict);
         setCities(loadedCities);
         setSelectedCity("");
@@ -223,7 +237,7 @@ const Hero = () => {
         setCities([]);
         setSelectedCity("");
       }
-    }, [selectedState, selectedDistrict]);
+    }, [selectedState, selectedDistrict, locaInitialized]);
 
     // Save search to recent searches
     const saveToRecentSearches = useCallback((query: string) => {
@@ -236,7 +250,7 @@ const Hero = () => {
 
     // Generate search suggestions using locaService
     const generateSuggestions = useCallback(async (query: string) => {
-      if (!query.trim() || query.length < 2) {
+      if (!query.trim() || query.length < 2 || !locaInitialized) {
         setSuggestions([]);
         return;
       }
@@ -268,7 +282,7 @@ const Hero = () => {
         console.error('Error generating suggestions:', error);
         setSuggestions([]);
       }
-    }, []);
+    }, [locaInitialized]);
 
     // Search properties function with rate limiting and request cancellation
     const searchProperties = useCallback(async (query: string, additionalFilters: Partial<PropertyFilters> = {}) => {
@@ -282,17 +296,35 @@ const Hero = () => {
         return;
       }
 
-      // Build location search query
-      let locationQuery = query;
+      // Build location search query - combine query with most specific location filter
+      let searchQuery = query.trim();
+      
       if (hasLocationFilter) {
-        const locationParts = [selectedCity, selectedDistrict, selectedState].filter(Boolean);
-        locationQuery = locationParts.join(', ') || query;
+        // Use the most specific location selected
+        // Priority: City > District > State
+        let locationFilter = '';
+        if (selectedCity) {
+          locationFilter = selectedCity;
+        } else if (selectedDistrict) {
+          locationFilter = selectedDistrict;
+        } else if (selectedState) {
+          locationFilter = selectedState;
+        }
+        
+        // Append location filter to search query if we have one
+        if (locationFilter) {
+          if (searchQuery) {
+            searchQuery = `${searchQuery} ${locationFilter}`;
+          } else {
+            searchQuery = locationFilter;
+          }
+        }
       }
 
       // Rate limiting: prevent searches within 1 second of each other
       const now = Date.now();
       const timeSinceLastSearch = now - lastSearchTimeRef.current;
-      if (timeSinceLastSearch < 1000 && lastSearchRef.current === locationQuery) {
+      if (timeSinceLastSearch < 1000 && lastSearchRef.current === searchQuery) {
         return;
 }
 
@@ -305,7 +337,7 @@ const Hero = () => {
       abortControllerRef.current = new AbortController();
       
       // Update tracking refs
-      lastSearchRef.current = locationQuery;
+      lastSearchRef.current = searchQuery;
       lastSearchTimeRef.current = now;
 
       setIsLoading(true);
@@ -314,7 +346,7 @@ const Hero = () => {
       
       try {
         const filters: PropertyFilters = {
-          search: locationQuery,
+          search: searchQuery,
           listingType: listingTypeMap[activeTab] as 'sale' | 'rent' | 'lease',
           limit: 9, // Show more results
           page: 1,
@@ -387,6 +419,21 @@ const Hero = () => {
     useEffect(() => {
       searchProperties(debouncedSearchQuery);
     }, [debouncedSearchQuery, searchProperties]);
+
+    // Trigger search when location filters change (state/district/city)
+    useEffect(() => {
+      if (!locaInitialized) return;
+
+      const hasLocationFilter = selectedState || selectedDistrict || selectedCity;
+
+      // Small debounce to avoid rapid requests when user changes selects quickly
+      const id = setTimeout(() => {
+        // searchProperties requires either a query or a location filter; call with current searchQuery
+        searchProperties(searchQuery);
+      }, 150);
+
+      return () => clearTimeout(id);
+    }, [selectedState, selectedDistrict, selectedCity, locaInitialized, searchProperties, searchQuery]);
 
     // Handle tab change
     const handleTabChange = (value: string) => {
@@ -931,7 +978,9 @@ const Hero = () => {
                                 <span className="truncate">
                                   {property.address.locationName ? 
                                     `${property.address.locationName}, ${property.address.city}` : 
-                                    `${property.address.city}, ${property.address.state}`
+                                    property.address.district
+                                      ? `${property.address.city}, ${property.address.district}, ${property.address.state}`
+                                      : `${property.address.city}, ${property.address.state}`
                                   }
                                 </span>
                               </div>

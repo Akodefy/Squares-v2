@@ -104,7 +104,7 @@ const PropertyMessageDialog: React.FC<PropertyMessageDialogProps> = ({
           <div className="bg-muted p-3 rounded-lg">
             <p className="font-medium text-sm">{property.title}</p>
             <p className="text-xs text-muted-foreground">
-              {property.address.city}, {property.address.state}
+              {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
             </p>
             <p className="text-sm font-semibold text-primary mt-1">
               ₹{property.price.toLocaleString("en-IN")}

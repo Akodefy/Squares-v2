@@ -27,6 +27,7 @@ interface Promotion {
     price: number;
     address: {
       city: string;
+      district?: string;
       state: string;
     };
   };
@@ -263,7 +264,7 @@ const Promotions = () => {
                         </div>
                         <CardDescription className="space-y-1">
                           <div className="flex items-center gap-4 text-sm">
-                            <span>{promotion.property.address.city}, {promotion.property.address.state}</span>
+                            <span>{promotion.property.address.district ? `${promotion.property.address.city}, ${promotion.property.address.district}, ${promotion.property.address.state}` : `${promotion.property.address.city}, ${promotion.property.address.state}`}</span>
                             <span>• Vendor: {promotion.vendor.name}</span>
                           </div>
                           <div className="flex items-center gap-4 text-sm">
@@ -344,7 +345,7 @@ const Promotions = () => {
                 <div className="bg-muted p-4 rounded-lg">
                   <p className="font-medium">{selectedPromotion.property.title}</p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedPromotion.property.address.city}, {selectedPromotion.property.address.state}
+                    {selectedPromotion.property.address.district ? `${selectedPromotion.property.address.city}, ${selectedPromotion.property.address.district}, ${selectedPromotion.property.address.state}` : `${selectedPromotion.property.address.city}, ${selectedPromotion.property.address.state}`}
                   </p>
                   <p className="text-lg font-bold mt-2">{formatPrice(selectedPromotion.property.price)}</p>
                 </div>

@@ -323,7 +323,7 @@ const PropertyCard = memo(({
             <div className="flex items-center text-xs text-muted-foreground mb-2">
               <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
               <span className="truncate">
-                {property.address.city}, {property.address.state}
+                {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
               </span>
             </div>
 

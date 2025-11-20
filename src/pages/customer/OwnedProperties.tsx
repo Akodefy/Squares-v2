@@ -56,9 +56,15 @@ interface OwnedProperty {
   bathrooms: number;
   address: {
     street: string;
+    locality?: string;
     city: string;
+    district?: string;
     state: string;
     pincode: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
   };
   images: Array<{
     url: string;
@@ -175,7 +181,7 @@ const OwnedProperties = () => {
   // Filter properties
   const filteredProperties = properties.filter(property => {
     const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         `${property.address.city}, ${property.address.state}`.toLowerCase().includes(searchQuery.toLowerCase());
+                         `${property.address.city}, ${property.address.district || ''}, ${property.address.state}`.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || property.status === statusFilter;
     
     return matchesSearch && matchesStatus;
@@ -479,7 +485,7 @@ const OwnedProperties = () => {
                         <div className="flex items-center gap-4 text-muted-foreground text-sm mb-2">
                           <span className="flex items-center gap-1">
                             <MapPin className="w-4 h-4" />
-                            {property.address.city}, {property.address.state}
+                            {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
@@ -668,7 +674,7 @@ const OwnedProperties = () => {
               <div className="p-4 bg-muted rounded-lg">
                 <h4 className="font-semibold mb-1">{selectedProperty.title}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {selectedProperty.address.city}, {selectedProperty.address.state}
+                  {selectedProperty.address.district ? `${selectedProperty.address.city}, ${selectedProperty.address.district}, ${selectedProperty.address.state}` : `${selectedProperty.address.city}, ${selectedProperty.address.state}`}
                 </p>
               </div>
 
@@ -818,7 +824,7 @@ const OwnedProperties = () => {
               <div className="p-4 bg-muted rounded-lg">
                 <h4 className="font-semibold mb-1">{selectedProperty.title}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {selectedProperty.address.city}, {selectedProperty.address.state}
+                  {selectedProperty.address.district ? `${selectedProperty.address.city}, ${selectedProperty.address.district}, ${selectedProperty.address.state}` : `${selectedProperty.address.city}, ${selectedProperty.address.state}`}
                 </p>
               </div>
 
