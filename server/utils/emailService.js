@@ -1161,6 +1161,201 @@ const emailTemplates = {
         </div>
       </div>
     `
+  }),
+
+  // New Message Alert for Vendors
+  'vendor-new-message': (data) => ({
+    subject: `New Message from ${data.senderName} - BuildHomeMart Squares`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0;">BuildHomeMart Squares</h1>
+          <p style="color: #666; margin: 5px 0 0 0;">New Message Alert</p>
+        </div>
+        
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="color: #166534; margin: 0 0 20px 0;">💬 You have a new message!</h2>
+          <p style="color: #166534; line-height: 1.6; margin: 0 0 20px 0;">
+            Hello ${data.vendorName}, you've received a new message from ${data.senderName}.
+          </p>
+          
+          <div style="background: white; padding: 20px; border-radius: 6px; margin: 20px 0;">
+            <h3 style="color: #1e293b; margin: 0 0 15px 0;">Message Preview:</h3>
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 4px; border-left: 4px solid #2563eb;">
+              <p style="color: #475569; margin: 0; font-style: italic;">"${data.messagePreview}"</p>
+            </div>
+            <p style="margin: 15px 0 5px 0; color: #64748b; font-size: 14px;">
+              <strong>From:</strong> ${data.senderName}<br/>
+              <strong>Received:</strong> ${data.timestamp}
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.messageLink}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+              View Message
+            </a>
+          </div>
+          
+          <div style="background: #e0f2fe; border: 1px solid #81d4fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="color: #0277bd; margin: 0; font-size: 14px;">
+              <strong>💡 Quick Response:</strong> Respond quickly to improve your response time and customer satisfaction rating!
+            </p>
+          </div>
+        </div>
+        
+        <div style="text-align: center; color: #94a3b8; font-size: 12px;">
+          <p>&copy; 2024 BuildHomeMart Squares. All rights reserved.</p>
+          <p><a href="${data.unsubscribeLink}" style="color: #94a3b8; text-decoration: underline;">Manage notification preferences</a></p>
+        </div>
+      </div>
+    `
+  }),
+
+  // Vendor Weekly Report
+  'vendor-weekly-report': (data) => ({
+    subject: `Your Weekly Performance Report - BuildHomeMart Squares (${data.weekRange})`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0;">BuildHomeMart Squares</h1>
+          <p style="color: #666; margin: 5px 0 0 0;">Vendor Performance Report</p>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="color: #1e293b; margin: 0 0 20px 0;">📊 Week of ${data.weekRange}</h2>
+          <p style="color: #475569; margin: 0 0 20px 0;">Hello ${data.vendorName}, here's your weekly performance summary:</p>
+          
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0;">
+            <div style="background: white; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #2563eb;">
+              <h3 style="color: #2563eb; margin: 0; font-size: 28px;">${data.newLeads || 0}</h3>
+              <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px;">New Leads</p>
+            </div>
+            <div style="background: white; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #059669;">
+              <h3 style="color: #059669; margin: 0; font-size: 28px;">${data.newInquiries || 0}</h3>
+              <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px;">New Inquiries</p>
+            </div>
+            <div style="background: white; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #dc2626;">
+              <h3 style="color: #dc2626; margin: 0; font-size: 28px;">${data.propertyViews || 0}</h3>
+              <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px;">Property Views</p>
+            </div>
+            <div style="background: white; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #7c3aed;">
+              <h3 style="color: #7c3aed; margin: 0; font-size: 28px;">${data.responseRate || 0}%</h3>
+              <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px;">Response Rate</p>
+            </div>
+          </div>
+
+          ${data.topProperty ? `
+          <div style="background: white; padding: 20px; border-radius: 6px; margin: 20px 0;">
+            <h3 style="color: #1e293b; margin: 0 0 15px 0;">🏆 Top Performing Property:</h3>
+            <p style="margin: 5px 0;"><strong>${data.topProperty.title}</strong></p>
+            <p style="margin: 5px 0; color: #64748b; font-size: 14px;">${data.topProperty.views} views this week</p>
+          </div>
+          ` : ''}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.dashboardLink}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+              View Full Report
+            </a>
+          </div>
+          
+          <div style="background: #fff3cd; border: 1px solid #ffd54f; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="color: #f57f17; margin: 0; font-size: 14px;">
+              <strong>💡 Tip:</strong> ${data.tip || 'Respond to inquiries within 2 hours to improve your response rate and customer satisfaction!'}
+            </p>
+          </div>
+        </div>
+        
+        <div style="text-align: center; color: #94a3b8; font-size: 12px;">
+          <p>&copy; 2024 BuildHomeMart Squares. All rights reserved.</p>
+          <p><a href="${data.unsubscribeLink}" style="color: #94a3b8; text-decoration: underline;">Manage notification preferences</a></p>
+        </div>
+      </div>
+    `
+  }),
+
+  // Vendor Business Update/News
+  'vendor-business-update': (data) => ({
+    subject: `${data.updateTitle} - BuildHomeMart Squares`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0;">BuildHomeMart Squares</h1>
+          <p style="color: #666; margin: 5px 0 0 0;">Business Update</p>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="color: #1e293b; margin: 0 0 20px 0;">📢 ${data.updateTitle}</h2>
+          <p style="color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
+            Hello ${data.vendorName},
+          </p>
+          
+          <div style="background: white; padding: 20px; border-radius: 6px; margin: 20px 0;">
+            <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${data.updateContent}</div>
+          </div>
+          
+          ${data.actionRequired ? `
+          <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="color: #f57f17; margin: 0; font-size: 14px;">
+              <strong>⚠️ Action Required:</strong> ${data.actionRequired}
+            </p>
+          </div>
+          ` : ''}
+
+          ${data.actionLink ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.actionLink}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+              ${data.actionLinkText || 'Learn More'}
+            </a>
+          </div>
+          ` : ''}
+        </div>
+        
+        <div style="text-align: center; color: #94a3b8; font-size: 12px;">
+          <p>&copy; 2024 BuildHomeMart Squares. All rights reserved.</p>
+          <p><a href="${data.unsubscribeLink}" style="color: #94a3b8; text-decoration: underline;">Manage notification preferences</a></p>
+        </div>
+      </div>
+    `
+  }),
+
+  // Vendor Marketing Tips
+  'vendor-marketing-tips': (data) => ({
+    subject: `Marketing Tips to Boost Your Business - BuildHomeMart Squares`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0;">BuildHomeMart Squares</h1>
+          <p style="color: #666; margin: 5px 0 0 0;">Marketing & Growth Tips</p>
+        </div>
+        
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="color: #166534; margin: 0 0 20px 0;">🚀 Grow Your Business</h2>
+          <p style="color: #166534; line-height: 1.6; margin: 0 0 20px 0;">
+            Hello ${data.vendorName}, here are some proven strategies to grow your real estate business:
+          </p>
+          
+          <div style="background: white; padding: 20px; border-radius: 6px; margin: 20px 0;">
+            ${data.tips && data.tips.length > 0 ? data.tips.map((tip, index) => `
+              <div style="margin-bottom: ${index < data.tips.length - 1 ? '20px' : '0'}; padding-bottom: ${index < data.tips.length - 1 ? '20px' : '0'}; border-bottom: ${index < data.tips.length - 1 ? '1px solid #e2e8f0' : 'none'};">
+                <h3 style="color: #1e293b; margin: 0 0 10px 0; font-size: 16px;">💡 ${tip.title}</h3>
+                <p style="color: #475569; margin: 0; line-height: 1.6;">${tip.description}</p>
+              </div>
+            `).join('') : '<p>Check out our latest marketing resources!</p>'}
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.resourceLink}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+              View All Resources
+            </a>
+          </div>
+        </div>
+        
+        <div style="text-align: center; color: #94a3b8; font-size: 12px;">
+          <p>&copy; 2024 BuildHomeMart Squares. All rights reserved.</p>
+          <p><a href="${data.unsubscribeLink}" style="color: #94a3b8; text-decoration: underline;">Unsubscribe from marketing emails</a></p>
+        </div>
+      </div>
+    `
   })
 };
 

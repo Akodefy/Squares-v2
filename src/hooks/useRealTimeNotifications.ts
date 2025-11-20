@@ -228,11 +228,33 @@ export const useRealTimeNotifications = () => {
   // Play notification sound
   const playNotificationSound = () => {
     try {
+      // Use a more reliable notification sound approach
       const audio = new Audio('/notification-sound.mp3');
       audio.volume = 0.5;
-      audio.play().catch(() => {
-        // Silent error handling
-      });
+      
+      // Alternative: Use Web Audio API for better browser support
+      const playSound = () => {
+        audio.play().catch((error) => {
+          // Fallback to beep sound if audio file not available
+          const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const oscillator = context.createOscillator();
+          const gainNode = context.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(context.destination);
+          
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          
+          gainNode.gain.setValueAtTime(0.3, context.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
+          
+          oscillator.start(context.currentTime);
+          oscillator.stop(context.currentTime + 0.5);
+        });
+      };
+      
+      playSound();
     } catch (error) {
       // Silent error handling
     }

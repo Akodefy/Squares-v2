@@ -2,8 +2,10 @@ const express = require('express');
 const Message = require('../models/Message');
 const Property = require('../models/Property');
 const User = require('../models/User');
+const Vendor = require('../models/Vendor');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const vendorNotificationService = require('../services/vendorNotificationService');
 const router = express.Router();
 
 // Apply auth middleware to all routes
@@ -177,10 +179,27 @@ router.post('/', asyncHandler(async (req, res) => {
   const newMessage = await Message.create(messageData);
 
   await newMessage.populate([
-    { path: 'sender', select: 'profile.firstName profile.lastName email profile.phone' },
-    { path: 'recipient', select: 'profile.firstName profile.lastName email profile.phone' },
+    { path: 'sender', select: 'profile.firstName profile.lastName email profile.phone role' },
+    { path: 'recipient', select: 'profile.firstName profile.lastName email profile.phone role' },
     { path: 'property', select: 'title price address city state' }
   ]);
+
+  // Send email notification to recipient if they are a vendor with email notifications enabled
+  if (newMessage.recipient.role === 'agent' || newMessage.recipient.role === 'vendor') {
+    try {
+      const vendor = await Vendor.findOne({ user: newMessage.recipient._id });
+      if (vendor) {
+        const senderName = `${newMessage.sender.profile?.firstName || ''} ${newMessage.sender.profile?.lastName || ''}`.trim() || 'A customer';
+        
+        vendorNotificationService.sendNewMessageEmail(vendor._id, {
+          senderName: senderName,
+          content: newMessage.message
+        }).catch(err => console.error('Failed to send email notification:', err));
+      }
+    } catch (emailError) {
+      console.error('Error checking vendor for email notification:', emailError);
+    }
+  }
 
   // Check if recipient has auto-response enabled (for vendors)
   try {
