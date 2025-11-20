@@ -1,5 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
+const Vendor = require('../models/Vendor');
 const Property = require('../models/Property');
 const Favorite = require('../models/Favorite');
 const Message = require('../models/Message');
@@ -164,7 +165,8 @@ router.post('/', asyncHandler(async (req, res) => {
     password,
     profile,
     role = 'user',
-    status = 'active'
+    status = 'active',
+    businessInfo
   } = req.body;
 
   // Check if user already exists
@@ -185,6 +187,100 @@ router.post('/', asyncHandler(async (req, res) => {
     status,
     emailVerified: true // Admin created users are auto-verified
   });
+
+  // If role is agent/vendor, create vendor profile
+  if (role === 'agent' && businessInfo) {
+    try {
+      const vendorData = {
+        user: user._id,
+        businessInfo: {
+          companyName: businessInfo.businessName || `${profile.firstName} ${profile.lastName}`,
+          businessType: businessInfo.businessType || 'real_estate_agent',
+          licenseNumber: businessInfo.licenseNumber || '',
+          gstNumber: businessInfo.gstNumber || '',
+          panNumber: businessInfo.panNumber || '',
+          website: businessInfo.website || '',
+        },
+        professionalInfo: {
+          experience: parseInt(businessInfo.experience) || 0,
+          specializations: [],
+          serviceAreas: [],
+          languages: ['english'],
+          certifications: []
+        },
+        contactInfo: {
+          officeAddress: {
+            street: profile.address?.street || '',
+            area: '',
+            city: profile.address?.city || '',
+            state: profile.address?.state || '',
+            district: profile.address?.district || '',
+            country: profile.address?.country || 'India',
+            countryCode: profile.address?.countryCode || 'IN',
+            stateCode: profile.address?.stateCode || '',
+            districtCode: profile.address?.districtCode || '',
+            cityCode: profile.address?.cityCode || '',
+            pincode: profile.address?.zipCode || '',
+            landmark: ''
+          },
+          officePhone: profile.phone || '',
+          whatsappNumber: profile.phone || '',
+          socialMedia: {
+            facebook: '',
+            instagram: '',
+            linkedin: '',
+            twitter: '',
+            youtube: ''
+          }
+        },
+        performance: {
+          rating: {
+            average: 0,
+            count: 0,
+            breakdown: { five: 0, four: 0, three: 0, two: 0, one: 0 }
+          },
+          statistics: {
+            totalProperties: 0,
+            activeListing: 0,
+            soldProperties: 0,
+            rentedProperties: 0,
+            totalViews: 0,
+            totalLeads: 0,
+            totalClients: 0,
+            responseTime: { average: 0, lastCalculated: new Date() }
+          }
+        },
+        status: 'active',
+        verification: {
+          isVerified: true,
+          verificationLevel: 'basic'
+        },
+        approval: {
+          status: 'approved',
+          submittedAt: new Date(),
+          reviewedAt: new Date(),
+          reviewedBy: req.user.id,
+          approvalNotes: 'Created by admin - auto-approved',
+          submittedDocuments: []
+        },
+        metadata: {
+          source: 'admin',
+          notes: 'Created by admin user'
+        }
+      };
+
+      const vendor = await Vendor.create(vendorData);
+      
+      // Link vendor profile to user
+      user.vendorProfile = vendor._id;
+      await user.save();
+      
+      console.log(`✓ Created vendor profile for ${email}`);
+    } catch (vendorError) {
+      console.error('Error creating vendor profile:', vendorError);
+      // Continue even if vendor creation fails - user is already created
+    }
+  }
 
   // Remove password from response
   const userResponse = user.toObject();
