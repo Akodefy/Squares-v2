@@ -25,7 +25,7 @@ export interface NotificationSettings {
 }
 
 export interface SecuritySettings {
-  twoFactorAuth: boolean;
+  // twoFactorAuth: boolean;
   sessionTimeout: number;
   passwordMinLength: number;
   maxLoginAttempts: number;
@@ -391,7 +391,7 @@ class SettingsService {
         weeklyReports: true,
       },
       security: {
-        twoFactorAuth: false,
+        // twoFactorAuth: false,
         sessionTimeout: 30,
         passwordMinLength: 8,
         maxLoginAttempts: 5,

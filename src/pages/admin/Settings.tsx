@@ -87,7 +87,6 @@ const AdminSettings = () => {
   });
 
   const [securitySettings, setSecuritySettings] = useState({
-    twoFactorAuth: false,
     sessionTimeout: 30,
     passwordMinLength: 8,
     maxLoginAttempts: 5,
@@ -1005,6 +1004,7 @@ const AdminSettings = () => {
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">Authentication</h4>
                 <div className="space-y-4">
+                  {/* Commented out Two-Factor Authentication for Super Admin
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <Label htmlFor="twoFactorAuth">Two-Factor Authentication (2FA)</Label>
@@ -1019,23 +1019,6 @@ const AdminSettings = () => {
                         setSecuritySettings(prev => ({ ...prev, twoFactorAuth: checked }));
                         markChanges('security');
                       }}
-                    />
-                  </div>
-                  {/* Commented out for Super Admin
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="requireEmailVerification">Require Email Verification</Label>
-                    <Switch
-                      id="requireEmailVerification"
-                      checked={securitySettings.requireEmailVerification}
-                      onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, requireEmailVerification: checked }))}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="requirePhoneVerification">Require Phone Verification</Label>
-                    <Switch
-                      id="requirePhoneVerification"
-                      checked={securitySettings.requirePhoneVerification}
-                      onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, requirePhoneVerification: checked }))}
                     />
                   </div>
                   */}
@@ -1116,7 +1099,8 @@ const AdminSettings = () => {
                   <Switch
                     id="autoRefund"
                     checked={paymentSettings.autoRefund}
-                    onCheckedChange={(checked) => setPaymentSettings(prev => ({ ...prev, autoRefund: checked }))}
+                    onCheckedChange={(checked) => setPaymentSettings(prev => ({ ...prev, autoRefund: checked }))
+                    }
                   />
                 </div>
               </div>

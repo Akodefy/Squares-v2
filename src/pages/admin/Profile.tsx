@@ -113,7 +113,6 @@ interface AdminProfile {
       refreshInterval: number;
     };
     security: {
-      twoFactorEnabled: boolean;
       sessionTimeout: number;
     };
   };
@@ -149,13 +148,12 @@ const convertUserToAdminProfile = (user: any): AdminProfile => {
         refreshInterval: 30,
       },
       security: {
-        twoFactorEnabled: false,
         sessionTimeout: 60,
       },
     } : {
       notifications: { email: true, browser: true, mobile: true },
       dashboard: { defaultView: "overview", autoRefresh: true, refreshInterval: 30 },
-      security: { twoFactorEnabled: false, sessionTimeout: 60 },
+      security: { sessionTimeout: 60 },
     }
   };
 };
@@ -203,7 +201,6 @@ const Profile = () => {
       refreshInterval: 30
     },
     security: {
-      twoFactorEnabled: false,
       sessionTimeout: 60
     }
   });
@@ -1222,6 +1219,7 @@ const Profile = () => {
               <div>
                 <h4 className="text-sm font-medium mb-4">Authentication</h4>
                 <div className="space-y-4">
+                  {/* Commented out Two-Factor Authentication for Super Admin
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="twoFactorAuth">Two-Factor Authentication</Label>
@@ -1237,6 +1235,7 @@ const Profile = () => {
                       }
                     />
                   </div>
+                  */}
                   <div>
                     <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
                     <Input
