@@ -500,28 +500,14 @@ class VendorService {
         };
       }>("/vendors/subscription-limits");
 
-      if (response.success && response.data) {
-        return response.data;
+      if (!response.success || !response.data) {
+        throw new Error('Failed to fetch subscription limits from server');
       }
 
-      // Default limits for free users
-      return {
-        maxProperties: 5,
-        currentProperties: 0,
-        canAddMore: true,
-        planName: 'Free',
-        features: ['5 Property Listings']
-      };
+      return response.data;
     } catch (error) {
       console.error("Failed to fetch subscription limits:", error);
-      // Return free tier limits as fallback
-      return {
-        maxProperties: 5,
-        currentProperties: 0,
-        canAddMore: true,
-        planName: 'Free',
-        features: ['5 Property Listings']
-      };
+      throw error;
     }
   }
 
@@ -782,25 +768,14 @@ class VendorService {
         };
       }>("/vendors/subscription/validate");
 
-      if (response.success && response.data) {
-        return response.data;
+      if (!response.success || !response.data) {
+        throw new Error('Failed to validate subscription from server');
       }
 
-      // Default free plan
-      return {
-        isActive: false,
-        planName: "Free",
-        features: ["5 Property Listings", "Basic Support"],
-        limits: { maxProperties: 5, maxPhotos: 10 }
-      };
+      return response.data;
     } catch (error) {
       console.error("Failed to validate subscription:", error);
-      return {
-        isActive: false,
-        planName: "Free",
-        features: ["5 Property Listings", "Basic Support"],
-        limits: { maxProperties: 5, maxPhotos: 10 }
-      };
+      throw error;
     }
   }
 

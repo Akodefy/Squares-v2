@@ -256,16 +256,32 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
         ]
       });
 
-      // Check limits using planSnapshot (preserves plan at subscription time)
-      // This ensures existing subscribers are not affected by superadmin plan updates
-      let maxProperties = 5; // Free tier default
+      // Check limits using planSnapshot for existing subscriptions or fetch FREE plan from database
+      let maxProperties;
       if (activeSubscription) {
-        // Use snapshot if available, otherwise fallback to current plan
+        // Use snapshot if available (preserves plan at subscription time)
         const planData = activeSubscription.planSnapshot || activeSubscription.plan;
-        if (planData && planData.limits) {
-          const planLimit = planData.limits.properties !== undefined ? planData.limits.properties : 5;
+        if (planData && planData.limits && planData.limits.properties !== undefined) {
+          const planLimit = planData.limits.properties;
           maxProperties = planLimit === 0 ? 999999 : planLimit; // 0 means unlimited
+        } else {
+          return res.status(500).json({
+            success: false,
+            message: 'Invalid subscription data. Please contact support.'
+          });
         }
+      } else {
+        // No subscription - fetch FREE plan from database to use admin-set limits
+        const Plan = require('../models/Plan');
+        const freePlan = await Plan.findOne({ identifier: 'free', isActive: true });
+        if (!freePlan || freePlan.limits?.properties === undefined) {
+          return res.status(500).json({
+            success: false,
+            message: 'Free plan not configured. Please contact administrator.'
+          });
+        }
+        const freePlanLimit = freePlan.limits.properties;
+        maxProperties = freePlanLimit === 0 ? 999999 : freePlanLimit;
       }
 
       if (currentProperties >= maxProperties && maxProperties !== 999999) {

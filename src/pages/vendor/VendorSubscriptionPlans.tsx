@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Circle, ArrowLeft, ArrowRight, Star, Zap, Shield, Camera, Video, Share2, Search, Users, Headphones } from 'lucide-react';
+import { CheckCircle, Circle, ArrowLeft, ArrowRight, Star, Zap, Shield, Camera, Video, Share2, Search, Users, Headphones, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { addonService } from '@/services/addonService';
+import { planService, Plan as PlanType } from '@/services/planService';
 
 interface Plan {
   id: string;
@@ -40,92 +41,60 @@ const VendorSubscriptionPlans: React.FC = () => {
   const [billingCycle] = useState<'monthly'>('monthly');
   const [loading, setLoading] = useState(false);
   const [addonsLoading, setAddonsLoading] = useState(true);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const plans: Plan[] = [
-    {
-      id: 'free',
-      name: 'FREE LISTING',
-      price: 0,
-      description: '5 Properties/Products - Basic listing',
-      icon: <Circle className="w-8 h-8 text-gray-600" />,
-      features: [
-        '5 Property listings',
-        'Basic property details',
-        'Standard visibility',
-        'Email support'
-      ]
-    },
-    {
-      id: 'basic',
-      name: 'BASIC PLAN',
-      price: 199,
-      description: '10 Properties + Top Rated + Verified Owner Badge',
-      icon: <Star className="w-8 h-8 text-green-600" />,
-      recommended: true,
-      features: [
-        '10 Property listings',
-        'Top Rated in Website',
-        'Verified Owner Badge',
-        'Priority email support',
-        'Enhanced visibility'
-      ]
-    },
-    {
-      id: 'standard',
-      name: 'STANDARD PLAN',
-      price: 499,
-      description: '15 Properties + Benefits + 1 Poster with 6 leads',
-      icon: <Zap className="w-8 h-8 text-blue-600" />,
-      features: [
-        '15 Property listings',
-        'Top Rated in Website',
-        'Verified Owner Badge',
-        '1 Poster with 6 leads',
-        'Priority support',
-        'Enhanced marketing'
-      ]
-    },
-    {
-      id: 'premium',
-      name: 'PREMIUM PLAN',
-      price: 1999,
-      description: 'Unlimited Properties + 4 Posters with 20 leads',
-      icon: <Shield className="w-8 h-8 text-purple-600" />,
-      features: [
-        'Unlimited Property listings',
-        'Top Rated in Website',
-        'Verified Owner Badge',
-        '4 Posters with 20 leads',
-        'Priority phone & email support',
-        'Advanced analytics',
-        'Featured listings'
-      ]
-    },
-    {
-      id: 'enterprise',
-      name: 'ENTERPRISE PLAN',
-      price: 4999,
-      description: 'Unlimited + Videos + 30+ leads + Marketing Manager',
-      icon: <Shield className="w-8 h-8 text-gold-600" />,
-      features: [
-        'Unlimited Property listings',
-        'Top Rated in Website',
-        'Verified Owner Badge',
-        '4 Posters & 1 Video with 30+ leads',
-        'Consultation with Marketing Manager',
-        'Commission based revenue',
-        '24/7 dedicated support',
-        'Custom branding & API access'
-      ]
-    }
-  ];
-
   useEffect(() => {
+    loadPlans();
     loadAddons();
     loadCurrentSubscription();
   }, []);
+
+  const loadPlans = async () => {
+    try {
+      setPlansLoading(true);
+      const response = await planService.getPlans({ isActive: true });
+      if (response.success && response.data.plans) {
+        const dbPlans: PlanType[] = response.data.plans.sort((a, b) => a.sortOrder - b.sortOrder);
+        
+        // Map database plans to UI format
+        const mappedPlans: Plan[] = dbPlans.map(dbPlan => ({
+          id: dbPlan._id,
+          name: dbPlan.name,
+          price: dbPlan.price,
+          description: dbPlan.description,
+          icon: getIconForPlan(dbPlan.name),
+          recommended: dbPlan.isPopular,
+          features: Array.isArray(dbPlan.features) 
+            ? dbPlan.features.map(f => typeof f === 'string' ? f : f.name)
+            : []
+        }));
+        
+        setPlans(mappedPlans);
+      }
+    } catch (error) {
+      console.error('Failed to load plans:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load subscription plans. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setPlansLoading(false);
+    }
+  };
+
+  const getIconForPlan = (name: string): React.ReactNode => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('free')) return <Circle className="w-8 h-8 text-gray-600" />;
+    if (lowerName.includes('basic')) return <Star className="w-8 h-8 text-green-600" />;
+    if (lowerName.includes('standard')) return <Zap className="w-8 h-8 text-blue-600" />;
+    if (lowerName.includes('premium')) return <Shield className="w-8 h-8 text-purple-600" />;
+    if (lowerName.includes('enterprise')) return <Shield className="w-8 h-8 text-gold-600" />;
+    return <Star className="w-8 h-8 text-gray-600" />;
+  };
 
   const loadCurrentSubscription = async () => {
     try {
@@ -322,58 +291,67 @@ const VendorSubscriptionPlans: React.FC = () => {
     </div>
   );
 
-  const renderPlanSelection = () => (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-4">
-          {currentSubscription ? 'Upgrade Your Subscription Plan' : 'Choose Your Subscription Plan'}
-        </h1>
-        <p className="text-muted-foreground text-lg mb-8">
-          {currentSubscription 
-            ? `You currently have the ${currentSubscription.planName} (₹${currentSubscription.amount?.toLocaleString() || 0}/month). Select a higher-priced plan to upgrade.`
-            : 'Select the plan that best fits your business needs'
-          }
-        </p>
-        
-        <div className="text-center mb-8">
-          <Badge variant="outline" className="px-4 py-2 text-sm">
-            Monthly Billing - No Long-term Commitments
-          </Badge>
-          {currentSubscription && (
-            <div className="mt-2">
-              <Badge variant="secondary" className="px-3 py-1 text-xs">
-                {plans.filter(plan => {
-                  if (plan.id === 'free') return false;
-                  const currentPlanPrice = currentSubscription.amount || 0;
-                  return plan.price > currentPlanPrice;
-                }).length} Upgrade Options Available
-              </Badge>
-            </div>
-          )}
+  const renderPlanSelection = () => {
+    if (plansLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </div>
+      );
+    }
 
-      <div className="grid md:grid-cols-3 gap-8">
-        {plans
-          .filter(plan => {
-            // Hide free plan from display in subscription page
-            if (plan.id === 'free') {
-              return false;
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-foreground mb-4">
+            {currentSubscription ? 'Upgrade Your Subscription Plan' : 'Choose Your Subscription Plan'}
+          </h1>
+          <p className="text-muted-foreground text-lg mb-8">
+            {currentSubscription 
+              ? `You currently have the ${currentSubscription.planName} (₹${currentSubscription.amount?.toLocaleString() || 0}/month). Select a higher-priced plan to upgrade.`
+              : 'Select the plan that best fits your business needs'
             }
-            
-            // If user has existing subscription, only show plans with higher price
-            // This ensures users can only upgrade to better plans, not downgrade
-            if (currentSubscription) {
-              const currentPlanPrice = currentSubscription.amount || 0;
-              return plan.price > currentPlanPrice;
-            }
-            
-            // For new subscribers, show all paid plans
-            return true;
-          })
-          .map((plan) => {
-          const isCurrentPlan = currentSubscription && 
-            currentSubscription.planName?.toLowerCase().includes(plan.name.toLowerCase());
+          </p>
+          
+          <div className="text-center mb-8">
+            <Badge variant="outline" className="px-4 py-2 text-sm">
+              Monthly Billing - No Long-term Commitments
+            </Badge>
+            {currentSubscription && (
+              <div className="mt-2">
+                <Badge variant="secondary" className="px-3 py-1 text-xs">
+                  {plans.filter(plan => {
+                    if (plan.id === 'free') return false;
+                    const currentPlanPrice = currentSubscription.amount || 0;
+                    return plan.price > currentPlanPrice;
+                  }).length} Upgrade Options Available
+                </Badge>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {plans
+            .filter(plan => {
+              // Hide free plan from display in subscription page
+              if (plan.id === 'free') {
+                return false;
+              }
+              
+              // If user has existing subscription, only show plans with higher price
+              // This ensures users can only upgrade to better plans, not downgrade
+              if (currentSubscription) {
+                const currentPlanPrice = currentSubscription.amount || 0;
+                return plan.price > currentPlanPrice;
+              }
+              
+              // For new subscribers, show all paid plans
+              return true;
+            })
+            .map((plan) => {
+            const isCurrentPlan = currentSubscription && 
+              currentSubscription.planName?.toLowerCase().includes(plan.name.toLowerCase());
           
           return (
             <Card 
@@ -413,7 +391,7 @@ const VendorSubscriptionPlans: React.FC = () => {
             <CardContent>
               <ul className="space-y-4">
                 {plan.features.map((feature, index) => {
-                  const featureName = typeof feature === 'string' ? feature : feature.name;
+                  const featureName = typeof feature === 'string' ? feature : (feature as any).name || '';
                   return (
                     <li key={index} className="flex items-center">
                       <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
@@ -455,7 +433,8 @@ const VendorSubscriptionPlans: React.FC = () => {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   const renderAddonSelection = () => (
     <div className="space-y-8">

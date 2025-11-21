@@ -320,10 +320,11 @@ const AddProperty = () => {
         }
       }
     } catch (error) {
+      console.error("Subscription check error:", error);
       setHasAddPropertySubscription(false);
       toast({
-        title: "Error",
-        description: "Failed to check subscription status. Please try again.",
+        title: "Configuration Error",
+        description: "Subscription plan not configured. Please contact administrator.",
         variant: "destructive",
       });
     } finally {
@@ -410,9 +411,10 @@ const AddProperty = () => {
         return;
       }
     } catch (error) {
+      console.error("Subscription verification error:", error);
       toast({
-        title: "Error",
-        description: "Failed to verify subscription status. Please try again.",
+        title: "Configuration Error",
+        description: "Subscription plan not configured. Please contact administrator.",
         variant: "destructive",
       });
       setIsCheckingSubscription(false);

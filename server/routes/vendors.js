@@ -2913,9 +2913,9 @@ router.get('/subscription-limits', authenticateToken, authorizeRoles('agent', 'a
     // Count current properties
     const currentProperties = await Property.countDocuments({ owner: vendorId });
 
-    let maxProperties = 5;
-    let planName = 'Free';
-    let features = ['5 Property Listings'];
+    let maxProperties;
+    let planName;
+    let features;
     let planData = null;
 
     if (activeSubscription && activeSubscription.plan) {
@@ -2927,23 +2927,28 @@ router.get('/subscription-limits', authenticateToken, authorizeRoles('agent', 'a
       planData = await Plan.findOne({ identifier: 'free', isActive: true });
     }
     
-    if (planData) {
-      planName = planData.name || 'Free';
-      
-      // Get property limit from plan (0 = unlimited)
-      const propertyLimit = planData.limits?.properties !== undefined ? planData.limits.properties : 5;
-      maxProperties = propertyLimit === 0 ? 999999 : propertyLimit;
-      
-      // Extract features from plan
-      features = (planData.features || []).map(f => {
-        if (typeof f === 'string') return f;
-        if (f && typeof f === 'object' && f.name && f.enabled !== false) return f.name;
-        return null;
-      }).filter(Boolean);
-      
-      if (features.length === 0) {
-        features = [`${maxProperties === 999999 ? 'Unlimited' : maxProperties} Property Listings`];
-      }
+    if (!planData || planData.limits?.properties === undefined) {
+      return res.status(500).json({
+        success: false,
+        message: 'Plan configuration not found. Please contact administrator.'
+      });
+    }
+
+    planName = planData.name;
+    
+    // Get property limit from plan (0 = unlimited)
+    const propertyLimit = planData.limits.properties;
+    maxProperties = propertyLimit === 0 ? 999999 : propertyLimit;
+    
+    // Extract features from plan
+    features = (planData.features || []).map(f => {
+      if (typeof f === 'string') return f;
+      if (f && typeof f === 'object' && f.name && f.enabled !== false) return f.name;
+      return null;
+    }).filter(Boolean);
+    
+    if (features.length === 0) {
+      features = [`${maxProperties === 999999 ? 'Unlimited' : maxProperties} Property Listings`];
     }
 
     const canAddMore = currentProperties < maxProperties;
@@ -2968,29 +2973,15 @@ router.get('/subscription-limits', authenticateToken, authorizeRoles('agent', 'a
       const propertyLimit = freePlan?.limits?.properties !== undefined ? freePlan.limits.properties : 5;
       const maxProps = propertyLimit === 0 ? 999999 : propertyLimit;
       
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: 'Failed to fetch subscription limits',
-        data: {
-          maxProperties: maxProps,
-          currentProperties: 0,
-          canAddMore: true,
-          planName: freePlan?.name || 'Free',
-          features: freePlan?.features?.map(f => typeof f === 'string' ? f : f.name).filter(Boolean) || [`${maxProps} Property Listings`]
-        }
+        message: 'Failed to fetch subscription limits. Plan configuration error.'
       });
     } catch (fallbackError) {
-      // Ultimate fallback if database is completely unavailable
-      res.status(500).json({
+      // Database error - return error without hardcoded fallback
+      return res.status(500).json({
         success: false,
-        message: 'Failed to fetch subscription limits',
-        data: {
-          maxProperties: 5,
-          currentProperties: 0,
-          canAddMore: true,
-          planName: 'Free',
-          features: ['5 Property Listings']
-        }
+        message: 'Failed to fetch subscription limits. Database error.'
       });
     }
   }
@@ -3236,11 +3227,7 @@ router.get('/billing/stats', requireVendorRole, asyncHandler(async (req, res) =>
     const messageCount = await Message.countDocuments({ recipient: vendorId });
     
     // Get limits from active subscription OR fetch free plan from database
-    let limits = {
-      properties: 5,
-      leads: 50,
-      messages: 100
-    };
+    let limits;
     
     if (activeSubscription?.plan?.limits) {
       limits = activeSubscription.plan.limits;
@@ -3248,9 +3235,13 @@ router.get('/billing/stats', requireVendorRole, asyncHandler(async (req, res) =>
       // No subscription - fetch FREE plan limits from database
       const Plan = require('../models/Plan');
       const freePlan = await Plan.findOne({ identifier: 'free', isActive: true });
-      if (freePlan?.limits) {
-        limits = freePlan.limits;
+      if (!freePlan?.limits) {
+        return res.status(500).json({
+          success: false,
+          message: 'Free plan not configured. Please contact administrator.'
+        });
       }
+      limits = freePlan.limits;
     }
     
     const stats = {
@@ -3962,21 +3953,10 @@ router.post('/subscription/refresh', requireVendorRole, asyncHandler(async (req,
       ]
     });
     
-    let refreshedData = {
-      hasActiveSubscription: false,
-      subscription: null,
-      limits: {
-        maxProperties: 5,
-        currentProperties,
-        canAddMore: currentProperties < 5,
-        planName: 'Free Plan',
-        features: ['5 Property Listings'],
-        planId: null
-      }
-    };
-    
     // Determine which plan to use
     let plan = null;
+    let refreshedData = null;
+    
     if (activeSubscription && activeSubscription.plan) {
       // ALWAYS use live plan data (not snapshot) so superadmin changes are reflected immediately
       plan = activeSubscription.plan;
