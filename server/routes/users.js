@@ -334,9 +334,10 @@ router.post('/', asyncHandler(async (req, res) => {
   });
 
   // If role is agent/vendor, create vendor profile
-  if (role === 'agent' && businessInfo) {
+  if (role === 'agent') {
     try {
       console.log(`[User Creation] Creating vendor profile for ${email}`);
+      console.log(`[User Creation] businessInfo provided:`, !!businessInfo);
       
       // Check if vendor profile already exists
       const existingVendor = await Vendor.findOne({ user: user._id });
@@ -345,20 +346,44 @@ router.post('/', asyncHandler(async (req, res) => {
         user.vendorProfile = existingVendor._id;
         await user.save();
       } else {
+        // Ensure businessInfo has required fields
+        const companyName = businessInfo?.businessName || `${profile.firstName} ${profile.lastName} Properties`;
+        
+        console.log(`[User Creation] Creating vendor with company name: ${companyName}`);
+        console.log(`[User Creation] businessInfo data:`, JSON.stringify(businessInfo, null, 2));
+        
+        // Parse service areas properly
+        let serviceAreas = [];
+        if (businessInfo?.serviceAreas && Array.isArray(businessInfo.serviceAreas)) {
+          serviceAreas = businessInfo.serviceAreas.map(area => {
+            if (typeof area === 'string') {
+              // If it's a string like "Mumbai, Maharashtra", parse it
+              const parts = area.split(',').map(p => p.trim());
+              return {
+                city: parts[0] || '',
+                state: parts[1] || '',
+                district: ''
+              };
+            }
+            // If it's already an object, return it
+            return area;
+          });
+        }
+        
         const vendorData = {
           user: user._id,
           businessInfo: {
-            companyName: businessInfo.businessName || `${profile.firstName} ${profile.lastName}`,
-            businessType: businessInfo.businessType || 'real_estate_agent',
-            licenseNumber: businessInfo.licenseNumber || undefined,
-            gstNumber: businessInfo.gstNumber || undefined,
-            panNumber: businessInfo.panNumber || undefined,
-            website: businessInfo.website || undefined,
+            companyName: companyName,
+            businessType: businessInfo?.businessType || 'real_estate_agent',
+            licenseNumber: businessInfo?.licenseNumber || undefined,
+            gstNumber: businessInfo?.gstNumber || undefined,
+            panNumber: businessInfo?.panNumber || undefined,
+            website: businessInfo?.website || undefined,
           },
           professionalInfo: {
-            experience: parseInt(businessInfo.experience) || 0,
-            specializations: businessInfo.specializations || [],
-            serviceAreas: businessInfo.serviceAreas || [],
+            experience: businessInfo?.experience ? parseInt(businessInfo.experience) : 0,
+            specializations: Array.isArray(businessInfo?.specializations) ? businessInfo.specializations : [],
+            serviceAreas: serviceAreas,
             languages: ['english'],
             certifications: []
           },
@@ -418,6 +443,20 @@ router.post('/', asyncHandler(async (req, res) => {
             approvalNotes: 'Created by admin - auto-approved',
             submittedDocuments: []
           },
+          settings: {
+            notifications: {
+              emailNotifications: true,
+              smsNotifications: true,
+              leadAlerts: true,
+              marketingEmails: false,
+              weeklyReports: true
+            },
+            privacy: {
+              showContactInfo: true,
+              showPerformanceStats: true,
+              allowDirectContact: true
+            }
+          },
           metadata: {
             source: 'admin',
             notes: 'Created by admin user'
@@ -444,18 +483,48 @@ router.post('/', asyncHandler(async (req, res) => {
         message: vendorError.message,
         code: vendorError.code,
         keyPattern: vendorError.keyPattern,
-        keyValue: vendorError.keyValue
+        keyValue: vendorError.keyValue,
+        userId: user._id.toString()
       });
       
-      // Delete the user if vendor creation fails to maintain data consistency
-      await User.findByIdAndDelete(user._id);
-      
-      // Return error to client
-      return res.status(500).json({
-        success: false,
-        message: `Failed to create vendor profile: ${vendorError.message}`,
-        error: vendorError.code === 11000 ? 'Duplicate business name or license number' : vendorError.message
-      });
+      // Check if it's a duplicate key error
+      if (vendorError.code === 11000) {
+        console.error('[User Creation] Duplicate key error - attempting to clean up and retry');
+        
+        // Try to find if vendor exists
+        const existingVendorAfterError = await Vendor.findOne({ user: user._id });
+        if (existingVendorAfterError) {
+          console.log('[User Creation] Vendor exists after duplicate error - linking to user');
+          user.vendorProfile = existingVendorAfterError._id;
+          await user.save();
+        } else {
+          // Delete the user if we can't fix the vendor profile issue
+          await User.findByIdAndDelete(user._id);
+          
+          return res.status(500).json({
+            success: false,
+            message: `Failed to create vendor profile: ${vendorError.message}`,
+            error: 'Duplicate business name or license number'
+          });
+        }
+      } else {
+        // For other errors, log but don't delete the user
+        // Admin can fix the vendor profile later using the fix endpoint
+        console.error('[User Creation] Non-duplicate error - user created but vendor profile failed');
+        console.error('[User Creation] Admin can fix this using POST /api/users/:id/fix-vendor-profile');
+        
+        // Return warning instead of error
+        const userResponse = user.toObject();
+        delete userResponse.password;
+        delete userResponse.verificationToken;
+        
+        return res.status(201).json({
+          success: true,
+          warning: 'User created but vendor profile creation failed. Please contact support.',
+          data: { user: userResponse },
+          fixEndpoint: `/api/users/${user._id}/fix-vendor-profile`
+        });
+      }
     }
   }
 
