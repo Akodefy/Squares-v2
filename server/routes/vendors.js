@@ -143,8 +143,10 @@ const requireVendorRole = asyncHandler(async (req, res, next) => {
     });
   }
 
+  console.log(`[requireVendorRole] User: ${req.user.email}, Role: ${req.user.role}, ID: ${req.user.id}`);
+
   // Allow both 'agent' and 'admin' roles to access vendor routes
-  if (!['agent', 'admin'].includes(req.user.role)) {
+  if (!['agent', 'admin', 'superadmin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Insufficient permissions. Vendor access required.'
@@ -153,26 +155,51 @@ const requireVendorRole = asyncHandler(async (req, res, next) => {
 
   // For agents, get their vendor profile
   if (req.user.role === 'agent') {
+    console.log(`[requireVendorRole] Looking for vendor profile for agent: ${req.user.id}`);
     const vendor = await Vendor.findByUserId(req.user.id);
     if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: 'Vendor profile not found. Please complete your vendor registration.'
-      });
+      console.error(`[requireVendorRole] No vendor profile found for agent: ${req.user.id}`);
+      
+      // Check if user has vendorProfile reference
+      const user = await User.findById(req.user.id);
+      console.log(`[requireVendorRole] User vendorProfile reference: ${user?.vendorProfile}`);
+      
+      // Try to find vendor by direct query
+      const directVendor = await Vendor.findOne({ user: req.user.id });
+      console.log(`[requireVendorRole] Direct vendor query result: ${directVendor ? directVendor._id : 'null'}`);
+      
+      if (directVendor) {
+        // Found vendor but static method failed - update user reference
+        if (!user.vendorProfile) {
+          user.vendorProfile = directVendor._id;
+          await user.save();
+          console.log(`[requireVendorRole] Updated user vendorProfile reference`);
+        }
+        req.vendor = directVendor;
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: 'Vendor profile not found. Please complete your vendor registration.'
+        });
+      }
+    } else {
+      console.log(`[requireVendorRole] Vendor profile found: ${vendor._id}`);
+      req.vendor = vendor;
     }
-    req.vendor = vendor;
   } else if (['admin', 'superadmin'].includes(req.user.role)) {
     // For admin, we might need to create a mock vendor profile or handle differently
     // For now, let's look for an existing vendor profile or create a basic one
+    console.log(`[requireVendorRole] Looking for vendor profile for admin: ${req.user.id}`);
     let vendor = await Vendor.findByUserId(req.user.id);
     if (!vendor) {
+      console.log(`[requireVendorRole] Creating vendor profile for admin: ${req.user.id}`);
       // Create a basic vendor profile for admin
       const user = await User.findById(req.user.id);
       const vendorData = {
         user: req.user.id,
         businessInfo: {
           companyName: `${user.profile.firstName} ${user.profile.lastName} - Admin`,
-          businessType: 'individual'
+          businessType: 'real_estate_agent'
         },
         professionalInfo: {
           experience: 0,
@@ -184,7 +211,14 @@ const requireVendorRole = asyncHandler(async (req, res, next) => {
         status: 'active',
         verification: {
           isVerified: true,
-          verificationLevel: 'enterprise'
+          verificationLevel: 'enterprise',
+          verificationDate: new Date()
+        },
+        approval: {
+          status: 'approved',
+          submittedAt: new Date(),
+          reviewedAt: new Date(),
+          approvalNotes: 'Auto-created for admin user'
         },
         metadata: {
           source: 'admin',
@@ -197,6 +231,10 @@ const requireVendorRole = asyncHandler(async (req, res, next) => {
       // Link user to vendor profile
       user.vendorProfile = vendor._id;
       await user.save();
+      
+      console.log(`[requireVendorRole] Created vendor profile for admin: ${vendor._id}`);
+    } else {
+      console.log(`[requireVendorRole] Vendor profile found for admin: ${vendor._id}`);
     }
     req.vendor = vendor;
   }

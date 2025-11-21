@@ -548,18 +548,39 @@ const AddUser = () => {
         };
       }
 
-      await userService.createUser(userData);
+      const response = await userService.createUser(userData);
       
       toast({
         title: "Success",
-        description: `${data.role === "agent" ? "Vendor" : "User"} created successfully.`,
+        description: `${data.role === "agent" ? "Vendor" : "User"} created successfully.${data.role === "agent" ? " Vendor profile has been auto-approved." : ""}`,
       });
       navigate("/admin/users");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create user:", error);
+      
+      // Extract error message
+      let errorMessage = "Failed to create user. Please try again.";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Check for specific errors
+      if (errorMessage.includes("Duplicate business name")) {
+        errorMessage = "Business name already exists. Please choose a different name.";
+      } else if (errorMessage.includes("duplicate key") && errorMessage.includes("email")) {
+        errorMessage = "Email address is already registered.";
+      } else if (errorMessage.includes("duplicate key") && errorMessage.includes("phone")) {
+        errorMessage = "Phone number is already registered.";
+      } else if (errorMessage.includes("vendor profile")) {
+        errorMessage = `${errorMessage} The user account was not created.`;
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create user. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }

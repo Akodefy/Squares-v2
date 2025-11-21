@@ -336,94 +336,118 @@ router.post('/', asyncHandler(async (req, res) => {
   // If role is agent/vendor, create vendor profile
   if (role === 'agent' && businessInfo) {
     try {
-      const vendorData = {
-        user: user._id,
-        businessInfo: {
-          companyName: businessInfo.businessName || `${profile.firstName} ${profile.lastName}`,
-          businessType: businessInfo.businessType || 'real_estate_agent',
-          licenseNumber: businessInfo.licenseNumber || '',
-          gstNumber: businessInfo.gstNumber || '',
-          panNumber: businessInfo.panNumber || '',
-          website: businessInfo.website || '',
-        },
-        professionalInfo: {
-          experience: parseInt(businessInfo.experience) || 0,
-          specializations: [],
-          serviceAreas: [],
-          languages: ['english'],
-          certifications: []
-        },
-        contactInfo: {
-          officeAddress: {
-            street: profile.address?.street || '',
-            area: '',
-            city: profile.address?.city || '',
-            state: profile.address?.state || '',
-            district: profile.address?.district || '',
-            country: profile.address?.country || 'India',
-            countryCode: profile.address?.countryCode || 'IN',
-            stateCode: profile.address?.stateCode || '',
-            districtCode: profile.address?.districtCode || '',
-            cityCode: profile.address?.cityCode || '',
-            pincode: profile.address?.zipCode || '',
-            landmark: ''
+      // Check if vendor profile already exists
+      const existingVendor = await Vendor.findOne({ user: user._id });
+      if (existingVendor) {
+        console.log(`Vendor profile already exists for user ${email}`);
+        user.vendorProfile = existingVendor._id;
+        await user.save();
+      } else {
+        const vendorData = {
+          user: user._id,
+          businessInfo: {
+            companyName: businessInfo.businessName || `${profile.firstName} ${profile.lastName}`,
+            businessType: businessInfo.businessType || 'real_estate_agent',
+            licenseNumber: businessInfo.licenseNumber || undefined,
+            gstNumber: businessInfo.gstNumber || undefined,
+            panNumber: businessInfo.panNumber || undefined,
+            website: businessInfo.website || undefined,
           },
-          officePhone: profile.phone || '',
-          whatsappNumber: profile.phone || '',
-          socialMedia: {
-            facebook: '',
-            instagram: '',
-            linkedin: '',
-            twitter: '',
-            youtube: ''
-          }
-        },
-        performance: {
-          rating: {
-            average: 0,
-            count: 0,
-            breakdown: { five: 0, four: 0, three: 0, two: 0, one: 0 }
+          professionalInfo: {
+            experience: parseInt(businessInfo.experience) || 0,
+            specializations: [],
+            serviceAreas: [],
+            languages: ['english'],
+            certifications: []
           },
-          statistics: {
-            totalProperties: 0,
-            activeListing: 0,
-            soldProperties: 0,
-            rentedProperties: 0,
-            totalViews: 0,
-            totalLeads: 0,
-            totalClients: 0,
-            responseTime: { average: 0, lastCalculated: new Date() }
+          contactInfo: {
+            officeAddress: {
+              street: profile.address?.street || '',
+              area: '',
+              city: profile.address?.city || '',
+              state: profile.address?.state || '',
+              district: profile.address?.district || '',
+              country: profile.address?.country || 'India',
+              countryCode: profile.address?.countryCode || 'IN',
+              stateCode: profile.address?.stateCode || '',
+              districtCode: profile.address?.districtCode || '',
+              cityCode: profile.address?.cityCode || '',
+              pincode: profile.address?.zipCode || '',
+              landmark: ''
+            },
+            officePhone: profile.phone || '',
+            whatsappNumber: profile.phone || '',
+            socialMedia: {
+              facebook: '',
+              instagram: '',
+              linkedin: '',
+              twitter: '',
+              youtube: ''
+            }
+          },
+          performance: {
+            rating: {
+              average: 0,
+              count: 0,
+              breakdown: { five: 0, four: 0, three: 0, two: 0, one: 0 }
+            },
+            statistics: {
+              totalProperties: 0,
+              activeListing: 0,
+              soldProperties: 0,
+              rentedProperties: 0,
+              totalViews: 0,
+              totalLeads: 0,
+              totalClients: 0,
+              responseTime: { average: 0, lastCalculated: new Date() }
+            }
+          },
+          status: 'active',
+          verification: {
+            isVerified: true,
+            verificationLevel: 'basic',
+            verificationDate: new Date()
+          },
+          approval: {
+            status: 'approved',
+            submittedAt: new Date(),
+            reviewedAt: new Date(),
+            reviewedBy: req.user.id,
+            approvalNotes: 'Created by admin - auto-approved',
+            submittedDocuments: []
+          },
+          metadata: {
+            source: 'admin',
+            notes: 'Created by admin user'
           }
-        },
-        status: 'active',
-        verification: {
-          isVerified: true,
-          verificationLevel: 'basic'
-        },
-        approval: {
-          status: 'approved',
-          submittedAt: new Date(),
-          reviewedAt: new Date(),
-          reviewedBy: req.user.id,
-          approvalNotes: 'Created by admin - auto-approved',
-          submittedDocuments: []
-        },
-        metadata: {
-          source: 'admin',
-          notes: 'Created by admin user'
-        }
-      };
+        };
 
-      const vendor = await Vendor.create(vendorData);
-      
-      // Link vendor profile to user
-      user.vendorProfile = vendor._id;
-      await user.save();
-      
-      console.log(`✓ Created vendor profile for ${email}`);
+        const vendor = await Vendor.create(vendorData);
+        
+        // Link vendor profile to user
+        user.vendorProfile = vendor._id;
+        await user.save();
+        
+        console.log(`✓ Created vendor profile for ${email}, vendorId: ${vendor._id}`);
+      }
     } catch (vendorError) {
       console.error('Error creating vendor profile:', vendorError);
-      // Continue even if vendor creation fails - user is already created
+      console.error('Vendor error details:', {
+        message: vendorError.message,
+        code: vendorError.code,
+        keyPattern: vendorError.keyPattern,
+        keyValue: vendorError.keyValue
+      });
+      
+      // Delete the user if vendor creation fails to maintain data consistency
+      await User.findByIdAndDelete(user._id);
+      
+      // Return error to client
+      return res.status(500).json({
+        success: false,
+        message: `Failed to create vendor profile: ${vendorError.message}`,
+        error: vendorError.code === 11000 ? 'Duplicate business name or license number' : vendorError.message
+      });
     }
   }
 
@@ -1014,6 +1038,123 @@ router.get('/activity', asyncHandler(async (req, res) => {
         hasPrevPage: page > 1,
         limit: parseInt(limit)
       }
+    }
+  });
+}));
+
+// @desc    Fix vendor profile for a user
+// @route   POST /api/users/:id/fix-vendor-profile
+// @access  Private/Admin
+router.post('/:id/fix-vendor-profile', authorizeRoles('admin', 'superadmin'), asyncHandler(async (req, res) => {
+  const userId = req.params.id;
+  
+  console.log(`[Fix Vendor Profile] Attempting to fix vendor profile for user: ${userId}`);
+  
+  // Get the user
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+  
+  // Check if user is an agent
+  if (user.role !== 'agent') {
+    return res.status(400).json({
+      success: false,
+      message: 'User is not an agent/vendor'
+    });
+  }
+  
+  // Check if vendor profile already exists
+  let vendor = await Vendor.findOne({ user: userId });
+  
+  if (vendor) {
+    console.log(`[Fix Vendor Profile] Vendor profile already exists: ${vendor._id}`);
+    
+    // Update user reference if missing
+    if (!user.vendorProfile || user.vendorProfile.toString() !== vendor._id.toString()) {
+      user.vendorProfile = vendor._id;
+      await user.save();
+      console.log(`[Fix Vendor Profile] Updated user vendorProfile reference`);
+    }
+    
+    return res.json({
+      success: true,
+      message: 'Vendor profile already exists and is linked',
+      data: {
+        vendorId: vendor._id,
+        status: vendor.status,
+        approvalStatus: vendor.approval.status
+      }
+    });
+  }
+  
+  // Create vendor profile if it doesn't exist
+  console.log(`[Fix Vendor Profile] Creating new vendor profile for user: ${userId}`);
+  
+  const vendorData = {
+    user: user._id,
+    businessInfo: {
+      companyName: `${user.profile.firstName} ${user.profile.lastName} Business`,
+      businessType: 'real_estate_agent'
+    },
+    professionalInfo: {
+      experience: 0,
+      specializations: [],
+      serviceAreas: [],
+      languages: ['english'],
+      certifications: []
+    },
+    contactInfo: {
+      officeAddress: {
+        street: user.profile.address?.street || '',
+        city: user.profile.address?.city || '',
+        state: user.profile.address?.state || '',
+        district: user.profile.address?.district || '',
+        country: 'India',
+        countryCode: 'IN',
+        pincode: user.profile.address?.zipCode || ''
+      },
+      officePhone: user.profile.phone || '',
+      whatsappNumber: user.profile.phone || ''
+    },
+    status: 'active',
+    verification: {
+      isVerified: true,
+      verificationLevel: 'basic',
+      verificationDate: new Date()
+    },
+    approval: {
+      status: 'approved',
+      submittedAt: new Date(),
+      reviewedAt: new Date(),
+      reviewedBy: req.user.id,
+      approvalNotes: 'Auto-created by admin repair tool',
+      submittedDocuments: []
+    },
+    metadata: {
+      source: 'admin',
+      notes: 'Created by admin repair tool'
+    }
+  };
+  
+  vendor = await Vendor.create(vendorData);
+  
+  // Link vendor profile to user
+  user.vendorProfile = vendor._id;
+  await user.save();
+  
+  console.log(`[Fix Vendor Profile] Successfully created vendor profile: ${vendor._id}`);
+  
+  res.json({
+    success: true,
+    message: 'Vendor profile created successfully',
+    data: {
+      vendorId: vendor._id,
+      status: vendor.status,
+      approvalStatus: vendor.approval.status
     }
   });
 }));
