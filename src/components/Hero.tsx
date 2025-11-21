@@ -14,7 +14,6 @@ import commercialImage from "@/assets/commercial.jpg";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { propertyService, type Property, type PropertyFilters } from "@/services/propertyService";
 import { DEFAULT_PROPERTY_IMAGE } from "@/utils/imageUtils";
-import { useDebounce } from "../hooks/use-debounce";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { locaService } from "@/services/locaService";
@@ -51,8 +50,6 @@ const Hero = () => {
     const [cities, setCities] = useState<string[]>([]);
     const [locaInitialized, setLocaInitialized] = useState(false);
     
-    // Increased debounce delay to reduce API calls and prevent rate limiting
-    const debouncedSearchQuery = useDebounce(searchQuery, 800);
 
     // Handle post property navigation based on role
     const handlePostProperty = async () => {
@@ -250,34 +247,18 @@ const Hero = () => {
 
     // Generate search suggestions using locaService
     const generateSuggestions = useCallback(async (query: string) => {
-      if (!query.trim() || query.length < 2 || !locaInitialized) {
+      if (!query.trim() || query.length < 2) {
         setSuggestions([]);
         return;
       }
 
       try {
-        // Search for matching locations from loca.json
-        const locationResults = locaService.searchLocations(query);
-        
-        // Format suggestions as "City, District, State"
-        const formattedSuggestions = locationResults
-          .slice(0, 8)
-          .map(result => {
-            const parts = [];
-            if (result.city && result.city !== result.district) {
-              parts.push(result.city);
-            }
-            if (result.district) {
-              parts.push(result.district);
-            }
-            if (result.state) {
-              parts.push(result.state);
-            }
-            return parts.join(', ');
-          })
-          .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
-
-        setSuggestions(formattedSuggestions);
+        const results = await locaService.searchLocations(query, 50);
+        // Convert PincodeSuggestion objects to display strings
+        const suggestionStrings = results.map(suggestion => 
+          `${suggestion.city}, ${suggestion.district}, ${suggestion.state}`
+        );
+        setSuggestions(suggestionStrings);
       } catch (error) {
         console.error('Error generating suggestions:', error);
         setSuggestions([]);
@@ -296,10 +277,18 @@ const Hero = () => {
         return;
       }
 
-      // Build location search query - combine query with most specific location filter
+      // Build location search query
       let searchQuery = query.trim();
       
-      if (hasLocationFilter) {
+      // Parse location string if it contains commas (e.g., "Palladam SO, TIRUPPUR, TAMIL NADU")
+      // Just use the first part (city/locality) for more accurate matching
+      if (searchQuery.includes(',')) {
+        const parts = searchQuery.split(',').map(p => p.trim());
+        // Use just the city/locality (first part) for better results
+        if (parts.length >= 1) {
+          searchQuery = parts[0];
+        }
+      } else if (hasLocationFilter) {
         // Use the most specific location selected
         // Priority: City > District > State
         let locationFilter = '';
@@ -344,6 +333,8 @@ const Hero = () => {
       setError(null);
       setShowSuggestions(false);
       
+      console.log('Searching properties with query:', searchQuery);
+      
       try {
         const filters: PropertyFilters = {
           search: searchQuery,
@@ -352,6 +343,8 @@ const Hero = () => {
           page: 1,
           ...additionalFilters
         };
+        
+        console.log('Search filters:', filters);
 
         // Add property type filter for commercial
         if (activeTab === 'commercial') {
@@ -376,6 +369,12 @@ const Hero = () => {
         }
 
         const response = await propertyService.getProperties(filters);
+        
+        console.log('Search response:', {
+          success: response.success,
+          count: response.data?.properties?.length || 0,
+          total: response.data?.pagination?.totalProperties || 0
+        });
         
         if (response.success) {
           setProperties(response.data.properties);
@@ -415,35 +414,22 @@ const Hero = () => {
       }
     }, [activeTab, propertyType, bedrooms, priceRange, selectedState, selectedDistrict, selectedCity, saveToRecentSearches]);
 
-    // Effect to search when debounced query changes
-    useEffect(() => {
-      searchProperties(debouncedSearchQuery);
-    }, [debouncedSearchQuery, searchProperties]);
-
     // Trigger search when location filters change (state/district/city)
     useEffect(() => {
       if (!locaInitialized) return;
 
       const hasLocationFilter = selectedState || selectedDistrict || selectedCity;
 
-      // Small debounce to avoid rapid requests when user changes selects quickly
-      const id = setTimeout(() => {
-        // searchProperties requires either a query or a location filter; call with current searchQuery
-        searchProperties(searchQuery);
-      }, 150);
-
-      return () => clearTimeout(id);
-    }, [selectedState, selectedDistrict, selectedCity, locaInitialized, searchProperties, searchQuery]);
+      // Only update suggestions if there are location filters, don't auto-search
+      if (hasLocationFilter && searchQuery.trim()) {
+        generateSuggestions(searchQuery);
+      }
+    }, [selectedState, selectedDistrict, selectedCity, locaInitialized, searchQuery]);
 
     // Handle tab change
     const handleTabChange = (value: string) => {
       setActiveTab(value);
-      if (searchQuery.trim()) {
-        // Re-search with new tab filter but with a small delay to prevent rapid requests
-        setTimeout(() => {
-          searchProperties(searchQuery);
-        }, 300);
-      }
+      // Remove automatic search on tab change
     };
 
     // Handle search input change
@@ -697,6 +683,21 @@ const Hero = () => {
                       value={searchQuery}
                       onChange={handleSearchChange}
                     />
+                    {searchQuery && !isLoading && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setProperties([]);
+                          setShowResults(false);
+                          setSuggestions([]);
+                          setShowSuggestions(false);
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                     {isLoading && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -718,6 +719,7 @@ const Hero = () => {
                                 onClick={() => {
                                   setSearchQuery(suggestion);
                                   setShowSuggestions(false);
+                                  // Auto-search when suggestion is clicked
                                   searchProperties(suggestion);
                                 }}
                               >
@@ -741,7 +743,6 @@ const Hero = () => {
                                 onClick={() => {
                                   setSearchQuery(search);
                                   setShowSuggestions(false);
-                                  searchProperties(search);
                                 }}
                               >
                                 <Clock className="h-3 w-3 text-gray-400" />
@@ -787,23 +788,24 @@ const Hero = () => {
                         </Button>
                       </div>
                       
-                      {activeTab !== 'commercial' && (
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Property Type</label>
-                          <Select value={propertyType} onValueChange={(v) => setPropertyType(v)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="apartment">Apartment</SelectItem>
-                              <SelectItem value="house">House</SelectItem>
-                              <SelectItem value="villa">Villa</SelectItem>
-                              <SelectItem value="plot">Plot</SelectItem>
-                              <SelectItem value="land">Land</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Property Type</label>
+                        <Select value={propertyType} onValueChange={(v) => setPropertyType(v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="apartment">Apartment</SelectItem>
+                            <SelectItem value="villa">Villa</SelectItem>
+                            <SelectItem value="house">House</SelectItem>
+                            <SelectItem value="commercial">Commercial</SelectItem>
+                            <SelectItem value="plot">Plot</SelectItem>
+                            <SelectItem value="land">Land</SelectItem>
+                            <SelectItem value="office">Office Space</SelectItem>
+                            <SelectItem value="pg">PG (Paying Guest)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       
                       <div>
                         <label className="text-sm font-medium mb-2 block">Bedrooms</label>

@@ -521,11 +521,11 @@ router.get('/', asyncHandler(async (req, res) => {
   recentActivities.push(...recentUsers.map(user => ({
     _id: user._id,
     type: 'user_registered',
-    description: `New user registered: ${user.profile.firstName} ${user.profile.lastName}`,
+    description: `New user registered: ${user.profile?.firstName || 'Unknown'} ${user.profile?.lastName || 'User'}`,
     timestamp: user.createdAt,
     metadata: {
       email: user.email,
-      name: `${user.profile.firstName} ${user.profile.lastName}`
+      name: `${user.profile?.firstName || 'Unknown'} ${user.profile?.lastName || 'User'}`
     }
   })));
 
@@ -544,13 +544,13 @@ router.get('/', asyncHandler(async (req, res) => {
     metadata: {
       title: property.title,
       listingType: property.listingType,
-      ownerName: `${property.owner.profile.firstName} ${property.owner.profile.lastName}`
+      ownerName: property.owner ? `${property.owner.profile?.firstName || 'Unknown'} ${property.owner.profile?.lastName || 'User'}` : 'Unknown User'
     }
   })));
 
   // Recent subscription purchases
   recentActivities.push(...recentSubscriptions
-    .filter(subscription => subscription.plan) // Filter out subscriptions with null plans
+    .filter(subscription => subscription.plan && subscription.user) // Filter out subscriptions with null plans or users
     .map(subscription => ({
       _id: subscription._id,
       type: 'subscription_purchased',
@@ -559,7 +559,7 @@ router.get('/', asyncHandler(async (req, res) => {
       metadata: {
         planName: subscription.plan.name,
         amount: subscription.amount,
-        userName: `${subscription.user.profile.firstName} ${subscription.user.profile.lastName}`,
+        userName: `${subscription.user.profile?.firstName || 'Unknown'} ${subscription.user.profile?.lastName || 'User'}`,
         email: subscription.user.email
       }
     })));
@@ -579,8 +579,8 @@ router.get('/', asyncHandler(async (req, res) => {
     timestamp: message.createdAt,
     metadata: {
       subject: message.subject,
-      senderName: `${message.sender.profile.firstName} ${message.sender.profile.lastName}`,
-      recipientName: `${message.recipient.profile.firstName} ${message.recipient.profile.lastName}`
+      senderName: message.sender ? `${message.sender.profile?.firstName || 'Unknown'} ${message.sender.profile?.lastName || 'User'}` : 'Unknown User',
+      recipientName: message.recipient ? `${message.recipient.profile?.firstName || 'Unknown'} ${message.recipient.profile?.lastName || 'User'}` : 'Unknown User'
     }
   })));
 

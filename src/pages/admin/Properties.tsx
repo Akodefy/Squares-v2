@@ -481,11 +481,13 @@ const Properties = () => {
                   onFilterChange={setTypeFilter}
                   filterOptions={[
                     { label: "Apartment", value: "apartment" },
-                    { label: "House", value: "house" },
                     { label: "Villa", value: "villa" },
-                    { label: "Plot", value: "plot" },
+                    { label: "House", value: "house" },
                     { label: "Commercial", value: "commercial" },
+                    { label: "Plot", value: "plot" },
+                    { label: "Land", value: "land" },
                     { label: "Office", value: "office" },
+                    { label: "PG (Paying Guest)", value: "pg" },
                   ]}
                   filterPlaceholder="Filter by type"
                 />

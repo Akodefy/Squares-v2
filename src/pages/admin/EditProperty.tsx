@@ -266,11 +266,13 @@ const EditProperty = () => {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="apartment">Apartment</SelectItem>
-                              <SelectItem value="independent-house">Independent House</SelectItem>
                               <SelectItem value="villa">Villa</SelectItem>
-                              <SelectItem value="plot">Residential Plot</SelectItem>
-                              <SelectItem value="commercial">Commercial Property</SelectItem>
-                              <SelectItem value="agricultural">Agricultural Land</SelectItem>
+                              <SelectItem value="house">House</SelectItem>
+                              <SelectItem value="commercial">Commercial</SelectItem>
+                              <SelectItem value="plot">Plot</SelectItem>
+                              <SelectItem value="land">Land</SelectItem>
+                              <SelectItem value="office">Office</SelectItem>
+                              <SelectItem value="pg">PG (Paying Guest)</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

@@ -20,6 +20,28 @@ export interface Property {
   };
   bedrooms: number;
   bathrooms: number;
+  furnishing?: string;
+  age?: string;
+  floor?: string;
+  totalFloors?: string;
+  facing?: string;
+  parkingSpaces?: string;
+  priceNegotiable?: boolean;
+  maintenanceCharges?: number;
+  securityDeposit?: number;
+  availability?: string;
+  possession?: string;
+  roadWidth?: string;
+  cornerPlot?: string;
+  plotType?: string;
+  landType?: string;
+  boundaryWall?: string;
+  areaUnit?: string;
+  commercialType?: string;
+  cabins?: number;
+  workstations?: number;
+  foodAvailability?: string;
+  gender?: string;
   address: {
     street: string;
     district?: string;

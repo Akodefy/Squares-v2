@@ -499,6 +499,24 @@ const PropertyDetails: React.FC = () => {
                       <span className="text-muted-foreground">Bathrooms:</span>
                       <span className="font-medium">{property.bathrooms || 0}</span>
                     </div>
+                    {property.floor && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Floor:</span>
+                        <span className="font-medium">{property.floor}</span>
+                      </div>
+                    )}
+                    {property.totalFloors && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Floors:</span>
+                        <span className="font-medium">{property.totalFloors}</span>
+                      </div>
+                    )}
+                    {property.furnishing && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Furnishing:</span>
+                        <span className="font-medium capitalize">{property.furnishing.replace('-', ' ')}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between">
@@ -509,6 +527,24 @@ const PropertyDetails: React.FC = () => {
                       <span className="text-muted-foreground">Status:</span>
                       <span className="font-medium capitalize">{property.status}</span>
                     </div>
+                    {property.facing && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Facing:</span>
+                        <span className="font-medium capitalize">{property.facing}</span>
+                      </div>
+                    )}
+                    {property.parkingSpaces && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Parking:</span>
+                        <span className="font-medium">{property.parkingSpaces}</span>
+                      </div>
+                    )}
+                    {property.age && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Age:</span>
+                        <span className="font-medium">{property.age} years</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Listed On:</span>
                       <span className="font-medium">{new Date(property.createdAt).toLocaleDateString()}</span>
