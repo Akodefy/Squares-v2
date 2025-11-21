@@ -336,10 +336,12 @@ router.post('/', asyncHandler(async (req, res) => {
   // If role is agent/vendor, create vendor profile
   if (role === 'agent' && businessInfo) {
     try {
+      console.log(`[User Creation] Creating vendor profile for ${email}`);
+      
       // Check if vendor profile already exists
       const existingVendor = await Vendor.findOne({ user: user._id });
       if (existingVendor) {
-        console.log(`Vendor profile already exists for user ${email}`);
+        console.log(`[User Creation] Vendor profile already exists for user ${email}`);
         user.vendorProfile = existingVendor._id;
         await user.save();
       } else {
@@ -355,8 +357,8 @@ router.post('/', asyncHandler(async (req, res) => {
           },
           professionalInfo: {
             experience: parseInt(businessInfo.experience) || 0,
-            specializations: [],
-            serviceAreas: [],
+            specializations: businessInfo.specializations || [],
+            serviceAreas: businessInfo.serviceAreas || [],
             languages: ['english'],
             certifications: []
           },
@@ -412,7 +414,7 @@ router.post('/', asyncHandler(async (req, res) => {
             status: 'approved',
             submittedAt: new Date(),
             reviewedAt: new Date(),
-            reviewedBy: req.user.id,
+            reviewedBy: req.user?.id,
             approvalNotes: 'Created by admin - auto-approved',
             submittedDocuments: []
           },
@@ -428,11 +430,17 @@ router.post('/', asyncHandler(async (req, res) => {
         user.vendorProfile = vendor._id;
         await user.save();
         
-        console.log(`✓ Created vendor profile for ${email}, vendorId: ${vendor._id}`);
+        // Verify vendor can be found
+        const verifyVendor = await Vendor.findByUserId(user._id);
+        if (!verifyVendor) {
+          console.error(`[User Creation] WARNING: Vendor profile created but not accessible via findByUserId`);
+        } else {
+          console.log(`[User Creation] ✓ Vendor profile created and verified: ${vendor._id}`);
+        }
       }
     } catch (vendorError) {
-      console.error('Error creating vendor profile:', vendorError);
-      console.error('Vendor error details:', {
+      console.error('[User Creation] Error creating vendor profile:', vendorError);
+      console.error('[User Creation] Vendor error details:', {
         message: vendorError.message,
         code: vendorError.code,
         keyPattern: vendorError.keyPattern,

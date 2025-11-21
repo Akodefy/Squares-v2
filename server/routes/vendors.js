@@ -134,6 +134,41 @@ router.get('/search/suggestions', asyncHandler(async (req, res) => {
 // Apply auth middleware to all routes
 router.use(authenticateToken);
 
+// @desc    Debug endpoint to check vendor profile status
+// @route   GET /api/vendors/debug/profile-status
+// @access  Private
+router.get('/debug/profile-status', asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  
+  // Get user info
+  const user = await User.findById(userId).select('-password -verificationToken');
+  
+  // Try to find vendor profile using all methods
+  const vendorByStatic = await Vendor.findByUserId(userId);
+  const vendorByQuery = await Vendor.findOne({ user: userId });
+  const vendorByReference = user?.vendorProfile ? await Vendor.findById(user.vendorProfile) : null;
+  
+  res.json({
+    success: true,
+    debug: {
+      userId,
+      userRole: user?.role,
+      userEmail: user?.email,
+      userVendorProfileRef: user?.vendorProfile?.toString() || null,
+      vendorFoundByStatic: vendorByStatic?._id?.toString() || null,
+      vendorFoundByQuery: vendorByQuery?._id?.toString() || null,
+      vendorFoundByReference: vendorByReference?._id?.toString() || null,
+      vendorStatus: vendorByQuery?.status || null,
+      vendorApprovalStatus: vendorByQuery?.approval?.status || null,
+      recommendation: !vendorByQuery 
+        ? 'Vendor profile missing - needs to be created'
+        : !user?.vendorProfile 
+        ? 'User missing vendorProfile reference - will be auto-fixed on next request'
+        : 'All good'
+    }
+  });
+}));
+
 // Middleware to check if user is vendor/agent and get vendor profile
 const requireVendorRole = asyncHandler(async (req, res, next) => {
   if (!req.user) {
@@ -153,48 +188,61 @@ const requireVendorRole = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // For agents, get their vendor profile
+  // For agents, get their vendor profile with fallback strategies
   if (req.user.role === 'agent') {
     console.log(`[requireVendorRole] Looking for vendor profile for agent: ${req.user.id}`);
-    const vendor = await Vendor.findByUserId(req.user.id);
+    
+    let vendor = await Vendor.findByUserId(req.user.id);
+    
+    // Fallback 1: Try direct query if static method fails
+    if (!vendor) {
+      console.log(`[requireVendorRole] Static method failed, trying direct query`);
+      vendor = await Vendor.findOne({ user: req.user.id });
+    }
+    
+    // Fallback 2: Check user's vendorProfile reference
+    if (!vendor) {
+      console.log(`[requireVendorRole] Trying user vendorProfile reference`);
+      const user = await User.findById(req.user.id);
+      if (user?.vendorProfile) {
+        vendor = await Vendor.findById(user.vendorProfile);
+      }
+    }
+    
     if (!vendor) {
       console.error(`[requireVendorRole] No vendor profile found for agent: ${req.user.id}`);
-      
-      // Check if user has vendorProfile reference
-      const user = await User.findById(req.user.id);
-      console.log(`[requireVendorRole] User vendorProfile reference: ${user?.vendorProfile}`);
-      
-      // Try to find vendor by direct query
-      const directVendor = await Vendor.findOne({ user: req.user.id });
-      console.log(`[requireVendorRole] Direct vendor query result: ${directVendor ? directVendor._id : 'null'}`);
-      
-      if (directVendor) {
-        // Found vendor but static method failed - update user reference
-        if (!user.vendorProfile) {
-          user.vendorProfile = directVendor._id;
-          await user.save();
-          console.log(`[requireVendorRole] Updated user vendorProfile reference`);
-        }
-        req.vendor = directVendor;
-      } else {
-        return res.status(404).json({
-          success: false,
-          message: 'Vendor profile not found. Please complete your vendor registration.'
-        });
-      }
-    } else {
-      console.log(`[requireVendorRole] Vendor profile found: ${vendor._id}`);
-      req.vendor = vendor;
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor profile not found. Please contact support.'
+      });
     }
+    
+    // Ensure user has vendorProfile reference
+    const user = await User.findById(req.user.id);
+    if (user && !user.vendorProfile) {
+      user.vendorProfile = vendor._id;
+      await user.save();
+      console.log(`[requireVendorRole] Updated user vendorProfile reference`);
+    }
+    
+    console.log(`[requireVendorRole] Vendor profile found: ${vendor._id}`);
+    req.vendor = vendor;
+    
   } else if (['admin', 'superadmin'].includes(req.user.role)) {
-    // For admin, we might need to create a mock vendor profile or handle differently
-    // For now, let's look for an existing vendor profile or create a basic one
     console.log(`[requireVendorRole] Looking for vendor profile for admin: ${req.user.id}`);
+    
     let vendor = await Vendor.findByUserId(req.user.id);
+    
+    // Try direct query if static method fails
+    if (!vendor) {
+      vendor = await Vendor.findOne({ user: req.user.id });
+    }
+    
+    // Create vendor profile for admin if it doesn't exist
     if (!vendor) {
       console.log(`[requireVendorRole] Creating vendor profile for admin: ${req.user.id}`);
-      // Create a basic vendor profile for admin
       const user = await User.findById(req.user.id);
+      
       const vendorData = {
         user: req.user.id,
         businessInfo: {
@@ -225,6 +273,7 @@ const requireVendorRole = asyncHandler(async (req, res, next) => {
           notes: 'Auto-created for admin user'
         }
       };
+      
       vendor = new Vendor(vendorData);
       await vendor.save();
       
@@ -236,6 +285,7 @@ const requireVendorRole = asyncHandler(async (req, res, next) => {
     } else {
       console.log(`[requireVendorRole] Vendor profile found for admin: ${vendor._id}`);
     }
+    
     req.vendor = vendor;
   }
 
