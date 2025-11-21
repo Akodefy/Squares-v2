@@ -170,7 +170,7 @@ class UserService {
     }
   }
 
-  async checkAvailability(data: { email?: string; phone?: string; userId?: string }): Promise<any> {
+  async checkAvailability(data: { email?: string; phone?: string; businessName?: string; userId?: string }): Promise<any> {
     try {
       const response = await this.makeRequest<any>("/users/check-availability", {
         method: "POST",

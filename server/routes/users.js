@@ -102,15 +102,16 @@ router.get('/all', authorizeRoles('admin', 'superadmin'), asyncHandler(async (re
   });
 }));
 
-// @desc    Check if email/phone is available
+// @desc    Check if email/phone/businessName is available
 // @route   POST /api/users/check-availability
 // @access  Private/Admin
 router.post('/check-availability', authorizeRoles('admin', 'subadmin', 'superadmin'), asyncHandler(async (req, res) => {
-  const { email, phone, userId } = req.body;
+  const { email, phone, businessName, userId } = req.body;
 
   const result = {
     email: { available: true, message: '' },
-    phone: { available: true, message: '' }
+    phone: { available: true, message: '' },
+    businessName: { available: true, message: '' }
   };
 
   if (email) {
@@ -134,6 +135,19 @@ router.post('/check-availability', authorizeRoles('admin', 'subadmin', 'superadm
     if (existingPhone) {
       result.phone.available = false;
       result.phone.message = 'Phone number is already registered';
+    }
+  }
+
+  if (businessName) {
+    const Vendor = require('../models/Vendor');
+    const trimmedName = businessName.trim();
+    const query = { 
+      'businessInfo.companyName': new RegExp(`^${trimmedName}$`, 'i')
+    };
+    const existingBusiness = await Vendor.findOne(query);
+    if (existingBusiness) {
+      result.businessName.available = false;
+      result.businessName.message = 'Business name is already registered';
     }
   }
 
