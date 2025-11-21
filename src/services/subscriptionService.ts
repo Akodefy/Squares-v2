@@ -30,6 +30,7 @@ export interface Subscription {
     description: string;
     price: number;
     billingPeriod: string;
+    billingCycleMonths?: number;
   };
   addons?: Array<{
     _id: string;

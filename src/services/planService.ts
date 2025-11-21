@@ -8,7 +8,8 @@ export interface Plan {
   description: string;
   price: number;
   currency: string;
-  billingPeriod: 'monthly' | 'yearly' | 'lifetime' | 'one-time';
+  billingPeriod: 'monthly' | 'yearly' | 'lifetime' | 'one-time' | 'custom';
+  billingCycleMonths?: number;
   features: Array<{
     name: string;
     description?: string;
@@ -259,10 +260,18 @@ class PlanService {
   // Helper method to format price
   formatPrice(plan: Plan): string {
     const symbol = plan.currency === 'INR' ? '₹' : plan.currency === 'USD' ? '$' : '€';
-    const period = plan.billingPeriod === 'monthly' ? '/month' : 
-                   plan.billingPeriod === 'yearly' ? '/year' : '';
     
-    // Use toLocaleString without hardcoded locale
+    let period = '';
+    if (plan.billingPeriod === 'custom' && plan.billingCycleMonths) {
+      period = `/${plan.billingCycleMonths} month${plan.billingCycleMonths > 1 ? 's' : ''}`;
+    } else if (plan.billingPeriod === 'monthly') {
+      period = '/month';
+    } else if (plan.billingPeriod === 'yearly') {
+      period = '/year';
+    } else if (plan.billingPeriod === 'lifetime') {
+      period = ' (Lifetime)';
+    }
+    
     return `${symbol}${plan.price.toLocaleString()}${period}`;
   }
 

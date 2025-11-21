@@ -20,6 +20,7 @@ const updateSubscriptionPlans = async () => {
         price: 0,
         currency: 'INR',
         billingPeriod: 'monthly',
+        billingCycleMonths: 1,
         features: [
           '5 Property listings',
           'Basic property details',
@@ -49,6 +50,7 @@ const updateSubscriptionPlans = async () => {
         price: 199,
         currency: 'INR',
         billingPeriod: 'monthly',
+        billingCycleMonths: 1,
         features: [
           '10 Property listings',
           'Top Rated in Website',
@@ -79,6 +81,7 @@ const updateSubscriptionPlans = async () => {
         price: 499,
         currency: 'INR',
         billingPeriod: 'monthly',
+        billingCycleMonths: 1,
         features: [
           '15 Property listings',
           'Top Rated in Website',
@@ -110,6 +113,7 @@ const updateSubscriptionPlans = async () => {
         price: 1999,
         currency: 'INR',
         billingPeriod: 'monthly',
+        billingCycleMonths: 1,
         features: [
           'Unlimited Property listings',
           'Top Rated in Website',
@@ -142,6 +146,7 @@ const updateSubscriptionPlans = async () => {
         price: 4999,
         currency: 'INR',
         billingPeriod: 'monthly',
+        billingCycleMonths: 1,
         features: [
           'Unlimited Property listings',
           'Top Rated in Website',

@@ -26,8 +26,13 @@ const VendorProtectedRoute: React.FC<VendorProtectedRouteProps> = ({ children })
 
   // If authenticated but not a vendor (agent), redirect to vendor login with error
   if (user?.role !== 'agent') {
-    console.log('VendorProtectedRoute: User role is', user?.role, 'expected agent, redirecting to login');
-    return <Navigate to="/vendor/login" replace />;
+    console.log('VendorProtectedRoute: User role is', user?.role, 'expected agent, clearing auth and redirecting');
+    
+    // Clear auth data for wrong portal access
+    const { authService } = require('@/services/authService');
+    authService.clearAuthData();
+    
+    return <Navigate to="/vendor/login" state={{ message: 'This is the Vendor Portal. Please use the correct login portal for your account.' }} replace />;
   }
 
   console.log('VendorProtectedRoute: User authenticated as vendor, rendering protected content');

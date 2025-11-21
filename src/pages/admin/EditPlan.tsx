@@ -278,20 +278,25 @@ const EditPlan = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="billing">Billing Period *</Label>
-                <Select 
-                  value={plan.billingPeriod} 
-                  onValueChange={(value: "monthly" | "yearly" | "lifetime") => setPlan({ ...plan, billingPeriod: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                    <SelectItem value="lifetime">Lifetime</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="billingCycleMonths">Billing Period (Months) *</Label>
+                <Input
+                  id="billingCycleMonths"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={plan.billingCycleMonths || 1}
+                  onChange={(e) => {
+                    const months = parseInt(e.target.value) || 1;
+                    let billingPeriod: "monthly" | "yearly" | "lifetime" | "one-time" | "custom" = "custom";
+                    if (months === 1) billingPeriod = "monthly";
+                    else if (months === 12) billingPeriod = "yearly";
+                    setPlan({ ...plan, billingPeriod, billingCycleMonths: months });
+                  }}
+                  placeholder="Enter number of months (1-120)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the billing cycle in months. Common values: 1 (monthly), 12 (yearly)
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -395,7 +400,7 @@ const EditPlan = () => {
                 <p className="text-xs text-muted-foreground">Marketing materials</p>
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="videos">Videos Allowed</Label>
                 <Input
                   id="videos"
@@ -408,7 +413,7 @@ const EditPlan = () => {
                   })}
                 />
                 <p className="text-xs text-muted-foreground">Property videos</p>
-              </div>
+              </div> */}
             </div>
           </CardContent>
         </Card>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -13,7 +13,7 @@ import { Eye, EyeOff } from "lucide-react";
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -21,6 +21,19 @@ const Login = () => {
 
   // Get the intended destination from location state
   const from = location.state?.from || null;
+  
+  // Show message if redirected from protected route
+  useEffect(() => {
+    if (location.state?.message) {
+      toast({
+        title: "Portal Access",
+        description: location.state.message,
+        variant: "default",
+      });
+      // Clear the message from state
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state?.message]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,18 +61,20 @@ const Login = () => {
         // Block vendors from logging in through default login
         if (user.role === 'agent') {
           console.log('Login: Vendor attempted to login through default portal');
+          
+          // Use logout to properly clear all state including AuthContext (skip redirect)
+          logout(true);
+          
           toast({
-            title: "Access Denied",
-            description: "Vendors must use the vendor login portal. Redirecting...",
-            variant: "destructive",
+            title: "Incorrect Portal",
+            description: "Please login through the Vendor Portal to access your vendor account.",
+            variant: "default",
           });
-          // Clear auth data
-          const { authService } = await import("@/services/authService");
-          authService.clearAuthData();
-          // Redirect to vendor login
+          
+          // Redirect to vendor login with delay
           setTimeout(() => {
             navigate("/vendor/login");
-          }, 1500);
+          }, 2000);
           return;
         }
         

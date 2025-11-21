@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -24,11 +24,25 @@ import {
 
 const VendorLogin = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { login, logout } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Show message if redirected from protected route
+  useEffect(() => {
+    if (location.state?.message) {
+      toast({
+        title: "Portal Access",
+        description: location.state.message,
+        variant: "default",
+      });
+      // Clear the message from state
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state?.message]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,11 +60,6 @@ const VendorLogin = () => {
     setIsLoading(true);
 
     try {
-      // Clear any existing auth data first (silently)
-      const { authService } = await import("@/services/authService");
-      authService.clearAuthData();
-      console.log('VendorLogin: Cleared existing auth data');
-      
       const success = await login(email, password);
       console.log('VendorLogin: Login attempt result:', success);
       
@@ -66,14 +75,33 @@ const VendorLogin = () => {
             title: "Login Successful",
             description: "Welcome to your vendor dashboard!",
           });
-                    navigate("/vendor/dashboard");
+          navigate("/vendor/dashboard");
         } else {
+          // Non-vendor trying to access vendor portal
+          console.log('VendorLogin: Non-vendor attempted to login through vendor portal');
+          
+          // Use logout to properly clear all state including AuthContext (skip redirect)
+          logout(true);
+          
+          // Determine correct portal name based on role
+          let portalName = 'Customer Portal';
+          if (user?.role === 'admin' || user?.role === 'superadmin') {
+            portalName = 'Admin Portal';
+          } else if (user?.role === 'subadmin') {
+            portalName = 'Sub-Admin Portal';
+          }
+          
           toast({
-            title: "Access Denied",
-            description: "This is a vendor-only portal. Please use the regular login.",
-            variant: "destructive",
+            title: "Incorrect Portal",
+            description: `Please login through the ${portalName} to access your account.`,
+            variant: "default",
           });
-          authService.clearAuthData();
+          
+          // Redirect to correct login page with delay
+          setTimeout(() => {
+            navigate("/login");
+          }, 2000);
+          return;
         }
       } else {
         toast({

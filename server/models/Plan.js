@@ -30,7 +30,13 @@ const planSchema = new mongoose.Schema({
   billingPeriod: {
     type: String,
     required: true,
-    enum: ['monthly', 'yearly', 'lifetime', 'one-time']
+    enum: ['custom', 'monthly', 'yearly', 'lifetime', 'one-time']
+  },
+  billingCycleMonths: {
+    type: Number,
+    min: 1,
+    max: 120,
+    default: 1
   },
   features: [{
     name: {

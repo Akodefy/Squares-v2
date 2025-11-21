@@ -18,7 +18,7 @@ interface AuthContextType {
   isVendor: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: (skipRedirect?: boolean) => void;
   checkAuth: () => Promise<void>;
 }
 
@@ -78,9 +78,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (skipRedirect?: boolean) => {
     authService.logout();
     setUser(null);
+    
+    // Only redirect if not explicitly skipped
+    if (!skipRedirect) {
+      // Force reload to clear all state and redirect to login
+      window.location.href = '/v2/login';
+    }
   };
 
   useEffect(() => {

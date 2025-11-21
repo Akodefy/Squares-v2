@@ -84,6 +84,10 @@ const VendorProfilePage: React.FC = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
+  // Subscription state
+  const [subscription, setSubscription] = useState<any>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  
   // Location data states from loca.json
   const [states, setStates] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
@@ -143,7 +147,8 @@ const VendorProfilePage: React.FC = () => {
         // Load profile and settings
         await Promise.all([
           loadVendorProfile(),
-          loadVendorSettings()
+          loadVendorSettings(),
+          loadSubscription()
         ]);
       } catch (error) {
         console.error("Initialization error:", error);
@@ -233,6 +238,29 @@ const VendorProfilePage: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load vendor subscription
+  const loadSubscription = async () => {
+    try {
+      setSubscriptionLoading(true);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.buildhomemartsquares.com/api'}/vendors/subscription/current`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setSubscription(data.data);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load subscription:", error);
+    } finally {
+      setSubscriptionLoading(false);
     }
   };
 
@@ -855,6 +883,36 @@ const VendorProfilePage: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Premium Badges */}
+              {!subscriptionLoading && subscription?.plan?.benefits && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {subscription.plan.benefits.topRated && (
+                    <Badge className="bg-yellow-500 hover:bg-yellow-600">
+                      <Star className="w-3 h-3 mr-1" />
+                      Top Rated
+                    </Badge>
+                  )}
+                  {subscription.plan.benefits.verifiedBadge && (
+                    <Badge className="bg-blue-500 hover:bg-blue-600">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Verified Owner
+                    </Badge>
+                  )}
+                  {subscription.plan.benefits.marketingManager && (
+                    <Badge className="bg-purple-500 hover:bg-purple-600">
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      Marketing Manager
+                    </Badge>
+                  )}
+                  {subscription.plan.benefits.commissionBased && (
+                    <Badge className="bg-green-500 hover:bg-green-600">
+                      <Award className="w-3 h-3 mr-1" />
+                      Commission Based
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

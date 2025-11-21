@@ -293,7 +293,7 @@ router.post('/create-subscription-order', authenticateToken, asyncHandler(async 
   try {
     // Check if Razorpay is initialized
     if (!razorpay) {
-      console.error('❌ Razorpay not initialized - check credentials');
+      console.error(' Razorpay not initialized - check credentials');
       return res.status(500).json({
         success: false,
         message: 'Payment gateway not configured. Please contact support.'

@@ -72,7 +72,15 @@ const SubscriptionPlans = () => {
                   {plan.currency === 'USD' ? '$' : '₹'}{plan.price.toLocaleString()}
                 </span>
                 <span className="text-muted-foreground ml-1">
-                  /{plan.billingPeriod}
+                  /
+                  {plan.billingPeriod === 'custom' && plan.billingCycleMonths 
+                    ? `${plan.billingCycleMonths} month${plan.billingCycleMonths > 1 ? 's' : ''}`
+                    : plan.billingPeriod === 'monthly' 
+                    ? 'month'
+                    : plan.billingPeriod === 'yearly'
+                    ? 'year'
+                    : plan.billingPeriod
+                  }
                 </span>
               </div>
               {plan.description && (

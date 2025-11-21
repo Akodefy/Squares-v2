@@ -166,6 +166,7 @@ const Plans = () => {
                 filterOptions={[
                   { label: "Monthly", value: "monthly" },
                   { label: "Yearly", value: "yearly" },
+                  { label: "Custom", value: "custom" },
                 ]}
                 filterPlaceholder="Filter by billing"
               />

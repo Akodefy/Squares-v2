@@ -7,7 +7,7 @@ interface CustomerProtectedRouteProps {
 }
 
 const CustomerProtectedRoute: React.FC<CustomerProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -17,6 +17,22 @@ const CustomerProtectedRoute: React.FC<CustomerProtectedRouteProps> = ({ childre
   if (!isAuthenticated) {
     // Redirect to login and preserve the attempted URL
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If vendor tries to access customer routes, redirect to vendor portal
+  if (user?.role === 'agent') {
+    console.log('CustomerProtectedRoute: Vendor detected, clearing auth and redirecting to vendor login');
+    const { authService } = require('@/services/authService');
+    authService.clearAuthData();
+    return <Navigate to="/vendor/login" state={{ message: 'Please login through the Vendor Portal' }} replace />;
+  }
+
+  // If admin tries to access customer routes, redirect to admin portal
+  if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'subadmin') {
+    console.log('CustomerProtectedRoute: Admin detected, clearing auth and redirecting to login');
+    const { authService } = require('@/services/authService');
+    authService.clearAuthData();
+    return <Navigate to="/login" state={{ message: 'Please login through the Admin Portal' }} replace />;
   }
 
   return <>{children}</>;

@@ -24,7 +24,8 @@ const CreatePlan = () => {
     description: "",
     price: 0,
     currency: "INR",
-    billingPeriod: "monthly" as "monthly" | "yearly" | "lifetime" | "one-time",
+    billingPeriod: "monthly" as "monthly" | "yearly" | "lifetime" | "one-time" | "custom",
+    billingCycleMonths: 1,
     features: [] as Array<{name: string; description?: string; enabled: boolean}>,
     limits: {
       properties: 5,
@@ -184,21 +185,25 @@ const CreatePlan = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="billing">Billing Period *</Label>
-                <Select 
-                  value={plan.billingPeriod} 
-                  onValueChange={(value: "monthly" | "yearly" | "lifetime" | "one-time") => setPlan({ ...plan, billingPeriod: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                    <SelectItem value="lifetime">Lifetime</SelectItem>
-                    <SelectItem value="one-time">One-time</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="billingCycleMonths">Billing Period (Months) *</Label>
+                <Input
+                  id="billingCycleMonths"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={plan.billingCycleMonths}
+                  onChange={(e) => {
+                    const months = parseInt(e.target.value) || 1;
+                    let billingPeriod: "monthly" | "yearly" | "lifetime" | "one-time" | "custom" = "custom";
+                    if (months === 1) billingPeriod = "monthly";
+                    else if (months === 12) billingPeriod = "yearly";
+                    setPlan({ ...plan, billingPeriod, billingCycleMonths: months });
+                  }}
+                  placeholder="Enter number of months (1-120)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the billing cycle in months. Common values: 1 (monthly), 12 (yearly)
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -303,7 +308,7 @@ const CreatePlan = () => {
                 <p className="text-xs text-muted-foreground">Marketing materials</p>
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="videos">Videos Allowed</Label>
                 <Input
                   id="videos"
@@ -316,7 +321,7 @@ const CreatePlan = () => {
                   })}
                 />
                 <p className="text-xs text-muted-foreground">Property videos</p>
-              </div>
+              </div> */}
             </div>
           </CardContent>
         </Card>

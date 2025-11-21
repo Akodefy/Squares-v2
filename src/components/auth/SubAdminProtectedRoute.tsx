@@ -7,7 +7,7 @@ interface SubAdminProtectedRouteProps {
 }
 
 const SubAdminProtectedRoute: React.FC<SubAdminProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isSubAdmin, loading } = useAuth();
+  const { isAuthenticated, isSubAdmin, loading, user } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -19,7 +19,20 @@ const SubAdminProtectedRoute: React.FC<SubAdminProtectedRouteProps> = ({ childre
   }
 
   if (!isSubAdmin) {
-    return <Navigate to="/customer/dashboard" replace />;
+    console.log('SubAdminProtectedRoute: User not subadmin, clearing auth and redirecting');
+    
+    // Clear auth data silently
+    const { authService } = require('@/services/authService');
+    authService.clearAuthData();
+    
+    // If user is a vendor, redirect to vendor portal
+    if (user?.role === 'agent') {
+      console.log('SubAdminProtectedRoute: Vendor detected, redirecting to vendor login');
+      return <Navigate to="/vendor/login" state={{ message: 'Please login through the Vendor Portal' }} replace />;
+    }
+    
+    // Redirect to login
+    return <Navigate to="/login" state={{ message: 'Please login with the correct portal' }} replace />;
   }
 
   return <>{children}</>;
