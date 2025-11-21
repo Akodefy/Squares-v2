@@ -1,6 +1,7 @@
 const express = require('express');
 const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
+const planChangeService = require('../services/planChangeService');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const router = express.Router();
@@ -149,10 +150,23 @@ router.put('/:id', asyncHandler(async (req, res) => {
     });
   }
 
+  // Validate changes
+  const validation = await planChangeService.validatePlanChanges(req.params.id, req.body);
+  if (!validation.isValid) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid plan changes',
+      errors: validation.errors
+    });
+  }
+
+  // Analyze impact of changes
+  const impact = await planChangeService.analyzePlanChangeImpact(req.params.id, req.body);
+
   // Track price changes
   if (req.body.price && req.body.price !== plan.price) {
     await plan.updatePrice(req.body.price, req.user.id, req.body.priceChangeReason);
-    delete req.body.price; // Remove from update object since it's already updated
+    delete req.body.price;
     delete req.body.priceChangeReason;
   }
 
@@ -161,7 +175,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
     const oldFeatures = plan.features || [];
     const newFeatures = req.body.features || [];
     
-    // Log feature additions/removals
     newFeatures.forEach(feature => {
       const featureName = typeof feature === 'string' ? feature : feature.name;
       const oldFeature = oldFeatures.find(f => 
@@ -186,7 +199,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: { plan },
-    message: 'Plan updated successfully'
+    impact,
+    warnings: validation.warnings,
+    message: 'Plan updated successfully. Changes will apply to new subscriptions only.'
   });
 }));
 
@@ -279,7 +294,8 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   if (activeSubscriptions > 0) {
     return res.status(400).json({
       success: false,
-      message: 'Cannot delete plan with active subscriptions'
+      message: 'Cannot delete plan with active subscriptions',
+      activeSubscriptions
     });
   }
 
@@ -288,6 +304,68 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: 'Plan deleted successfully'
+  });
+}));
+
+// @desc    Get plan change impact analysis (Admin only)
+// @route   POST /api/plans/:id/analyze-impact
+// @access  Private/Admin
+router.post('/:id/analyze-impact', asyncHandler(async (req, res) => {
+  if (!['admin', 'superadmin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  const impact = await planChangeService.analyzePlanChangeImpact(req.params.id, req.body);
+
+  res.json({
+    success: true,
+    data: { impact }
+  });
+}));
+
+// @desc    Get plan affected subscriptions (Admin only)
+// @route   GET /api/plans/:id/affected-subscriptions
+// @access  Private/Admin
+router.get('/:id/affected-subscriptions', asyncHandler(async (req, res) => {
+  if (!['admin', 'superadmin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  const { status = 'active' } = req.query;
+  const subscriptions = await planChangeService.getAffectedSubscriptions(req.params.id, status);
+
+  res.json({
+    success: true,
+    data: {
+      subscriptions,
+      total: subscriptions.length,
+      note: 'These subscriptions use snapshot data and will not be affected by plan changes'
+    }
+  });
+}));
+
+// @desc    Get plan change history (Admin only)
+// @route   GET /api/plans/:id/change-history
+// @access  Private/Admin
+router.get('/:id/change-history', asyncHandler(async (req, res) => {
+  if (!['admin', 'superadmin'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  const history = await planChangeService.getPlanChangeHistory(req.params.id);
+
+  res.json({
+    success: true,
+    data: { history }
   });
 }));
 

@@ -1,14 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, Info, AlertCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import planService from "@/services/planService";
 
 const CreatePlan = () => {
@@ -30,17 +31,19 @@ const CreatePlan = () => {
       featuredListings: 0,
       photos: 10,
       videoTours: 0,
-      videos: 0,
       leads: 0,
       posters: 0,
-      topRated: false,
-      verifiedBadge: false,
-      messages: 100,
-      marketingManager: false,
-      commissionBased: false,
-      support: "email" as "none" | "email" | "priority" | "phone" | "dedicated",
+      videos: 0,
+      messages: 0,
       leadManagement: "basic" as "none" | "basic" | "advanced" | "premium" | "enterprise"
     },
+    benefits: {
+      topRated: false,
+      verifiedBadge: false,
+      marketingManager: false,
+      commissionBased: false,
+    },
+    support: "email" as "none" | "email" | "priority" | "phone" | "dedicated",
     isActive: true,
     isPopular: false,
     sortOrder: 0,
@@ -94,16 +97,24 @@ const CreatePlan = () => {
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin/plans")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">Create New Plan</h1>
-          <p className="text-muted-foreground mt-2">Add a new subscription plan</p>
+          <p className="text-muted-foreground mt-2">Add a new subscription plan for your users</p>
         </div>
       </div>
+
+      <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+        <Info className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-900 dark:text-blue-100">
+          <strong>Plan Snapshot Protection:</strong> Once users subscribe to this plan, they will keep these exact features and pricing even if you update the plan later. Only new subscribers will get the updated plan.
+        </AlertDescription>
+      </Alert>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
+            <CardDescription>Define the core details of your subscription plan</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
@@ -227,52 +238,24 @@ const CreatePlan = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Limits & Benefits</CardTitle>
+            <CardTitle>Usage Limits</CardTitle>
+            <CardDescription>Set usage limits for plan subscribers</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-6 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="properties">Properties Limit</Label>
+                <Label htmlFor="properties">Property Listings</Label>
                 <Input
                   id="properties"
                   type="number"
-                  min="-1"
+                  min="0"
                   value={plan.limits.properties}
                   onChange={(e) => setPlan({ 
                     ...plan, 
                     limits: { ...plan.limits, properties: parseInt(e.target.value) || 0 } 
                   })}
                 />
-                <p className="text-xs text-muted-foreground">0 = unlimited, -1 = no properties</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="leads">Leads Limit</Label>
-                <Input
-                  id="leads"
-                  type="number"
-                  min="0"
-                  value={plan.limits.leads}
-                  onChange={(e) => setPlan({ 
-                    ...plan, 
-                    limits: { ...plan.limits, leads: parseInt(e.target.value) || 0 } 
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">Monthly limit, 0 = unlimited</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="posters">Promotional Posters</Label>
-                <Input
-                  id="posters"
-                  type="number"
-                  min="0"
-                  value={plan.limits.posters}
-                  onChange={(e) => setPlan({ 
-                    ...plan, 
-                    limits: { ...plan.limits, posters: parseInt(e.target.value) || 0 } 
-                  })}
-                />
+                <p className="text-xs text-muted-foreground">0 = unlimited properties</p>
               </div>
 
               <div className="space-y-2">
@@ -287,24 +270,41 @@ const CreatePlan = () => {
                     limits: { ...plan.limits, featuredListings: parseInt(e.target.value) || 0 } 
                   })}
                 />
+                <p className="text-xs text-muted-foreground">Highlighted in search</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="videoTours">Video Tours</Label>
+                <Label htmlFor="leads">Monthly Leads</Label>
                 <Input
-                  id="videoTours"
+                  id="leads"
                   type="number"
                   min="0"
-                  value={plan.limits.videoTours}
+                  value={plan.limits.leads}
                   onChange={(e) => setPlan({ 
                     ...plan, 
-                    limits: { ...plan.limits, videoTours: parseInt(e.target.value) || 0 } 
+                    limits: { ...plan.limits, leads: parseInt(e.target.value) || 0 } 
                   })}
                 />
+                <p className="text-xs text-muted-foreground">0 = unlimited</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="videos">Videos</Label>
+                <Label htmlFor="posters">Promotional Posters</Label>
+                <Input
+                  id="posters"
+                  type="number"
+                  min="0"
+                  value={plan.limits.posters}
+                  onChange={(e) => setPlan({ 
+                    ...plan, 
+                    limits: { ...plan.limits, posters: parseInt(e.target.value) || 0 } 
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Marketing materials</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="videos">Videos Allowed</Label>
                 <Input
                   id="videos"
                   type="number"
@@ -315,118 +315,7 @@ const CreatePlan = () => {
                     limits: { ...plan.limits, videos: parseInt(e.target.value) || 0 } 
                   })}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="messages">Monthly Messages</Label>
-                <Input
-                  id="messages"
-                  type="number"
-                  min="0"
-                  value={plan.limits.messages}
-                  onChange={(e) => setPlan({ 
-                    ...plan, 
-                    limits: { ...plan.limits, messages: parseInt(e.target.value) || 0 } 
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">0 = unlimited</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="support">Support Level</Label>
-                <Select 
-                  value={plan.limits.support} 
-                  onValueChange={(value: any) => setPlan({ 
-                    ...plan, 
-                    limits: { ...plan.limits, support: value } 
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="priority">Priority</SelectItem>
-                    <SelectItem value="phone">Phone</SelectItem>
-                    <SelectItem value="dedicated">Dedicated</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="leadManagement">Lead Management</Label>
-                <Select 
-                  value={plan.limits.leadManagement} 
-                  onValueChange={(value: any) => setPlan({ 
-                    ...plan, 
-                    limits: { ...plan.limits, leadManagement: value } 
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-semibold">Benefits</h4>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="topRated"
-                    checked={plan.limits.topRated}
-                    onCheckedChange={(checked) => setPlan({ 
-                      ...plan, 
-                      limits: { ...plan.limits, topRated: checked as boolean } 
-                    })}
-                  />
-                  <Label htmlFor="topRated" className="cursor-pointer">Top Rated in Website</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="verifiedBadge"
-                    checked={plan.limits.verifiedBadge}
-                    onCheckedChange={(checked) => setPlan({ 
-                      ...plan, 
-                      limits: { ...plan.limits, verifiedBadge: checked as boolean } 
-                    })}
-                  />
-                  <Label htmlFor="verifiedBadge" className="cursor-pointer">Verified Owner Badge</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="marketing"
-                    checked={plan.limits.marketingManager}
-                    onCheckedChange={(checked) => setPlan({ 
-                      ...plan, 
-                      limits: { ...plan.limits, marketingManager: checked as boolean } 
-                    })}
-                  />
-                  <Label htmlFor="marketing" className="cursor-pointer">Marketing Manager Access</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="commission"
-                    checked={plan.limits.commissionBased}
-                    onCheckedChange={(checked) => setPlan({ 
-                      ...plan, 
-                      limits: { ...plan.limits, commissionBased: checked as boolean } 
-                    })}
-                  />
-                  <Label htmlFor="commission" className="cursor-pointer">Commission Based</Label>
-                </div>
+                <p className="text-xs text-muted-foreground">Property videos</p>
               </div>
             </div>
           </CardContent>
@@ -434,9 +323,101 @@ const CreatePlan = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Features</CardTitle>
+            <CardTitle>Premium Benefits</CardTitle>
+            <CardDescription>Special benefits and features for this plan</CardDescription>
           </CardHeader>
-                    <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="topRated"
+                  checked={plan.benefits.topRated}
+                  onCheckedChange={(checked) => setPlan({ 
+                    ...plan, 
+                    benefits: { ...plan.benefits, topRated: checked as boolean } 
+                  })}
+                />
+                <Label htmlFor="topRated" className="cursor-pointer text-sm">Top Rated Badge</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="verifiedBadge"
+                  checked={plan.benefits.verifiedBadge}
+                  onCheckedChange={(checked) => setPlan({ 
+                    ...plan, 
+                    benefits: { ...plan.benefits, verifiedBadge: checked as boolean } 
+                  })}
+                />
+                <Label htmlFor="verifiedBadge" className="cursor-pointer text-sm">Verified Owner Badge</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="marketing"
+                  checked={plan.benefits.marketingManager}
+                  onCheckedChange={(checked) => setPlan({ 
+                    ...plan, 
+                    benefits: { ...plan.benefits, marketingManager: checked as boolean } 
+                  })}
+                />
+                <Label htmlFor="marketing" className="cursor-pointer text-sm">Marketing Manager</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="commission"
+                  checked={plan.benefits.commissionBased}
+                  onCheckedChange={(checked) => setPlan({ 
+                    ...plan, 
+                    benefits: { ...plan.benefits, commissionBased: checked as boolean } 
+                  })}
+                />
+                <Label htmlFor="commission" className="cursor-pointer text-sm">Commission Based Revenue</Label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Support Level</CardTitle>
+            <CardDescription>Choose the support level for this plan</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="support">Support Level</Label>
+              <Select 
+                value={plan.support} 
+                onValueChange={(value: any) => setPlan({ ...plan, support: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="email">Email Support</SelectItem>
+                  <SelectItem value="priority">Priority Support</SelectItem>
+                  <SelectItem value="phone">Phone Support</SelectItem>
+                  <SelectItem value="dedicated">Dedicated Support</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Features</CardTitle>
+            <CardDescription>List the key features included in this plan</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-900 dark:text-amber-100 text-sm">
+                Add descriptive features to help users understand what they get with this plan. These will be displayed on the subscription selection page.
+              </AlertDescription>
+            </Alert>
             <div className="flex gap-2">
               <Input
                 placeholder="Feature name..."

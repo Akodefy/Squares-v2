@@ -62,46 +62,48 @@ const planSchema = new mongoose.Schema({
     },
     videos: {
       type: Number,
-      default: 0 // Number of videos allowed
+      default: 0
     },
     leads: {
       type: Number,
-      default: 0 // Monthly lead limit
+      default: 0
     },
     posters: {
       type: Number,
-      default: 0 // Number of promotional posters
-    },
-    topRated: {
-      type: Boolean,
-      default: false // Show as top rated in website
-    },
-    verifiedBadge: {
-      type: Boolean,
-      default: false // Show verified owner badge
+      default: 0
     },
     messages: {
       type: Number,
-      default: 0 // Monthly message limit
-    },
-    marketingManager: {
-      type: Boolean,
-      default: false // Access to marketing manager consultation
-    },
-    commissionBased: {
-      type: Boolean,
-      default: false // Commission-based revenue model
-    },
-    support: {
-      type: String,
-      enum: ['none', 'email', 'priority', 'phone', 'dedicated'],
-      default: 'email'
+      default: 0
     },
     leadManagement: {
       type: String,
       enum: ['none', 'basic', 'advanced', 'premium', 'enterprise'],
       default: 'basic'
     }
+  },
+  benefits: {
+    topRated: {
+      type: Boolean,
+      default: false
+    },
+    verifiedBadge: {
+      type: Boolean,
+      default: false
+    },
+    marketingManager: {
+      type: Boolean,
+      default: false
+    },
+    commissionBased: {
+      type: Boolean,
+      default: false
+    }
+  },
+  support: {
+    type: String,
+    enum: ['none', 'email', 'priority', 'phone', 'dedicated'],
+    default: 'email'
   },
   isActive: {
     type: Boolean,

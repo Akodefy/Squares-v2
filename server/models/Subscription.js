@@ -12,9 +12,53 @@ const subscriptionSchema = new mongoose.Schema({
     ref: 'Plan',
     required: true
   },
+  // Snapshot of plan details at the time of subscription
+  // This ensures existing subscriptions are not affected when superadmin updates plans
+  planSnapshot: {
+    name: String,
+    description: String,
+    price: Number,
+    currency: String,
+    billingPeriod: String,
+    features: [{
+      name: String,
+      description: String,
+      enabled: Boolean
+    }],
+    limits: {
+      properties: Number,
+      featuredListings: Number,
+      photos: Number,
+      videoTours: Number,
+      videos: Number,
+      leads: Number,
+      posters: Number,
+      topRated: Boolean,
+      verifiedBadge: Boolean,
+      messages: Number,
+      marketingManager: Boolean,
+      commissionBased: Boolean,
+      support: String,
+      leadManagement: String
+    }
+  },
   addons: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'AddonService'
+  }],
+  // Snapshot of addon details at subscription time
+  addonsSnapshot: [{
+    addonId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'AddonService'
+    },
+    name: String,
+    description: String,
+    price: Number,
+    currency: String,
+    category: String,
+    billingType: String,
+    limits: mongoose.Schema.Types.Mixed
   }],
   status: {
     type: String,
@@ -115,6 +159,18 @@ subscriptionSchema.virtual('isExpired').get(function() {
   return this.endDate <= new Date() || this.status === 'expired';
 });
 
+// Virtual to get effective plan details (snapshot if available, otherwise live plan)
+subscriptionSchema.virtual('effectivePlan').get(function() {
+  return this.planSnapshot || this.plan;
+});
+
+// Virtual to get effective addon details
+subscriptionSchema.virtual('effectiveAddons').get(function() {
+  return this.addonsSnapshot && this.addonsSnapshot.length > 0 
+    ? this.addonsSnapshot 
+    : this.addons;
+});
+
 // Method to calculate days remaining
 subscriptionSchema.methods.getDaysRemaining = function() {
   if (this.isExpired) return 0;
@@ -123,6 +179,51 @@ subscriptionSchema.methods.getDaysRemaining = function() {
   const diffTime = this.endDate - now;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return Math.max(0, diffDays);
+};
+
+// Method to create plan snapshot at subscription time
+subscriptionSchema.methods.createPlanSnapshot = async function() {
+  if (!this.populated('plan')) {
+    await this.populate('plan');
+  }
+  
+  const plan = this.plan;
+  if (plan && typeof plan === 'object') {
+    this.planSnapshot = {
+      name: plan.name,
+      description: plan.description,
+      price: plan.price,
+      currency: plan.currency,
+      billingPeriod: plan.billingPeriod,
+      features: plan.features ? JSON.parse(JSON.stringify(plan.features)) : [],
+      limits: plan.limits ? JSON.parse(JSON.stringify(plan.limits)) : {}
+    };
+  }
+};
+
+// Method to create addons snapshot at subscription time
+subscriptionSchema.methods.createAddonsSnapshot = async function() {
+  if (this.addons && this.addons.length > 0) {
+    if (!this.populated('addons')) {
+      await this.populate('addons');
+    }
+    
+    this.addonsSnapshot = this.addons.map(addon => {
+      if (addon && typeof addon === 'object') {
+        return {
+          addonId: addon._id,
+          name: addon.name,
+          description: addon.description,
+          price: addon.price,
+          currency: addon.currency,
+          category: addon.category,
+          billingType: addon.billingType,
+          limits: addon.limits ? JSON.parse(JSON.stringify(addon.limits)) : {}
+        };
+      }
+      return null;
+    }).filter(Boolean);
+  }
 };
 
 // Method to renew subscription

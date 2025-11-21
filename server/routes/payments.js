@@ -732,6 +732,14 @@ router.post('/verify-subscription-payment', authenticateToken, asyncHandler(asyn
       transactionId: `${razorpay_payment_id || `mock_payment_${Date.now()}`}_${billingCycle}_${addons.length}addons`
     });
 
+    // Create plan snapshot to preserve current plan details
+    await subscription.createPlanSnapshot();
+    
+    // Create addons snapshot if addons exist
+    if (addons && addons.length > 0) {
+      await subscription.createAddonsSnapshot();
+    }
+
     await subscription.save();
 
     // Link payment to subscription
@@ -857,6 +865,9 @@ router.post('/verify-payment', asyncHandler(async (req, res) => {
       },
       lastPaymentDate: new Date()
     });
+
+    // Create plan snapshot to preserve current plan details
+    await subscription.createPlanSnapshot();
 
     await subscription.save();
 

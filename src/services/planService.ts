@@ -22,20 +22,16 @@ export interface Plan {
     videos?: number;
     leads: number;
     posters: number;
-    topRated: boolean;
-    verifiedBadge: boolean;
     messages: number;
-    marketingManager?: boolean;
-    commissionBased?: boolean;
-    support?: 'none' | 'email' | 'priority' | 'phone' | 'dedicated';
     leadManagement?: 'none' | 'basic' | 'advanced' | 'premium' | 'enterprise';
   };
   benefits?: {
-    topRatedInWebsite: boolean;
-    verifiedOwnerBadge: boolean;
-    marketingConsultation: boolean;
-    commissionBased: boolean;
+    topRated?: boolean;
+    verifiedBadge?: boolean;
+    marketingManager?: boolean;
+    commissionBased?: boolean;
   };
+  support?: 'none' | 'email' | 'priority' | 'phone' | 'dedicated';
   isActive: boolean;
   isPopular: boolean;
   sortOrder: number;

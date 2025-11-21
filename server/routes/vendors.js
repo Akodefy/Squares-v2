@@ -2096,10 +2096,10 @@ router.get('/subscription/check/:subscriptionName', authenticateToken, authorize
       data: {
         hasSubscription,
         subscriptionName,
-        planDetails: activeSubscription?.plan ? {
-          name: activeSubscription.plan.name,
-          identifier: activeSubscription.plan.identifier,
-          limits: activeSubscription.plan.limits
+        planDetails: activeSubscription ? {
+          name: (activeSubscription.planSnapshot || activeSubscription.plan)?.name,
+          identifier: (activeSubscription.planSnapshot || activeSubscription.plan)?.identifier,
+          limits: (activeSubscription.planSnapshot || activeSubscription.plan)?.limits
         } : null
       }
     });
@@ -2854,20 +2854,20 @@ router.get('/subscription-status', requireVendorRole, asyncHandler(async (req, r
           hasActiveSubscription: true,
           subscription: {
             id: activeSubscription._id,
-            planName: activeSubscription.plan.name,
-            planId: activeSubscription.plan._id,
+            planName: (activeSubscription.planSnapshot || activeSubscription.plan)?.name,
+            planId: activeSubscription.plan?._id,
             status: activeSubscription.status,
             startDate: activeSubscription.startDate,
             endDate: activeSubscription.endDate,
-            features: (activeSubscription.plan.features || []).map(f => {
+            features: ((activeSubscription.planSnapshot || activeSubscription.plan)?.features || []).map(f => {
               if (typeof f === 'string') {
                 return f;
               } else if (f && typeof f === 'object' && f.name) {
                 return f.enabled !== false ? f.name : null;
               }
               return null;
-            }).filter(Boolean), // Remove null values
-            limits: activeSubscription.plan.limits || {}, // Include full limits
+            }).filter(Boolean),
+            limits: (activeSubscription.planSnapshot || activeSubscription.plan)?.limits || {},
             billingCycle: activeSubscription.billingCycle || 'monthly',
             addons: activeSubscription.addons || [],
             amount: activeSubscription.amount,
@@ -2917,23 +2917,28 @@ router.get('/subscription-limits', authenticateToken, authorizeRoles('agent', 'a
     let planName = 'Free';
     let features = ['5 Property Listings'];
 
-    if (activeSubscription && activeSubscription.plan) {
-      const plan = activeSubscription.plan;
-      planName = plan.name || 'Free';
+    if (activeSubscription) {
+      // Use snapshot if available (preserves plan at time of subscription)
+      // Otherwise fallback to current plan data
+      const planData = activeSubscription.planSnapshot || activeSubscription.plan;
       
-      // Get property limit from plan
-      const propertyLimit = plan.limits?.properties !== undefined ? plan.limits.properties : 5;
-      maxProperties = propertyLimit === 0 ? 999999 : propertyLimit; // 0 means unlimited
-      
-      // Extract features
-      features = (plan.features || []).map(f => {
-        if (typeof f === 'string') return f;
-        if (f && typeof f === 'object' && f.name && f.enabled !== false) return f.name;
-        return null;
-      }).filter(Boolean);
-      
-      if (features.length === 0) {
-        features = [`${maxProperties === 999999 ? 'Unlimited' : maxProperties} Property Listings`];
+      if (planData) {
+        planName = planData.name || 'Free';
+        
+        // Get property limit from plan
+        const propertyLimit = planData.limits?.properties !== undefined ? planData.limits.properties : 5;
+        maxProperties = propertyLimit === 0 ? 999999 : propertyLimit; // 0 means unlimited
+        
+        // Extract features
+        features = (planData.features || []).map(f => {
+          if (typeof f === 'string') return f;
+          if (f && typeof f === 'object' && f.name && f.enabled !== false) return f.name;
+          return null;
+        }).filter(Boolean);
+        
+        if (features.length === 0) {
+          features = [`${maxProperties === 999999 ? 'Unlimited' : maxProperties} Property Listings`];
+        }
       }
     }
 
