@@ -1,6 +1,7 @@
 import { emailService } from './emailService';
 import { userService } from './userService';
 import { authService } from './authService';
+import { socketService } from './socketService';
 
 export interface NotificationData {
   type: 'property_alert' | 'price_drop' | 'new_message' | 'news_update' | 'welcome' | 'password_reset' | 'email_verification';
@@ -334,7 +335,7 @@ class NotificationService {
   }
 
   isConnected(): boolean {
-    return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
+    return socketService.isConnected();
   }
 
   async testNotification(): Promise<void> {

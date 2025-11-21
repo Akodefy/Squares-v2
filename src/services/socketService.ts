@@ -13,7 +13,7 @@ const getSocketUrl = () => {
     baseUrl = 'https://' + baseUrl;
   }
   
-  console.log('🔌 Socket.IO URL:', baseUrl);
+  console.log(' Socket.IO URL:', baseUrl);
   return baseUrl;
 };
 
@@ -64,24 +64,24 @@ class SocketService {
   connect(): Promise<Socket> {
     return new Promise((resolve, reject) => {
       if (this.socket?.connected) {
-        console.log('✅ Socket already connected');
+        console.log(' Socket already connected');
         return resolve(this.socket);
       }
 
       if (this.isConnecting) {
-        console.log('⏳ Connection already in progress');
+        console.log(' Connection already in progress');
         return;
       }
 
       const token = authService.getToken();
       if (!token) {
-        console.error('❌ No authentication token found');
+        console.error(' No authentication token found');
         return reject(new Error('No authentication token'));
       }
 
       this.isConnecting = true;
 
-      console.log('🔌 Connecting to Socket.IO server:', SOCKET_URL);
+      console.log(' Connecting to Socket.IO server:', SOCKET_URL);
 
       this.socket = io(SOCKET_URL, {
         auth: { token },
@@ -95,25 +95,25 @@ class SocketService {
       this.setupEventHandlers();
 
       this.socket.on('connect', () => {
-        console.log('✅ Socket connected:', this.socket?.id);
+        console.log(' Socket connected:', this.socket?.id);
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         resolve(this.socket!);
       });
 
       this.socket.on('connect_error', (error) => {
-        console.error('❌ Socket connection error:', error.message);
+        console.error(' Socket connection error:', error.message);
         this.isConnecting = false;
         this.reconnectAttempts++;
 
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          console.error('❌ Max reconnection attempts reached');
+          console.error(' Max reconnection attempts reached');
           reject(error);
         }
       });
 
       this.socket.on('disconnect', (reason) => {
-        console.log('🔌 Socket disconnected:', reason);
+        console.log(' Socket disconnected:', reason);
         this.isConnecting = false;
 
         if (reason === 'io server disconnect') {
@@ -129,80 +129,80 @@ class SocketService {
 
     // New message received
     this.socket.on('new_message', (data: { message: SocketMessage; conversationId: string }) => {
-      console.log('📨 New message received:', data);
+      console.log(' New message received:', data);
       this.emit('new_message', data);
     });
 
     // Message notification
     this.socket.on('message_notification', (data: any) => {
-      console.log('🔔 Message notification:', data);
+      console.log(' Message notification:', data);
       this.emit('message_notification', data);
     });
 
     // Typing indicator
     this.socket.on('user_typing', (data: TypingIndicator) => {
-      console.log('✍️ User typing:', data);
+      console.log(' User typing:', data);
       this.emit('user_typing', data);
     });
 
     // Message read receipt
     this.socket.on('message_read_receipt', (data: MessageReadReceipt) => {
-      console.log('✅ Message read:', data);
+      console.log(' Message read:', data);
       this.emit('message_read_receipt', data);
     });
 
     // Conversation read
     this.socket.on('conversation_read', (data: any) => {
-      console.log('✅ Conversation read:', data);
+      console.log(' Conversation read:', data);
       this.emit('conversation_read', data);
     });
 
     // User status changed
     this.socket.on('user_status_changed', (data: UserStatus) => {
-      console.log('👤 User status changed:', data);
+      console.log(' User status changed:', data);
       this.emit('user_status_changed', data);
     });
 
     // User joined conversation
     this.socket.on('user_joined_conversation', (data: any) => {
-      console.log('👋 User joined conversation:', data);
+      console.log(' User joined conversation:', data);
       this.emit('user_joined_conversation', data);
     });
 
     // User left conversation
     this.socket.on('user_left_conversation', (data: any) => {
-      console.log('👋 User left conversation:', data);
+      console.log(' User left conversation:', data);
       this.emit('user_left_conversation', data);
     });
 
     // Message sent confirmation
     this.socket.on('message_sent', (data: any) => {
-      console.log('✅ Message sent:', data);
+      console.log(' Message sent:', data);
       this.emit('message_sent', data);
     });
 
     // Message error
     this.socket.on('message_error', (data: any) => {
-      console.error('❌ Message error:', data);
+      console.error(' Message error:', data);
       this.emit('message_error', data);
     });
 
     // Online users status
     this.socket.on('online_users_status', (data: Record<string, boolean>) => {
-      console.log('👥 Online users status:', data);
+      console.log(' Online users status:', data);
       this.emit('online_users_status', data);
     });
 
     // Error
     this.socket.on('error', (error: any) => {
-      console.error('❌ Socket error:', error);
+      console.error(' Socket error:', error);
       this.emit('error', error);
     });
   }
 
   disconnect() {
     if (this.socket) {
-      console.log('🔌 Disconnecting socket...');
+      console.log(' Disconnecting socket...');
       this.socket.disconnect();
       this.socket = null;
       this.eventHandlers.clear();

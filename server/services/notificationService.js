@@ -1,128 +1,45 @@
-// Real-time Notification Service using Server-Sent Events (SSE)
+// Real-time Notification Service using Socket.IO
 const EventEmitter = require('events');
 
 class NotificationService extends EventEmitter {
   constructor() {
     super();
-    this.clients = new Map(); // Map of userId -> Set of response objects
+    this.io = null; // Socket.IO instance
     this.notificationQueue = new Map(); // Queue for offline users
-    this.keepAliveIntervals = new Map(); // Keep-alive intervals for each client
   }
 
   /**
-   * Add a client connection for real-time notifications
+   * Initialize Socket.IO instance
+   * @param {object} io - Socket.IO server instance
+   */
+  initialize(io) {
+    this.io = io;
+    console.log('NotificationService initialized with Socket.IO');
+  }
+
+  /**
+   * Check if user is connected
    * @param {string} userId - User ID
-   * @param {object} res - Express response object
+   * @returns {boolean}
    */
-  addClient(userId, res) {
-    if (!this.clients.has(userId)) {
-      this.clients.set(userId, new Set());
-    }
-    
-    this.clients.get(userId).add(res);
-    
-    // Setup SSE headers with proper CORS
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
-
-    // Send initial connection confirmation
-    this.sendToClient(res, {
-      type: 'connection',
-      data: {
-        message: 'Connected to real-time notifications',
-        timestamp: new Date().toISOString(),
-        userId: userId
-      }
-    });
-
-    // Send any queued notifications
-    this.sendQueuedNotifications(userId);
-
-    // Setup keep-alive to prevent connection timeouts
-    const keepAliveInterval = setInterval(() => {
-      try {
-        // Send a comment (keep-alive ping) every 30 seconds
-        res.write(': keep-alive\n\n');
-      } catch (error) {
-        console.error('Keep-alive error:', error);
-        clearInterval(keepAliveInterval);
-        this.removeClient(userId, res);
-      }
-    }, 30000); // 30 seconds
-
-    // Store the interval ID
-    if (!this.keepAliveIntervals.has(userId)) {
-      this.keepAliveIntervals.set(userId, new Map());
-    }
-    this.keepAliveIntervals.get(userId).set(res, keepAliveInterval);
-
-    // Handle client disconnect
-    res.on('close', () => {
-      this.removeClient(userId, res);
-    });
-
-    console.log(`User ${userId} connected for real-time notifications`);
+  isUserConnected(userId) {
+    if (!this.io) return false;
+    return this.io.sockets.adapter.rooms.has(`user:${userId}`);
   }
 
   /**
-   * Remove a client connection
-   * @param {string} userId - User ID
-   * @param {object} res - Express response object
-   */
-  removeClient(userId, res) {
-    // Clear keep-alive interval
-    if (this.keepAliveIntervals.has(userId)) {
-      const interval = this.keepAliveIntervals.get(userId).get(res);
-      if (interval) {
-        clearInterval(interval);
-        this.keepAliveIntervals.get(userId).delete(res);
-      }
-      if (this.keepAliveIntervals.get(userId).size === 0) {
-        this.keepAliveIntervals.delete(userId);
-      }
-    }
-
-    // Remove client
-    if (this.clients.has(userId)) {
-      this.clients.get(userId).delete(res);
-      if (this.clients.get(userId).size === 0) {
-        this.clients.delete(userId);
-      }
-    }
-    console.log(`User ${userId} disconnected from real-time notifications`);
-  }
-
-  /**
-   * Send notification to a specific client
-   * @param {object} res - Express response object
-   * @param {object} notification - Notification data
-   */
-  sendToClient(res, notification) {
-    try {
-      const data = `data: ${JSON.stringify(notification)}\n\n`;
-      res.write(data);
-    } catch (error) {
-      console.error('Error sending notification to client:', error);
-    }
-  }
-
-  /**
-   * Send queued notifications to a user
+   * Send queued notifications to a user via Socket.IO
    * @param {string} userId - User ID
    */
   sendQueuedNotifications(userId) {
+    if (!this.io) return;
+    
     if (this.notificationQueue.has(userId)) {
       const notifications = this.notificationQueue.get(userId);
-      const clients = this.clients.get(userId);
       
-      if (clients && clients.size > 0) {
+      if (this.isUserConnected(userId)) {
         notifications.forEach(notification => {
-          clients.forEach(client => {
-            this.sendToClient(client, notification);
-          });
+          this.io.to(`user:${userId}`).emit('notification', notification);
         });
         
         // Clear queue after sending
@@ -132,36 +49,35 @@ class NotificationService extends EventEmitter {
   }
 
   /**
-   * Send real-time notification to user(s)
+   * Send real-time notification to user(s) via Socket.IO
    * @param {string|Array} userIds - User ID(s) to send notification to
    * @param {object} notification - Notification data
    */
   sendNotification(userIds, notification) {
+    if (!this.io) {
+      console.warn('Socket.IO not initialized, cannot send notification');
+      return;
+    }
+
     const targetUsers = Array.isArray(userIds) ? userIds : [userIds];
     
     targetUsers.forEach(userId => {
-      const clients = this.clients.get(userId);
-      
-      if (clients && clients.size > 0) {
-        // User is online - send immediately
-        clients.forEach(client => {
-          this.sendToClient(client, {
-            ...notification,
-            timestamp: new Date().toISOString(),
-            userId: userId
-          });
-        });
+      const notificationData = {
+        ...notification,
+        timestamp: new Date().toISOString(),
+        userId: userId
+      };
+
+      if (this.isUserConnected(userId)) {
+        // User is online - send immediately via Socket.IO
+        this.io.to(`user:${userId}`).emit('notification', notificationData);
       } else {
         // User is offline - queue notification
         if (!this.notificationQueue.has(userId)) {
           this.notificationQueue.set(userId, []);
         }
         
-        this.notificationQueue.get(userId).push({
-          ...notification,
-          timestamp: new Date().toISOString(),
-          userId: userId
-        });
+        this.notificationQueue.get(userId).push(notificationData);
         
         // Limit queue size (keep only last 50 notifications)
         const queue = this.notificationQueue.get(userId);
@@ -176,15 +92,23 @@ class NotificationService extends EventEmitter {
   }
 
   /**
-   * Broadcast notification to all connected users
+   * Broadcast notification to all connected users via Socket.IO
    * @param {object} notification - Notification data
    */
   broadcast(notification) {
-    const allUserIds = Array.from(this.clients.keys());
-    this.sendNotification(allUserIds, {
+    if (!this.io) {
+      console.warn('Socket.IO not initialized, cannot broadcast');
+      return;
+    }
+
+    const notificationData = {
       ...notification,
-      type: 'broadcast'
-    });
+      type: notification.type || 'broadcast',
+      timestamp: new Date().toISOString()
+    };
+
+    // Broadcast to all connected clients
+    this.io.emit('notification', notificationData);
   }
 
   /**
@@ -357,12 +281,26 @@ class NotificationService extends EventEmitter {
    * @returns {object} Connection stats
    */
   getStats() {
-    const totalConnections = Array.from(this.clients.values())
-      .reduce((sum, clientSet) => sum + clientSet.size, 0);
+    if (!this.io) {
+      return {
+        connectedUsers: 0,
+        totalConnections: 0,
+        queuedNotifications: 0
+      };
+    }
+
+    const sockets = this.io.sockets.sockets;
+    const connectedUsers = new Set();
+    
+    sockets.forEach(socket => {
+      if (socket.userId) {
+        connectedUsers.add(socket.userId);
+      }
+    });
     
     return {
-      connectedUsers: this.clients.size,
-      totalConnections: totalConnections,
+      connectedUsers: connectedUsers.size,
+      totalConnections: sockets.size,
       queuedNotifications: Array.from(this.notificationQueue.values())
         .reduce((sum, queue) => sum + queue.length, 0)
     };

@@ -357,35 +357,37 @@ const VendorMessages = () => {
   });
 
   return (
-    <div className="space-y-6 pt-16">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <MessageSquare className="w-8 h-8 text-primary" />
-            Vendor Messages
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Communicate with property seekers and clients
-          </p>
-        </div>
-        
-        <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Messages</SelectItem>
-              <SelectItem value="unread">Unread</SelectItem>
-              <SelectItem value="read">Read</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="flex flex-col h-screen pt-16">
+      <div className="flex-shrink-0 px-6 py-4 border-b bg-background">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <MessageSquare className="w-8 h-8 text-primary" />
+              Vendor Messages
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Communicate with property seekers and clients
+            </p>
+          </div>
+          
+          <div className="flex gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Messages</SelectItem>
+                <SelectItem value="unread">Unread</SelectItem>
+                <SelectItem value="read">Read</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      <div className={`grid gap-6 h-[calc(100vh-12rem)] ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-3'}`}>
-        <Card className={`${isMobile ? (showConversationList ? 'block' : 'hidden') : 'lg:col-span-1'}`}>
-          <CardHeader className="pb-3">
+      <div className="flex-1 flex overflow-hidden">
+        <Card className={`flex flex-col ${isMobile ? (showConversationList ? 'flex' : 'hidden') : 'w-1/3 border-r'}`}>
+          <CardHeader className="flex-shrink-0 pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Conversations</CardTitle>
               <Badge variant="secondary">{conversations.length}</Badge>
@@ -401,8 +403,8 @@ const VendorMessages = () => {
               />
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-20rem)]">
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <ScrollArea className="h-full">
               <div className="space-y-1 p-3">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
@@ -511,10 +513,10 @@ const VendorMessages = () => {
           </CardContent>
         </Card>
 
-        <Card className={`${isMobile ? (!showConversationList ? 'block' : 'hidden') : 'lg:col-span-2'}`}>
+        <Card className={`flex flex-col ${isMobile ? (!showConversationList ? 'flex' : 'hidden') : 'flex-1'}`}>
           {activeConversation ? (
             <>
-              <CardHeader className="pb-3 border-b">
+              <CardHeader className="flex-shrink-0 pb-3 border-b">
                 {isMobile && (
                   <div className="flex items-center gap-2 mb-3">
                     <Button
@@ -622,7 +624,7 @@ const VendorMessages = () => {
               </CardHeader>
 
               {activeConversation.property && (
-                <div className="px-6 py-3 bg-muted/30 border-b">
+                <div className="flex-shrink-0 px-6 py-3 bg-muted/30 border-b">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
@@ -635,8 +637,8 @@ const VendorMessages = () => {
                 </div>
               )}
 
-              <CardContent className="p-0">
-                <ScrollArea className="h-[calc(100vh-28rem)] p-4">
+              <CardContent className="flex-1 p-0 overflow-hidden">
+                <ScrollArea className="h-full p-4">
                   <div className="space-y-4">
                     {messages.map((message) => {
                       const senderId = typeof message.sender === 'string' ? message.sender : message.sender._id;
@@ -754,97 +756,97 @@ const VendorMessages = () => {
                     )}
                   </div>
                 </ScrollArea>
+              </CardContent>
 
-                <div className="p-4 border-t">
-                  {selectedFiles.length > 0 && (
-                    <div className="mb-3 flex flex-wrap gap-2">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center gap-2 bg-muted px-3 py-2 rounded-lg">
-                          <span className="text-sm truncate max-w-[200px]">{file.name}</span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-5 w-5 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                            onClick={() => removeFile(index)}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              <div className="flex-shrink-0 p-4 border-t">
+                {selectedFiles.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-muted px-3 py-2 rounded-lg">
+                        <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => removeFile(index)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex items-end gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => handleFileSelect(e, 'document')}
+                    multiple
+                  />
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileSelect(e, 'image')}
+                    multiple
+                  />
                   
-                  <div className="flex items-end gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => handleFileSelect(e, 'document')}
-                      multiple
-                    />
-                    <input
-                      ref={imageInputRef}
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => handleFileSelect(e, 'image')}
-                      multiple
-                    />
-                    
-                    <div className="flex gap-1">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading || sending}
-                        title="Attach document"
-                      >
-                        <Paperclip className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => imageInputRef.current?.click()}
-                        disabled={isUploading || sending}
-                        title="Attach image"
-                      >
-                        <ImageIcon className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="flex-1">
-                      <Textarea
-                        placeholder="Type your message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessage();
-                          }
-                        }}
-                        className="min-h-[40px] resize-none"
-                        disabled={sending || isUploading}
-                      />
-                    </div>
-                    
+                  <div className="flex gap-1">
                     <Button 
-                      onClick={sendMessage} 
-                      disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || isUploading}
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading || sending}
+                      title="Attach document"
                     >
-                      {sending || isUploading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
+                      <Paperclip className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={isUploading || sending}
+                      title="Attach image"
+                    >
+                      <ImageIcon className="w-4 h-4" />
                     </Button>
                   </div>
+                  
+                  <div className="flex-1">
+                    <Textarea
+                      placeholder="Type your message..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          sendMessage();
+                        }
+                      }}
+                      className="min-h-[40px] resize-none"
+                      disabled={sending || isUploading}
+                    />
+                  </div>
+                  
+                  <Button 
+                    onClick={sendMessage} 
+                    disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || isUploading}
+                  >
+                    {sending || isUploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
-              </CardContent>
+              </div>
             </>
           ) : (
-            <CardContent className="flex items-center justify-center h-full">
+            <CardContent className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <MessageSquare className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Select a conversation</h3>

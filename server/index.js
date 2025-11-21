@@ -285,9 +285,13 @@ app.use('/api/refund_policy', refund_policyRoutes);
 // Import services
 const adminRealtimeService = require('./services/adminRealtimeService');
 const socketService = require('./services/socketService');
+const notificationService = require('./services/notificationService');
 
 // Initialize Socket.IO service
 socketService.initialize(io);
+
+// Initialize notification service with Socket.IO
+notificationService.initialize(io);
 
 // Setup admin-specific socket handlers
 io.on('connection', (socket) => {

@@ -1,6 +1,7 @@
-// Real-time notifications hook using Server-Sent Events
-import { useEffect, useState, useRef } from 'react';
+// Real-time notifications hook using Socket.IO
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { socketService } from '@/services/socketService';
 import { authService } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
 
@@ -23,89 +24,57 @@ export const useRealTimeNotifications = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState<RealTimeNotification[]>([]);
   const [stats, setStats] = useState<NotificationStats | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const notificationIdsRef = useRef<Set<string>>(new Set());
   const { user } = useAuth();
 
-  // Connect to notification stream
-  const connect = () => {
-    const token = authService.getToken();
-    if (!user || !token || eventSourceRef.current) {
+  // Handle incoming notifications from Socket.IO
+  const handleNotification = useCallback((notification: RealTimeNotification) => {
+    const notificationId = `${notification.type}-${notification.timestamp}-${notification.userId}`;
+    
+    if (notificationIdsRef.current.has(notificationId)) {
       return;
     }
+    
+    notificationIdsRef.current.add(notificationId);
+    
+    if (notificationIdsRef.current.size > 100) {
+      const firstId = Array.from(notificationIdsRef.current)[0];
+      notificationIdsRef.current.delete(firstId);
+    }
+    
+    processNotification(notification);
+    
+    setNotifications(prev => {
+      const updated = [notification, ...prev];
+      return updated.slice(0, 20);
+    });
+  }, [user]);
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.buildhomemartsquares.com/api';
-    const url = `${apiUrl}/notifications/stream?token=${encodeURIComponent(token)}`;
+  // Connect to Socket.IO and listen for notifications
+  const connect = useCallback(async () => {
+    if (!user) return;
 
-    const eventSource = new EventSource(url);
-
-    eventSource.onopen = () => {
+    try {
+      const socket = await socketService.connect();
       setIsConnected(true);
-    };
 
-    eventSource.onmessage = (event) => {
-      try {
-        const notification: RealTimeNotification = JSON.parse(event.data);
-        
-        const notificationId = `${notification.type}-${notification.timestamp}-${notification.userId}`;
-        
-        if (notificationIdsRef.current.has(notificationId)) {
-          return;
-        }
-        
-        if (notification.type === 'connection') {
-          return;
-        }
-        
-        notificationIdsRef.current.add(notificationId);
-        
-        if (notificationIdsRef.current.size > 100) {
-          const firstId = Array.from(notificationIdsRef.current)[0];
-          notificationIdsRef.current.delete(firstId);
-        }
-        
-        handleNotification(notification);
-        
-        setNotifications(prev => {
-          const updated = [notification, ...prev];
-          return updated.slice(0, 20);
-        });
-        
-      } catch (error) {
-        // Silent error handling
-      }
-    };
+      // Listen for notification events
+      socketService.on('notification', handleNotification);
 
-    eventSource.onerror = () => {
-      setIsConnected(false);
-      
-      if (eventSourceRef.current === eventSource) {
-        eventSource.close();
-        eventSourceRef.current = null;
-      }
-      
-      setTimeout(() => {
-        const currentToken = authService.getToken();
-        if (user && currentToken && !eventSourceRef.current) {
-          connect();
-        }
-      }, 5000);
-    };
-
-    eventSourceRef.current = eventSource;
-  };
-
-  // Disconnect from notification stream
-  const disconnect = () => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    } catch (error) {
+      console.error('Failed to connect to notification service:', error);
       setIsConnected(false);
     }
-  };
+  }, [user, handleNotification]);
+
+  // Disconnect from Socket.IO
+  const disconnect = useCallback(() => {
+    socketService.off('notification', handleNotification);
+    setIsConnected(false);
+  }, [handleNotification]);
 
   // Handle different types of notifications
-  const handleNotification = (notification: RealTimeNotification) => {
+  const processNotification = (notification: RealTimeNotification) => {
     // Show toast notification based on type
     const notificationConfig = getNotificationConfig(notification);
     
@@ -353,22 +322,21 @@ export const useRealTimeNotifications = () => {
 
   // Auto-connect when user is authenticated
   useEffect(() => {
-    const token = authService.getToken();
-    if (user && token && !eventSourceRef.current) {
+    if (user) {
       connect();
     }
 
     return () => {
       disconnect();
     };
-  }, [user]);
+  }, [user, connect, disconnect]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       disconnect();
     };
-  }, []);
+  }, [disconnect]);
 
   return {
     isConnected,

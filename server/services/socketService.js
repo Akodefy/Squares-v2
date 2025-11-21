@@ -65,6 +65,10 @@ class SocketService {
       // Broadcast user online status
       this.broadcastUserStatus(userId, true);
 
+      // Send queued notifications
+      const notificationService = require('./notificationService');
+      notificationService.sendQueuedNotifications(userId);
+
       // Handle joining conversations
       socket.on('join_conversation', async (conversationId) => {
         try {
