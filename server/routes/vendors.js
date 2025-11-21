@@ -3938,47 +3938,52 @@ router.post('/subscription/refresh', requireVendorRole, asyncHandler(async (req,
       }
     };
     
-    if (activeSubscription && activeSubscription.plan) {
-      const plan = activeSubscription.plan;
-      const maxProperties = plan.limits?.properties || 0;
+    if (activeSubscription) {
+      // Use planSnapshot if available (preserves plan at subscription time)
+      // This ensures existing subscribers are not affected by superadmin plan updates
+      const plan = activeSubscription.planSnapshot || activeSubscription.plan;
       
-      // Handle features format
-      let planFeatures = [];
-      if (plan.features && Array.isArray(plan.features)) {
-        planFeatures = plan.features.map(feature => {
-          if (typeof feature === 'string') {
-            return feature;
-          } else if (feature && typeof feature === 'object' && feature.name) {
-            return feature.enabled !== false ? feature.name : null;
-          }
-          return null;
-        }).filter(Boolean);
-      }
-      
-      refreshedData = {
-        hasActiveSubscription: true,
-        subscription: {
-          id: activeSubscription._id,
-          planName: plan.name,
-          planId: plan._id,
-          identifier: plan.identifier,
-          status: activeSubscription.status,
-          startDate: activeSubscription.startDate,
-          endDate: activeSubscription.endDate,
-          features: planFeatures,
-          limits: plan.limits || {},
-          billingCycle: activeSubscription.billingCycle || 'monthly'
-        },
-        limits: {
-          maxProperties: maxProperties === 0 ? 999999 : maxProperties,
-          currentProperties,
-          canAddMore: maxProperties === 0 || currentProperties < maxProperties,
-          planName: plan.name,
-          features: planFeatures,
-          planId: plan._id,
-          limits: plan.limits || {}
+      if (plan) {
+        const maxProperties = plan.limits?.properties !== undefined ? plan.limits.properties : 0;
+        
+        // Handle features format
+        let planFeatures = [];
+        if (plan.features && Array.isArray(plan.features)) {
+          planFeatures = plan.features.map(feature => {
+            if (typeof feature === 'string') {
+              return feature;
+            } else if (feature && typeof feature === 'object' && feature.name) {
+              return feature.enabled !== false ? feature.name : null;
+            }
+            return null;
+          }).filter(Boolean);
         }
-      };
+      
+        refreshedData = {
+          hasActiveSubscription: true,
+          subscription: {
+            id: activeSubscription._id,
+            planName: plan.name,
+            planId: plan._id || activeSubscription.plan?._id,
+            identifier: plan.identifier,
+            status: activeSubscription.status,
+            startDate: activeSubscription.startDate,
+            endDate: activeSubscription.endDate,
+            features: planFeatures,
+            limits: plan.limits || {},
+            billingCycle: activeSubscription.billingCycle || 'monthly'
+          },
+          limits: {
+            maxProperties: maxProperties === 0 ? 999999 : maxProperties,
+            currentProperties,
+            canAddMore: maxProperties === 0 || currentProperties < maxProperties,
+            planName: plan.name,
+            features: planFeatures,
+            planId: plan._id || activeSubscription.plan?._id,
+            limits: plan.limits || {}
+          }
+        };
+      }
     }
     
     res.json({

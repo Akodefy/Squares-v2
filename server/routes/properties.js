@@ -256,11 +256,16 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
         ]
       });
 
-      // Check limits
+      // Check limits using planSnapshot (preserves plan at subscription time)
+      // This ensures existing subscribers are not affected by superadmin plan updates
       let maxProperties = 5; // Free tier default
-      if (activeSubscription && activeSubscription.plan) {
-        const planLimit = activeSubscription.plan.limits?.properties || 0;
-        maxProperties = planLimit === 0 ? 999999 : planLimit; // 0 means unlimited
+      if (activeSubscription) {
+        // Use snapshot if available, otherwise fallback to current plan
+        const planData = activeSubscription.planSnapshot || activeSubscription.plan;
+        if (planData && planData.limits) {
+          const planLimit = planData.limits.properties !== undefined ? planData.limits.properties : 5;
+          maxProperties = planLimit === 0 ? 999999 : planLimit; // 0 means unlimited
+        }
       }
 
       if (currentProperties >= maxProperties && maxProperties !== 999999) {
