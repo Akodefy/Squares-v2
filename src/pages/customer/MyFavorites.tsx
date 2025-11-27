@@ -234,7 +234,7 @@ const MyFavorites: React.FC = () => {
               </Button>
             )}
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className={`w-full ${isMobile ? 'w-full' : 'md:w-48'}`}>
+              <SelectTrigger className={`w-full sm:w-auto md:w-48`}>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>

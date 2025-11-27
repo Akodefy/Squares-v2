@@ -90,15 +90,25 @@ const PropertyComparison = () => {
     setRefreshing(false);
   }, [loadProperties, selectedProperties]);
 
-  // Initialize from URL params only once on mount
+  // Initialize from URL params or localStorage only once on mount
   useEffect(() => {
     if (!hasInitialized.current) {
-      const ids = searchParams.get('properties')?.split(',').filter(Boolean) || [];
+      const urlIds = searchParams.get('properties')?.split(',').filter(Boolean) || [];
+      const storedIds = localStorage.getItem('compareProperties');
+      const ids = urlIds.length > 0 ? urlIds : (storedIds ? JSON.parse(storedIds) : []);
+
       setSelectedProperties(ids);
       loadProperties(ids);
       hasInitialized.current = true;
     }
   }, []);
+
+  // Persist selected properties to localStorage whenever they change
+  useEffect(() => {
+    if (hasInitialized.current) {
+      localStorage.setItem('compareProperties', JSON.stringify(selectedProperties));
+    }
+  }, [selectedProperties]);
 
   // Listen to realtime events for property updates - stable callback
   const handlePropertyUpdate = useCallback((data: any) => {

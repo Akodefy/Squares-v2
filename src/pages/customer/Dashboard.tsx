@@ -348,7 +348,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Quick Actions */}
-        <Card>
+        <Card className="h-fit">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
             <CardDescription>Frequently used features</CardDescription>

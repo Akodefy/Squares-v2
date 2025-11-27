@@ -100,7 +100,7 @@ const Index = () => {
         </p>
         <Link
           to="/products"
-          className="bg-accent text-accent-foreground px-8 py-3 rounded-lg font-semibold hover:bg-accent/90 transition-colors shadow-[var(--shadow-medium)] inline-block"
+          className="bg-accent text-accent-foreground px-8 py-3 rounded-lg font-semibold hover:bg-accent/80 hover:brightness-110 hover:shadow-lg hover:scale-105 transition-all duration-300 shadow-[var(--shadow-medium)] inline-block"
         >
           Get Started Today
         </Link>

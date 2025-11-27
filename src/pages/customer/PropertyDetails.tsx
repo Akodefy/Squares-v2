@@ -457,8 +457,8 @@ const PropertyDetails: React.FC = () => {
                     <p className="text-2xl font-bold">{formatArea(property.area).split(' ')[0]}</p>
                     <p className="text-sm text-muted-foreground">Sq Ft</p>
                   </div>
-                  <div className="text-center p-4 bg-muted rounded-lg">
-                    <Building2 className="w-6 h-6 mx-auto mb-2 text-primary" />
+                  <div className="flex flex-col items-center justify-center text-center p-4 bg-muted rounded-lg">
+                    <Building2 className="w-6 h-6 mb-2 text-primary" />
                     <p className="text-2xl font-bold capitalize">{property.type}</p>
                     <p className="text-sm text-muted-foreground">Type</p>
                   </div>
@@ -549,9 +549,9 @@ const PropertyDetails: React.FC = () => {
                       <span className="text-muted-foreground">Listed On:</span>
                       <span className="font-medium">{new Date(property.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Property ID:</span>
-                      <span className="font-medium text-xs">{property._id}</span>
+                      <span className="font-medium text-xs break-all text-right">{property._id}</span>
                     </div>
                   </div>
                 </div>

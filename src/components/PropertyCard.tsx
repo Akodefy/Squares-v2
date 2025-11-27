@@ -12,6 +12,7 @@ import EnterprisePropertyContactDialog from "@/components/EnterprisePropertyCont
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { vendorService } from "@/services/vendorService";
+import { favoriteService } from "@/services/favoriteService";
 
 interface PropertyCardProps {
   property: Property;
@@ -25,6 +26,8 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   const [showEnterpriseDialog, setShowEnterpriseDialog] = useState(false);
   const [isEnterpriseProperty, setIsEnterpriseProperty] = useState(false);
   const [checkingEnterprise, setCheckingEnterprise] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [loadingFavorite, setLoadingFavorite] = useState(false);
   
   const primaryImage = propertyService.getPrimaryImage(property);
   const formattedPrice = propertyService.formatPrice(property.price, property.listingType);
@@ -55,6 +58,22 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
 
     checkEnterpriseStatus();
   }, [property.vendor?._id, property.owner?._id]);
+
+  // Check if property is favorited
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (isAuthenticated && !isVendor) {
+        try {
+          const favorited = await favoriteService.isFavorite(property._id);
+          setIsFavorited(favorited);
+        } catch (error) {
+          console.error("Failed to check favorite status:", error);
+        }
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [isAuthenticated, isVendor, property._id]);
 
   const handleViewDetails = () => {
     // Check if the current user is the vendor owner of this property
@@ -92,12 +111,30 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
     }
   };
 
-  const handleFavoriteClick = () => {
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+
     if (!isAuthenticated) {
       navigate('/login', { state: { from: `/property/${property._id}`, action: 'favorite' } });
       return;
     }
-    // TODO: Add favorite functionality
+
+    if (loadingFavorite) return;
+
+    try {
+      setLoadingFavorite(true);
+      if (isFavorited) {
+        await favoriteService.removeFromFavorites(property._id);
+        setIsFavorited(false);
+      } else {
+        await favoriteService.addToFavorites(property._id);
+        setIsFavorited(true);
+      }
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+    } finally {
+      setLoadingFavorite(false);
+    }
   };
 
   return (
@@ -131,13 +168,14 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
         >
           {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
         </Badge>
-        <Button 
-          size="icon" 
-          variant="ghost" 
-          className="absolute top-3 right-3 bg-background/80 backdrop-blur hover:bg-background"
+        <Button
+          size="icon"
+          variant="ghost"
+          className={`absolute top-3 right-3 bg-background/80 backdrop-blur hover:bg-background ${isFavorited ? 'text-red-500' : ''}`}
           onClick={handleFavoriteClick}
+          disabled={loadingFavorite}
         >
-          <Heart className="h-5 w-5" />
+          <Heart className={`h-5 w-5 ${isFavorited ? 'fill-current' : ''}`} />
         </Button>
       </div>
       

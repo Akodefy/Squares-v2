@@ -299,10 +299,16 @@ const Profile = () => {
 
     } catch (error) {
       console.error('Error loading user data:', error);
+
+      // Check if it's a network error (offline)
+      const isOffline = !navigator.onLine || (error instanceof Error && error.message.includes('Failed to fetch'));
+
       toast({
-        title: "Error",
-        description: "Failed to load profile data",
-        variant: "destructive"
+        title: isOffline ? "Connection Issue" : "Error",
+        description: isOffline
+          ? "You're offline. Please check your internet connection and try again."
+          : "Failed to load profile data. Please try again.",
+        variant: isOffline ? "default" : "destructive"
       });
     } finally {
       setLoading(false);

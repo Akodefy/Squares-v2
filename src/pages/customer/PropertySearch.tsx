@@ -275,7 +275,7 @@ const PropertySearch = () => {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar - Filters */}
           <aside className="lg:w-80 flex-shrink-0">
-            <Card className="sticky top-20">
+            <Card className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
               <CardContent className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Filters</h2>
                 

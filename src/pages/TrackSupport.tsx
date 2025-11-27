@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, Eye, MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, LogIn } from "lucide-react";
 import {
   Dialog,
@@ -150,11 +151,44 @@ const TrackSupport = () => {
   const getPriorityBadge = (priority: string) => {
     const colors: Record<string, string> = {
       low: 'bg-gray-100 text-gray-800',
+      normal: 'bg-blue-100 text-blue-800',
       medium: 'bg-blue-100 text-blue-800',
       high: 'bg-orange-100 text-orange-800',
       urgent: 'bg-red-100 text-red-800'
     };
-    return colors[priority] || colors.medium;
+    return colors[priority] || colors.normal;
+  };
+
+  const getPriorityLabel = (priority: string) => {
+    const labels: Record<string, string> = {
+      low: 'Low',
+      normal: 'Normal',
+      medium: 'Normal',
+      high: 'High',
+      urgent: 'Urgent'
+    };
+    return labels[priority] || 'Normal';
+  };
+
+  const getStatusTooltip = (status: string) => {
+    const tooltips: Record<string, string> = {
+      open: 'Your ticket has been received and is waiting to be reviewed',
+      'in-progress': 'Our support team is currently working on your ticket',
+      resolved: 'Your issue has been resolved. You can reopen if needed',
+      closed: 'This ticket has been closed and is archived'
+    };
+    return tooltips[status] || tooltips.open;
+  };
+
+  const getPriorityTooltip = (priority: string) => {
+    const tooltips: Record<string, string> = {
+      low: 'Low priority - Response within 3-5 business days',
+      normal: 'Normal priority - Response within 1-2 business days',
+      medium: 'Normal priority - Response within 1-2 business days',
+      high: 'High priority - Response within 24 hours',
+      urgent: 'Urgent - Immediate attention required'
+    };
+    return tooltips[priority] || tooltips.normal;
   };
 
   const filteredTickets = tickets.filter(ticket =>
@@ -176,42 +210,44 @@ const TrackSupport = () => {
         </Button>
       </div>
 
-      {/* Track by Number */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Track Ticket by Number</CardTitle>
-          <CardDescription>Enter your ticket number and email to view its status</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="ticketNumber">Ticket Number</Label>
-                <Input
-                  id="ticketNumber"
-                  placeholder="TKT-123456"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
-                />
+      {/* Track by Number - Only show for non-authenticated users */}
+      {!isAuthenticated && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Track Ticket by Number</CardTitle>
+            <CardDescription>Enter your ticket number and email to view its status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="ticketNumber">Ticket Number</Label>
+                  <Input
+                    id="ticketNumber"
+                    placeholder="TKT-123456"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="trackingEmail">Email Address</Label>
+                  <Input
+                    id="trackingEmail"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={trackingEmail}
+                    onChange={(e) => setTrackingEmail(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="trackingEmail">Email Address</Label>
-                <Input
-                  id="trackingEmail"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={trackingEmail}
-                  onChange={(e) => setTrackingEmail(e.target.value)}
-                />
-              </div>
+              <Button onClick={handleTrackByNumber} className="w-full md:w-auto">
+                <Search className="w-4 h-4 mr-2" />
+                Track Ticket
+              </Button>
             </div>
-            <Button onClick={handleTrackByNumber} className="w-full md:w-auto">
-              <Search className="w-4 h-4 mr-2" />
-              Track Ticket
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* My Tickets */}
       <Card>
@@ -255,7 +291,7 @@ const TrackSupport = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search tickets..."
+                  placeholder="Search by ticket title or ticket ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -296,16 +332,34 @@ const TrackSupport = () => {
                               <div className="space-y-2 flex-1">
                                 <div className="flex items-center gap-2">
                                   <CardTitle className="text-lg">{ticket.subject}</CardTitle>
-                                  <Badge className={statusInfo.class}>
-                                    <StatusIcon className="w-3 h-3 mr-1" />
-                                    {statusInfo.label}
-                                  </Badge>
-                                  <Badge className={getPriorityBadge(ticket.priority)}>
-                                    {ticket.priority.toUpperCase()}
-                                  </Badge>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge className={statusInfo.class}>
+                                          <StatusIcon className="w-3 h-3 mr-1" />
+                                          {statusInfo.label}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{getStatusTooltip(ticket.status)}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge className={getPriorityBadge(ticket.priority)}>
+                                          {getPriorityLabel(ticket.priority)}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{getPriorityTooltip(ticket.priority)}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
                                 <CardDescription>
-                                  Ticket #{ticket.ticketNumber} • {new Date(ticket.createdAt).toLocaleDateString()}
+                                  Ticket #{ticket.ticketNumber} • Created: {new Date(ticket.createdAt).toLocaleDateString()} • Updated: {new Date(ticket.updatedAt).toLocaleDateString()}
                                 </CardDescription>
                               </div>
                             </div>

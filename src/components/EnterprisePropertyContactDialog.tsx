@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Building2, MapPin, IndianRupee } from "lucide-react";
-import { Property } from "@/services/propertyService";
+import { Property, propertyService } from "@/services/propertyService";
 
 interface EnterprisePropertyContactDialogProps {
   open: boolean;
@@ -22,7 +22,8 @@ const EnterprisePropertyContactDialog: React.FC<EnterprisePropertyContactDialogP
   property,
 }) => {
   const whatsappNumber = "+91 90807 20215";
-  const whatsappMessage = `Hi, I'm interested in the property: ${property.title} located at ${property.address.city}, ${property.address.state}. Price: ₹${property.price.toLocaleString('en-IN')}. Can you please provide more details?`;
+  const formattedPrice = propertyService.formatPrice(property.price, property.listingType);
+  const whatsappMessage = `Hi, I'm interested in the property: ${property.title} located at ${property.address.city}, ${property.address.state}. Price: ${formattedPrice}. Can you please provide more details?`;
   
   const handleWhatsAppContact = () => {
     const encodedMessage = encodeURIComponent(whatsappMessage);
@@ -53,9 +54,7 @@ const EnterprisePropertyContactDialog: React.FC<EnterprisePropertyContactDialogP
             </div>
             <div className="flex items-center text-sm text-gray-600">
               <IndianRupee className="w-4 h-4 mr-1" />
-              ₹{property.price.toLocaleString('en-IN')}
-              {property.listingType === 'rent' && '/month'}
-              {property.listingType === 'lease' && '/year'}
+              {formattedPrice}
             </div>
           </div>
 

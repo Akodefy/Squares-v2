@@ -12,6 +12,7 @@ import { Property } from "@/services/propertyService";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { getPropertyContactInfo } from "@/utils/propertyUtils";
+import { propertyService } from "@/services/propertyService";
 
 interface PropertyContactDialogProps {
   open: boolean;
@@ -91,7 +92,7 @@ const PropertyContactDialog: React.FC<PropertyContactDialogProps> = ({
               {property.address.district ? `${property.address.city}, ${property.address.district}, ${property.address.state}` : `${property.address.city}, ${property.address.state}`}
             </p>
             <p className="text-sm font-semibold text-primary mt-1">
-              ₹{property.price.toLocaleString("en-IN")}
+              {propertyService.formatPrice(property.price, property.listingType)}
             </p>
           </div>
 

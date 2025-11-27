@@ -111,7 +111,7 @@ const Products = () => {
           <Input
             type="text"
             placeholder="Search properties by location, type..."
-            className="pl-10 h-12"
+            className="pl-10 h-12 border-2 border-border focus-visible:border-primary"
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
           />
