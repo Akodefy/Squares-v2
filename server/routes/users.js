@@ -683,23 +683,17 @@ router.put('/profile', asyncHandler(async (req, res) => {
     preferences,
   } = req.body;
 
-  // Update email if provided and different
-  if (email && email !== user.email) {
-    // Check if email is already taken by another user
-    const existingUser = await User.findOne({ 
-      email: email,
-      _id: { $ne: user._id }
+  // Check if email or phone is being changed - these require OTP verification
+  const isEmailChanging = email && email !== user.email;
+  const isPhoneChanging = profile?.phone && profile.phone !== user.profile.phone;
+
+  if (isEmailChanging || isPhoneChanging) {
+    return res.status(403).json({
+      success: false,
+      requiresOTP: true,
+      message: 'Email and phone changes require verification. Please use the OTP verification flow.',
+      endpoint: '/api/auth/request-profile-update-otp'
     });
-    
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email is already in use by another account'
-      });
-    }
-    
-    user.email = email;
-    user.emailVerified = false; // Reset verification status on email change
   }
 
   // Helper function to deeply merge objects, filtering out undefined values

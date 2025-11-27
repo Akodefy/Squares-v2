@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { PincodeAutocomplete } from "@/components/PincodeAutocomplete";
 import { locaService } from "@/services/locaService";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -78,7 +80,22 @@ const Profile = () => {
     loadingCities: false
   });
 
-
+  // OTP verification states
+  const [showOTPDialog, setShowOTPDialog] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpExpiry, setOtpExpiry] = useState(10);
+  const [pendingChanges, setPendingChanges] = useState<{
+    newEmail?: string;
+    newPhone?: string;
+    otherUpdates?: Partial<UserType>;
+  }>({});
+  const [originalValues, setOriginalValues] = useState({
+    email: "",
+    phone: ""
+  });
 
   // Real stats from API - Customer-focused only
   const [stats, setStats] = useState({
@@ -208,10 +225,16 @@ const Profile = () => {
         location: locationString,
         address: existingAddress?.street || "",
         pincode: existingAddress?.zipCode || "",
-        bio: "", // Bio field not available in current User model
+        bio: userData.profile.bio || "",
         joinDate: userService.formatCreationDate(userData.createdAt),
         avatar: (userData.profile as any).avatar || "", // Avatar may not be in type definition but exists in API
         verified: userData.profile.emailVerified || false
+      });
+
+      // Save original values for comparison
+      setOriginalValues({
+        email: userData.email,
+        phone: userData.profile.phone || ""
       });
 
       // Populate location dropdowns with existing data
@@ -340,12 +363,15 @@ const Profile = () => {
 
   const handleSave = async () => {
     if (!user) return;
-    
+
     try {
       setSaving(true);
-      
+
+      // Check if email or phone changed
+      const isEmailChanged = profile.email !== originalValues.email;
+      const isPhoneChanged = profile.phone !== originalValues.phone;
+
       // Prepare user data for update
-      // Ensure preferences is always an object, never undefined
       const defaultPreferences = {
         notifications: {
           email: true,
@@ -376,6 +402,7 @@ const Profile = () => {
           firstName: profile.name.split(' ')[0] || '',
           lastName: profile.name.split(' ').slice(1).join(' ') || '',
           phone: profile.phone,
+          bio: profile.bio,
           address: {
             street: profile.address,
             city: locationData.selectedCity || profile.location.split(',')[0]?.trim() || '',
@@ -387,17 +414,37 @@ const Profile = () => {
         }
       };
 
-      console.log('Profile data being sent:', updateData);
-      console.log('Current profile.pincode:', profile.pincode);
-      console.log('Address object being sent:', updateData.profile?.address);
+      // If email or phone changed, trigger OTP verification
+      if (isEmailChanged || isPhoneChanged) {
+        console.log('Email or phone changed, requesting OTP verification');
+        setPendingChanges({
+          newEmail: isEmailChanged ? profile.email : undefined,
+          newPhone: isPhoneChanged ? profile.phone : undefined,
+          otherUpdates: updateData
+        });
+        setSaving(false);
+        await handleRequestOTP(isEmailChanged ? profile.email : undefined, isPhoneChanged ? profile.phone : undefined);
+        return;
+      }
 
+      // No email/phone change, proceed with normal update
+      console.log('Profile data being sent:', updateData);
       await userService.updateCurrentUser(updateData);
-      await loadUserData(); // Refresh data
-      console.log('User data refreshed, checking pincode...');
+      await loadUserData();
       setIsEditing(false);
-      
-    } catch (error) {
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+
+    } catch (error: any) {
       console.error('Error saving profile:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -406,6 +453,144 @@ const Profile = () => {
   const handleCancel = () => {
     setIsEditing(false);
     // Reset form data if needed
+  };
+
+  // OTP verification handlers
+  const handleRequestOTP = async (newEmail?: string, newPhone?: string) => {
+    try {
+      setSendingOtp(true);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/request-profile-update-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          newEmail,
+          newPhone,
+          currentEmail: originalValues.email,
+          currentPhone: originalValues.phone
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setShowOTPDialog(true);
+        setOtpSent(true);
+        setOtpExpiry(data.expiryMinutes || 10);
+
+        toast({
+          title: "Verification Code Sent",
+          description: data.message,
+        });
+      } else {
+        throw new Error(data.message || 'Failed to send verification code');
+      }
+    } catch (error: any) {
+      console.error('Error requesting OTP:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send verification code. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter the complete 6-digit code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setVerifyingOtp(true);
+
+      // First verify OTP and update email/phone
+      const verifyResponse = await fetch(`${import.meta.env.VITE_API_URL}/auth/verify-profile-update-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          otp,
+          newEmail: pendingChanges.newEmail,
+          newPhone: pendingChanges.newPhone
+        })
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyResponse.ok || !verifyData.success) {
+        throw new Error(verifyData.message || 'Invalid verification code');
+      }
+
+      // Now update other profile fields if any
+      if (pendingChanges.otherUpdates) {
+        // Remove email and phone from otherUpdates as they're already updated
+        const { profile: profileUpdate, ...rest } = pendingChanges.otherUpdates;
+        if (profileUpdate) {
+          const { phone, ...otherProfileFields } = profileUpdate as any;
+          const finalUpdate = {
+            ...rest,
+            profile: otherProfileFields
+          };
+
+          // Only update if there are other fields to update
+          if (Object.keys(otherProfileFields).length > 1) {
+            await userService.updateCurrentUser(finalUpdate);
+          }
+        }
+      }
+
+      // Reload user data
+      await loadUserData();
+
+      // Close dialog and reset states
+      setShowOTPDialog(false);
+      setOtp("");
+      setOtpSent(false);
+      setPendingChanges({});
+      setIsEditing(false);
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated and verified successfully.",
+      });
+
+    } catch (error: any) {
+      console.error('Error verifying OTP:', error);
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Invalid verification code. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const handleCancelOTP = () => {
+    setShowOTPDialog(false);
+    setOtp("");
+    setOtpSent(false);
+    setPendingChanges({});
+    // Revert changes to profile
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        email: originalValues.email,
+        phone: originalValues.phone
+      }));
+    }
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -994,6 +1179,87 @@ const Profile = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* OTP Verification Dialog */}
+      <Dialog open={showOTPDialog} onOpenChange={(open) => !verifyingOtp && !open && handleCancelOTP()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verify Your Changes</DialogTitle>
+            <DialogDescription>
+              {pendingChanges.newEmail
+                ? `Enter the 6-digit code sent to your new email: ${pendingChanges.newEmail}`
+                : `Enter the 6-digit code sent to your current email: ${originalValues.email}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Verification Code</Label>
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={otp}
+                  onChange={(value) => setOtp(value)}
+                  disabled={verifyingOtp}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                Code expires in {otpExpiry} minutes
+              </p>
+            </div>
+
+            {pendingChanges.newEmail && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <strong>Email Change:</strong> {originalValues.email} → {pendingChanges.newEmail}
+                </p>
+              </div>
+            )}
+
+            {pendingChanges.newPhone && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <strong>Phone Change:</strong> {originalValues.phone} → {pendingChanges.newPhone}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelOTP}
+              disabled={verifyingOtp}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleVerifyOTP}
+              disabled={verifyingOtp || otp.length !== 6}
+              className="w-full sm:w-auto"
+            >
+              {verifyingOtp ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Verifying...
+                </div>
+              ) : (
+                "Verify & Update"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

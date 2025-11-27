@@ -958,11 +958,12 @@ router.post('/forgot-password', validateRequest(forgotPasswordSchema), asyncHand
   // Find user
   const user = await User.findOne({ email });
 
-  // Always return success even if user doesn't exist (security)
+  // Check if user exists
   if (!user) {
-    return res.json({
-      success: true,
-      message: 'If an account with that email exists, we sent a password reset OTP.'
+    return res.status(404).json({
+      success: false,
+      error: 'EMAIL_NOT_REGISTERED',
+      message: 'This email is not registered. Please check your email or sign up for a new account.'
     });
   }
 
@@ -1288,6 +1289,166 @@ router.post('/change-password', authenticateToken, asyncHandler(async (req, res)
     requiresOTP: true,
     message: 'For your security, password changes now require email verification. Please use the OTP-based password change method.',
     nextStep: 'request-password-change-otp'
+  });
+}));
+
+// @desc    Request OTP for profile update (email/phone change)
+// @route   POST /api/auth/request-profile-update-otp
+// @access  Private
+router.post('/request-profile-update-otp', authenticateToken, asyncHandler(async (req, res) => {
+  const { newEmail, newPhone, currentEmail, currentPhone } = req.body;
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Determine if email or phone is changing
+  const isEmailChanging = newEmail && newEmail !== user.email;
+  const isPhoneChanging = newPhone && newPhone !== user.profile.phone;
+
+  if (!isEmailChanging && !isPhoneChanging) {
+    return res.status(400).json({
+      success: false,
+      message: 'No changes detected to email or phone'
+    });
+  }
+
+  // If email is changing, check if new email is already in use
+  if (isEmailChanging) {
+    const emailExists = await User.findOne({ email: newEmail, _id: { $ne: user._id } });
+    if (emailExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email is already registered to another account'
+      });
+    }
+  }
+
+  // If phone is changing, check if new phone is already in use
+  if (isPhoneChanging) {
+    const phoneExists = await User.findOne({ 'profile.phone': newPhone, _id: { $ne: user._id } });
+    if (phoneExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'This phone number is already registered to another account'
+      });
+    }
+  }
+
+  // Check rate limiting for OTP requests
+  const rateLimitCheck = await canRequestOTP(user.email, 'profile_update');
+  if (!rateLimitCheck.canRequest) {
+    return res.status(429).json({
+      success: false,
+      message: rateLimitCheck.message,
+      remainingSeconds: rateLimitCheck.remainingSeconds
+    });
+  }
+
+  // Determine which email to send OTP to
+  // If email is changing, send to NEW email for verification
+  // If only phone is changing, send to CURRENT email
+  const otpEmail = isEmailChanging ? newEmail : user.email;
+
+  // Generate OTP for profile update
+  const otpResult = await createOTP(otpEmail, 'profile_update', {
+    userId: user._id.toString(),
+    newEmail: newEmail || user.email,
+    newPhone: newPhone || user.profile.phone,
+    expiryMinutes: 10
+  });
+
+  // Send OTP email
+  try {
+    await sendEmail({
+      to: otpEmail,
+      template: 'profile-update-otp',
+      data: {
+        firstName: user.profile.firstName || 'User',
+        otpCode: otpResult.otpCode,
+        expiryMinutes: otpResult.expiryMinutes,
+        changeType: isEmailChanging ? 'email' : 'phone',
+        newValue: isEmailChanging ? newEmail : newPhone
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Verification code has been sent to ' + (isEmailChanging ? 'your new email address' : 'your current email address'),
+      expiryMinutes: otpResult.expiryMinutes,
+      sentTo: otpEmail
+    });
+  } catch (emailError) {
+    console.error('Failed to send profile update OTP:', emailError);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send verification code. Please try again.'
+    });
+  }
+}));
+
+// @desc    Verify OTP and update profile (email/phone)
+// @route   POST /api/auth/verify-profile-update-otp
+// @access  Private
+router.post('/verify-profile-update-otp', authenticateToken, asyncHandler(async (req, res) => {
+  const { otp, newEmail, newPhone } = req.body;
+
+  if (!otp) {
+    return res.status(400).json({
+      success: false,
+      message: 'OTP is required'
+    });
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Determine which email to verify OTP against
+  const otpEmail = (newEmail && newEmail !== user.email) ? newEmail : user.email;
+
+  // Verify OTP
+  const verificationResult = await verifyOTP(otpEmail, otp, 'profile_update');
+  if (!verificationResult.success) {
+    return res.status(400).json({
+      success: false,
+      error: verificationResult.error,
+      message: verificationResult.message,
+      attemptsLeft: verificationResult.attemptsLeft
+    });
+  }
+
+  // Update email if changed
+  if (newEmail && newEmail !== user.email) {
+    user.email = newEmail;
+    user.profile.emailVerified = true; // Mark new email as verified
+  }
+
+  // Update phone if changed
+  if (newPhone && newPhone !== user.profile.phone) {
+    user.profile.phone = newPhone;
+    // Note: We're using email OTP, so we don't mark phone as verified
+    // Phone verification would require SMS OTP which is not implemented yet
+  }
+
+  await user.save();
+
+  // Remove password from response
+  const userResponse = user.toObject();
+  delete userResponse.password;
+
+  res.json({
+    success: true,
+    message: 'Profile updated successfully',
+    data: { user: userResponse }
   });
 }));
 

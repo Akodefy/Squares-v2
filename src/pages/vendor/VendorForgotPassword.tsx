@@ -56,7 +56,7 @@ const VendorForgotPassword = () => {
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         setStep("otp");
         if (data.expiryMinutes) {
           setExpiryMinutes(data.expiryMinutes);
@@ -65,10 +65,26 @@ const VendorForgotPassword = () => {
           title: "OTP Sent!",
           description: "Check your email for the password reset code.",
         });
+      } else if (response.status === 404 && data.error === 'EMAIL_NOT_REGISTERED') {
+        // Email not registered error
+        toast({
+          title: "Email Not Registered",
+          description: data.message || "This email is not registered. Please check your email or sign up for a new account.",
+          variant: "destructive",
+        });
+        // Stay on email step, do not proceed to OTP page
+      } else if (response.status === 429) {
+        // Rate limit error
+        toast({
+          title: "Too Many Requests",
+          description: data.message || "Please wait before requesting another OTP",
+          variant: "destructive",
+        });
       } else {
+        // Other errors
         toast({
           title: "Error",
-          description: data.message || "Failed to send OTP",
+          description: data.message || "Failed to send password reset code. Please try again.",
           variant: "destructive",
         });
       }
@@ -220,6 +236,7 @@ const VendorForgotPassword = () => {
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       maxLength={6}
+                      autoComplete="off"
                       required
                     />
                     <p className="text-xs text-muted-foreground">

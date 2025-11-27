@@ -151,7 +151,7 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
               maxLength={6}
               className="text-center text-2xl font-mono tracking-widest"
               disabled={loading}
-              autoComplete="one-time-code"
+              autoComplete="off"
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>

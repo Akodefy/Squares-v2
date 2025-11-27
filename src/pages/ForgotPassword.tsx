@@ -87,6 +87,14 @@ const ForgotPassword = () => {
           title: "OTP Sent!",
           description: "Check your email for the password reset code.",
         });
+      } else if (response.status === 404 && data.error === 'EMAIL_NOT_REGISTERED') {
+        // Email not registered error
+        toast({
+          title: "Email Not Registered",
+          description: data.message || "This email is not registered. Please check your email or sign up for a new account.",
+          variant: "destructive",
+        });
+        // Stay on email step, do not proceed to OTP page
       } else if (response.status === 429) {
         // Rate limit error
         toast({
@@ -95,22 +103,12 @@ const ForgotPassword = () => {
           variant: "destructive",
         });
       } else {
-        // Even if user doesn't exist, we show success for security
-        // But if there's an actual error, show it
-        if (data.message && !data.message.includes("exists")) {
-          toast({
-            title: "Error",
-            description: data.message,
-            variant: "destructive",
-          });
-        } else {
-          // Security: Don't reveal if email exists or not
-          setStep("otp");
-          toast({
-            title: "Check Your Email",
-            description: "If an account exists with this email, you will receive a password reset code.",
-          });
-        }
+        // Other errors
+        toast({
+          title: "Error",
+          description: data.message || "Failed to send password reset code. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Request OTP error:", error);

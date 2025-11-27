@@ -1905,6 +1905,7 @@ const VendorRegister = () => {
                   onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="Enter 6-digit OTP"
                   className="text-center text-lg tracking-wider"
+                  autoComplete="off"
                   required
                 />
               </div>
