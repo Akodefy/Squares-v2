@@ -38,11 +38,15 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     let queryFilter = {};
     
     if (!req.user || !['admin', 'superadmin', 'subadmin'].includes(req.user.role)) {
-      // For customers: show only available properties (remove verified check for now)
-      queryFilter = { 
-        status: 'available'
+      // For customers: show only available and non-archived properties
+      queryFilter = {
+        status: 'available',
+        $or: [
+          { archived: { $exists: false } },
+          { archived: false }
+        ]
       };
-      console.log('Applying customer filter - showing only available properties');
+      console.log('Applying customer filter - showing only available and non-archived properties');
     } else {
       console.log('Admin user detected - showing all properties');
     }
@@ -307,6 +311,11 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
       if (vendor) {
         propertyData.vendor = vendor._id;
         propertyData.agent = req.user.id;
+      }
+
+      // Mark as free listing if no active subscription
+      if (!activeSubscription) {
+        propertyData.isFreeListing = true;
       }
     }
 

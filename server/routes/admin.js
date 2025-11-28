@@ -1564,6 +1564,13 @@ router.post('/properties/:id/approve', asyncHandler(async (req, res) => {
   property.approvedBy = req.user.id;
   property.approvedAt = new Date();
 
+  // Set expiration date for free listings (30 days from approval)
+  if (property.isFreeListing) {
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + 30);
+    property.freeListingExpiresAt = expirationDate;
+  }
+
   await property.save();
 
   // Send approval email to property owner (non-blocking)
@@ -2909,6 +2916,113 @@ router.get('/vendors/performance', isAnyAdmin, asyncHandler(async (req, res) => 
   res.json({
     success: true,
     vendors
+  });
+}));
+
+// @desc    Get expired free listings
+// @route   GET /api/admin/properties/expired-free-listings
+// @access  Private/Admin
+router.get('/properties/expired-free-listings', authenticateToken, isSuperAdmin, asyncHandler(async (req, res) => {
+  const now = new Date();
+
+  // Find all free listings that have expired
+  const expiredProperties = await Property.find({
+    isFreeListing: true,
+    freeListingExpiresAt: { $lte: now },
+    $or: [
+      { archived: { $exists: false } },
+      { archived: false }
+    ]
+  })
+  .populate('owner', 'email profile.firstName profile.lastName')
+  .populate('vendor', 'businessName')
+  .sort({ freeListingExpiresAt: -1 });
+
+  // Also get already archived properties
+  const archivedProperties = await Property.find({
+    isFreeListing: true,
+    archived: true
+  })
+  .populate('owner', 'email profile.firstName profile.lastName')
+  .populate('vendor', 'businessName')
+  .sort({ archivedAt: -1 })
+  .limit(50);
+
+  res.json({
+    success: true,
+    data: {
+      expired: expiredProperties,
+      archived: archivedProperties,
+      expiredCount: expiredProperties.length,
+      archivedCount: archivedProperties.length
+    }
+  });
+}));
+
+// @desc    Manually trigger free listing expiry job
+// @route   POST /api/admin/properties/run-expiry-job
+// @access  Private/Admin
+router.post('/properties/run-expiry-job', authenticateToken, isSuperAdmin, asyncHandler(async (req, res) => {
+  const freeListingExpiryJob = require('../jobs/freeListingExpiry');
+
+  console.log(`[Admin] Manually triggering free listing expiry job by user ${req.user.id}`);
+
+  const result = await freeListingExpiryJob.trigger();
+
+  res.json({
+    success: true,
+    message: 'Free listing expiry job completed',
+    data: result
+  });
+}));
+
+// @desc    Restore archived property (unarchive)
+// @route   POST /api/admin/properties/:id/unarchive
+// @access  Private/Admin
+router.post('/properties/:id/unarchive', authenticateToken, isSuperAdmin, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid property ID format'
+    });
+  }
+
+  const property = await Property.findById(id);
+
+  if (!property) {
+    return res.status(404).json({
+      success: false,
+      message: 'Property not found'
+    });
+  }
+
+  if (!property.archived) {
+    return res.status(400).json({
+      success: false,
+      message: 'Property is not archived'
+    });
+  }
+
+  // Unarchive the property
+  property.archived = false;
+  property.archivedAt = null;
+  property.archivedReason = null;
+
+  // Extend expiration by 30 days if it's a free listing
+  if (property.isFreeListing) {
+    const newExpirationDate = new Date();
+    newExpirationDate.setDate(newExpirationDate.getDate() + 30);
+    property.freeListingExpiresAt = newExpirationDate;
+  }
+
+  await property.save();
+
+  res.json({
+    success: true,
+    message: 'Property unarchived successfully',
+    data: { property }
   });
 }));
 

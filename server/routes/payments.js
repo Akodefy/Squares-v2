@@ -749,6 +749,10 @@ router.post('/verify-subscription-payment', authenticateToken, asyncHandler(asyn
       $inc: { subscriberCount: 1 }
     });
 
+    // Unarchive any archived free listings for this user
+    const subscriptionPropertyService = require('../services/subscriptionPropertyService');
+    await subscriptionPropertyService.unarchiveFreeListingsOnSubscription(req.user.id);
+
     // Populate response
     await subscription.populate([
       { path: 'user', select: 'name email phone profile' },

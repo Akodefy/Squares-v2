@@ -43,6 +43,7 @@ const { authenticateToken } = require('./middleware/authMiddleware');
 // Import services
 const paymentStatusService = require('./services/paymentStatusService');
 const paymentCleanupJob = require('./jobs/paymentCleanup');
+const freeListingExpiryJob = require('./jobs/freeListingExpiry');
 
 // Import database
 const { connectDB } = require('./config/database');
@@ -366,6 +367,11 @@ const startServer = async () => {
       paymentCleanupJob.start(5);
       console.log(` Payment cleanup job started (runs every 5 minutes)`);
       console.log(`  Razorpay timeout limit: 15 minutes`);
+
+      // Start free listing expiry job (runs daily)
+      freeListingExpiryJob.start(24);
+      console.log(` Free listing expiry job started (runs every 24 hours)`);
+      console.log(`  Free listings expire after 30 days`);
     });
   } catch (error) {
     console.error(' Failed to start server:', error.message);
@@ -394,7 +400,11 @@ const gracefulShutdown = (signal) => {
       // Stop payment cleanup job
       paymentCleanupJob.stop();
       console.log('Payment cleanup job stopped');
-      
+
+      // Stop free listing expiry job
+      freeListingExpiryJob.stop();
+      console.log('Free listing expiry job stopped');
+
       // Close database connection
       await mongoose.connection.close();
       console.log('Database connection closed');

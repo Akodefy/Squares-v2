@@ -205,6 +205,25 @@ const propertySchema = new mongoose.Schema({
   clientName: {
     type: String,
     trim: true
+  },
+  // Free listing expiration tracking
+  isFreeListing: {
+    type: Boolean,
+    default: false
+  },
+  freeListingExpiresAt: {
+    type: Date
+  },
+  // Archive tracking
+  archived: {
+    type: Boolean,
+    default: false
+  },
+  archivedAt: {
+    type: Date
+  },
+  archivedReason: {
+    type: String
   }
 }, {
   timestamps: true
@@ -217,6 +236,8 @@ propertySchema.index({ owner: 1 });
 propertySchema.index({ vendor: 1 });
 propertySchema.index({ agent: 1 });
 propertySchema.index({ featured: 1 });
+propertySchema.index({ archived: 1 });
+propertySchema.index({ isFreeListing: 1, freeListingExpiresAt: 1 });
 
 // Pre-save middleware to set vendor reference
 propertySchema.pre('save', async function(next) {

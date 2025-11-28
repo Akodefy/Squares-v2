@@ -4371,4 +4371,44 @@ router.post('/reviews/:id/respond', requireVendorRole, asyncHandler(async (req, 
   });
 }));
 
+// @desc    Get vendor's archived properties
+// @route   GET /api/vendors/properties/archived
+// @access  Private/Vendor
+router.get('/properties/archived', requireVendorRole, asyncHandler(async (req, res) => {
+  const vendorId = req.user.id;
+
+  // Find all archived properties for this vendor
+  const archivedProperties = await Property.find({
+    owner: vendorId,
+    archived: true
+  }).sort({ archivedAt: -1 });
+
+  // Find expiring soon properties (within 7 days)
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+  const expiringSoon = await Property.find({
+    owner: vendorId,
+    isFreeListing: true,
+    archived: false,
+    freeListingExpiresAt: {
+      $gte: new Date(),
+      $lte: sevenDaysFromNow
+    }
+  }).sort({ freeListingExpiresAt: 1 });
+
+  res.json({
+    success: true,
+    data: {
+      archivedProperties,
+      expiringSoon,
+      archivedCount: archivedProperties.length,
+      expiringSoonCount: expiringSoon.length
+    },
+    message: archivedProperties.length > 0
+      ? 'You have archived properties. Purchase a subscription to reactivate them.'
+      : 'No archived properties found.'
+  });
+}));
+
 module.exports = router;

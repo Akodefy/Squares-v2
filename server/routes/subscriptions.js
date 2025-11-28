@@ -487,6 +487,10 @@ router.post('/', authenticateToken, async (req, res) => {
       $inc: { subscriberCount: 1 }
     });
 
+    // Unarchive any archived free listings for this user
+    const subscriptionPropertyService = require('../services/subscriptionPropertyService');
+    await subscriptionPropertyService.unarchiveFreeListingsOnSubscription(req.user.userId);
+
     // Populate the response
     await subscription.populate([
       { path: 'user', select: 'name email phone' },
