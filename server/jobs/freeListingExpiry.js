@@ -169,27 +169,16 @@ class FreeListingExpiryJob {
     const firstName = owner.profile?.firstName || 'Vendor';
     const propertyTitle = property.title;
 
-    const emailSubject = 'Your Free Listing Has Expired - Upgrade to Continue';
-    const emailBody = `
-Dear ${firstName},
-
-Your free property listing "${propertyTitle}" has expired after 30 days and is no longer visible to customers.
-
-To make your property visible again and access more features, please purchase one of our subscription plans:
-
-✓ Basic Plan - Extended listing duration with more photos
-✓ Standard Plan - Featured listings and lead management
-✓ Premium Plan - Top placement and verified badge
-✓ Enterprise Plan - Unlimited listings and priority support
-
-Visit your dashboard to view available subscription plans and reactivate your property listing.
-
-Best regards,
-BuildHomeMartSquares Team
-    `.trim();
-
     try {
-      await sendEmail(owner.email, emailSubject, emailBody);
+      await sendEmail({
+        to: owner.email,
+        template: 'free-listing-expired',
+        data: {
+          firstName,
+          propertyTitle,
+          subscriptionLink: `${process.env.CLIENT_URL}/vendor/subscriptions`
+        }
+      });
     } catch (error) {
       console.error('[Free Listing Expiry Job] Error sending email:', error);
     }

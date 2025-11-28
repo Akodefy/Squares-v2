@@ -1544,6 +1544,57 @@ const emailTemplates = {
         </div>
       </div>
     `
+  }),
+
+  // Free Listing Expired
+  'free-listing-expired': (data) => ({
+    subject: '⏰ Your Free Listing Has Expired - Upgrade to Continue',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0;">BuildHomeMart Squares</h1>
+          <p style="color: #666; margin: 5px 0 0 0;">Subscription Notice</p>
+        </div>
+
+        <div style="background: #fff7ed; border: 2px solid #f97316; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="color: #c2410c; margin: 0 0 20px 0; text-align: center;">⏰ Free Listing Expired</h2>
+          <p style="color: #9a3412; line-height: 1.6; margin: 0 0 20px 0;">
+            Hello ${data.firstName},
+          </p>
+          <p style="color: #9a3412; line-height: 1.6; margin: 0 0 20px 0;">
+            Your free property listing <strong>"${data.propertyTitle}"</strong> has expired after 30 days and is <strong>no longer visible to customers</strong>.
+          </p>
+
+          <div style="background: white; padding: 20px; border-radius: 6px; margin: 20px 0;">
+            <h3 style="color: #1e293b; margin: 0 0 15px 0;">🚀 Upgrade to Keep Your Property Active</h3>
+            <p style="color: #475569; margin: 0 0 15px 0;">Purchase any subscription plan to make your property visible again and unlock premium features:</p>
+            <ul style="color: #475569; line-height: 1.8;">
+              <li><strong>Basic Plan</strong> - Extended duration with more photos</li>
+              <li><strong>Standard Plan</strong> - Featured listings & lead management</li>
+              <li><strong>Premium Plan</strong> - Top placement & verified badge</li>
+              <li><strong>Enterprise Plan</strong> - Unlimited listings & priority support</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.subscriptionLink || process.env.CLIENT_URL + '/vendor/subscriptions'}" style="background: #f97316; color: white; padding: 14px 35px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
+              View Subscription Plans
+            </a>
+          </div>
+
+          <div style="background: #fef2f2; padding: 15px; border-radius: 6px; border-left: 4px solid #dc2626;">
+            <p style="color: #7f1d1d; margin: 0; font-size: 14px;">
+              <strong>Note:</strong> All your archived properties will be automatically restored once you purchase any subscription.
+            </p>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: #94a3b8; font-size: 12px;">
+          <p>Need help? Contact us at ${process.env.SUPPORT_EMAIL || 'support@buildhomemartsquares.com'}</p>
+          <p>&copy; 2024 BuildHomeMart Squares. All rights reserved.</p>
+        </div>
+      </div>
+    `
   })
 };
 
@@ -1570,6 +1621,7 @@ const sendEmail = async (options) => {
         'customer-booking-confirmation': { name: 'BuildHomeMart Bookings', email: process.env.SMTP_FROM || process.env.SMTP_USER },
         'service-status-update': { name: 'BuildHomeMart Services', email: process.env.SMTP_FROM || process.env.SMTP_USER },
         'weekly-report': { name: 'BuildHomeMart Reports', email: process.env.SMTP_FROM || process.env.SMTP_USER },
+        'free-listing-expired': { name: 'BuildHomeMart Subscriptions', email: process.env.SMTP_FROM || process.env.SMTP_USER },
         default: { name: 'BuildHomeMart Squares', email: process.env.SMTP_FROM || process.env.SMTP_USER }
       };
       return senders[template] || senders.default;
