@@ -61,15 +61,13 @@ const VendorLogin = () => {
 
     try {
       const success = await login(email, password);
-      console.log('VendorLogin: Login attempt result:', success);
-      
+
       if (success) {
         // Check if user is a vendor and navigate accordingly
         // Get user from localStorage directly since getCurrentUser is async
         const userStr = localStorage.getItem('user');
         const user = userStr ? JSON.parse(userStr) : null;
-        console.log('VendorLogin: Current user after login:', user);
-        
+
         if (user?.role === 'agent') {
           toast({
             title: "Login Successful",
@@ -78,8 +76,7 @@ const VendorLogin = () => {
           navigate("/vendor/dashboard");
         } else {
           // Non-vendor trying to access vendor portal
-          console.log('VendorLogin: Non-vendor attempted to login through vendor portal');
-          
+
           // Use logout to properly clear all state including AuthContext (skip redirect)
           logout(true);
           

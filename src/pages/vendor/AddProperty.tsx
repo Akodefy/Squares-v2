@@ -296,7 +296,7 @@ const AddProperty = () => {
     }
   }, [selectedLocationNames, formData.pincode]);
 
-  // Check subscription limits and property count - only on initial load
+  // Check subscription limits and property count
   const checkSubscriptionLimits = useCallback(async () => {
     setIsCheckingSubscription(true);
     try {
@@ -332,10 +332,10 @@ const AddProperty = () => {
     }
   }, [toast]);
 
-  // Only check subscription on component mount
+  // Check subscription on component mount with proper dependency
   useEffect(() => {
     checkSubscriptionLimits();
-  }, []);
+  }, [checkSubscriptionLimits]);
 
   const steps = [
     { id: 1, title: "Basic Details", description: "Property type and listing details" },
@@ -599,10 +599,9 @@ const AddProperty = () => {
 
   const handleImageUpload = async (files: FileList | File[]) => {
     if (!files || files.length === 0) {
-      console.log('No files to upload');
       return;
     }
-    
+
     const fileArray = Array.from(files);
     const maxImages = 10;
     const currentImageCount = uploadedImages.length;
@@ -628,15 +627,12 @@ const AddProperty = () => {
       return;
     }
 
-    console.log('Starting image upload process for', fileArray.length, 'files');
     setUploadingImages(true);
 
     try {
       const newImages = [];
-      
+
       for (const file of fileArray) {
-        console.log('Processing file:', file.name, file.type, file.size);
-        
         // Validate file type
         if (!file.type.startsWith('image/')) {
           toast({
@@ -660,8 +656,7 @@ const AddProperty = () => {
 
         // Create object URL for preview
         const url = URL.createObjectURL(file);
-        console.log('Created preview URL for', file.name);
-        
+
         newImages.push({
           id: Date.now() + Math.random(),
           name: file.name,
@@ -670,20 +665,14 @@ const AddProperty = () => {
         });
       }
 
-      console.log('Adding', newImages.length, 'images to state');
       if (newImages.length > 0) {
-        setUploadedImages(prev => {
-          const updated = [...prev, ...newImages];
-          console.log('Updated images state:', updated);
-          return updated;
-        });
+        setUploadedImages(prev => [...prev, ...newImages]);
         toast({
           title: "Images Added",
           description: `${newImages.length} image(s) ready for upload (${currentImageCount + newImages.length}/${maxImages})`,
         });
       }
     } catch (error) {
-      console.error('Image upload error:', error);
       toast({
         title: "Upload Error",
         description: error instanceof Error ? error.message : "Failed to process images",
@@ -691,18 +680,13 @@ const AddProperty = () => {
       });
     } finally {
       setUploadingImages(false);
-      console.log('Image upload process completed');
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('File input change triggered', e.target.files);
     const files = e.target.files;
     if (files && files.length > 0) {
-      console.log(`Processing ${files.length} files`);
       handleImageUpload(files);
-    } else {
-      console.log('No files selected');
     }
     // Reset input value to allow re-uploading same file
     e.target.value = '';
@@ -802,7 +786,6 @@ const AddProperty = () => {
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      console.log('Files dropped:', files.length);
       await handleImageUpload(files);
     }
   };
@@ -977,65 +960,55 @@ const AddProperty = () => {
               <Label htmlFor="pincode" className="text-sm md:text-base">PIN Code *</Label>
               <PincodeAutocomplete
                 value={formData.pincode}
-                onChange={(pincode, locationData) => {
+                onChange={async (pincode, locationData) => {
                   setFormData(prev => ({ ...prev, pincode }));
 
                   // Auto-fill location fields if suggestion provides data
                   if (locationData) {
-                    // Set state if available
-                    if (locationData.state && states.includes(locationData.state.toUpperCase())) {
-                      setFormData(prev => ({
-                        ...prev,
-                        state: locationData.state.toUpperCase(),
-                        stateCode: locationData.state.toUpperCase()
-                      }));
+                    try {
+                      // Set state if available
+                      if (locationData.state && states.includes(locationData.state.toUpperCase())) {
+                        const stateUpper = locationData.state.toUpperCase();
 
-                      // Load districts for the selected state
-                      setTimeout(() => {
-                        // Set district if available
-                        if (locationData.district) {
-                          const districtsForState = locaService.getDistricts(locationData.state.toUpperCase());
-                          const matchingDistrict = districtsForState.find(d =>
-                            d.toUpperCase() === locationData.district.toUpperCase()
-                          );
+                        // Get districts for the state
+                        const districtsForState = locaService.getDistricts(stateUpper);
 
-                          if (matchingDistrict) {
-                            setFormData(prev => ({
-                              ...prev,
-                              district: matchingDistrict,
-                              districtCode: matchingDistrict
-                            }));
+                        // Find matching district
+                        const matchingDistrict = locationData.district
+                          ? districtsForState.find(d => d.toUpperCase() === locationData.district.toUpperCase())
+                          : null;
 
-                            // Load cities for the selected district
-                            setTimeout(() => {
-                              // Set city if available
-                              if (locationData.city) {
-                                const citiesForDistrict = locaService.getCities(
-                                  locationData.state.toUpperCase(),
-                                  matchingDistrict
-                                );
-                                const matchingCity = citiesForDistrict.find(c =>
-                                  c.toUpperCase() === locationData.city.toUpperCase()
-                                );
-
-                                if (matchingCity) {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    city: matchingCity,
-                                    cityCode: matchingCity
-                                  }));
-                                }
-                              }
-                            }, 100);
-                          }
+                        // Find matching city if district is available
+                        let matchingCity = null;
+                        if (matchingDistrict && locationData.city) {
+                          const citiesForDistrict = locaService.getCities(stateUpper, matchingDistrict);
+                          matchingCity = citiesForDistrict.find(c => c.toUpperCase() === locationData.city.toUpperCase());
                         }
-                      }, 100);
-                    }
 
-                    toast({
-                      title: "Location Auto-filled ✓",
-                      description: `${locationData.city}, ${locationData.district}, ${locationData.state}`,
-                    });
+                        // Update all location fields at once to avoid race conditions
+                        setFormData(prev => ({
+                          ...prev,
+                          state: stateUpper,
+                          stateCode: stateUpper,
+                          district: matchingDistrict || prev.district,
+                          districtCode: matchingDistrict || prev.districtCode,
+                          city: matchingCity || prev.city,
+                          cityCode: matchingCity || prev.cityCode
+                        }));
+
+                        toast({
+                          title: "Location Auto-filled ✓",
+                          description: `${locationData.city}, ${locationData.district}, ${locationData.state}`,
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Error auto-filling location:', error);
+                      toast({
+                        title: "Auto-fill Warning",
+                        description: "Some location fields could not be auto-filled. Please verify manually.",
+                        variant: "default",
+                      });
+                    }
                   }
                 }}
                 state={formData.state}
@@ -1628,8 +1601,6 @@ const AddProperty = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('Upload button clicked, triggering file input');
-                      console.log('File input ref:', fileInputRef.current);
                       fileInputRef.current?.click();
                     }}
                     disabled={uploadingImages}
@@ -1690,81 +1661,6 @@ const AddProperty = () => {
                 </div>
               )}
             </div>
-
-            {/* Property Videos section commented out as not necessary
-            <div>
-              <Label className="text-base font-medium">Property Videos (Optional)</Label>
-              <p className="text-sm text-muted-foreground mb-4">
-                Upload videos to showcase your property better
-              </p>
-
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
-                <Video className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('video-upload')?.click()}
-                    disabled={uploadingVideos}
-                  >
-                    {uploadingVideos ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Video
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-sm text-muted-foreground">
-                    MP4, MOV, AVI (max 100MB)
-                  </p>
-                </div>
-                <input
-                  id="video-upload"
-                  type="file"
-                  multiple
-                  accept="video/*"
-                  className="hidden"
-                  onChange={handleVideoFileInputChange}
-                  disabled={uploadingVideos}
-                />
-              </div>
-
-              {uploadingVideos && (
-                <div className="flex items-center justify-center gap-2 mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                  <span className="text-sm font-medium text-blue-600">Processing videos...</span>
-                </div>
-              )}
-
-              {uploadedVideos.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  {uploadedVideos.map((video) => (
-                    <div key={video.id} className="relative border rounded-lg p-4">
-                      <div className="flex items-center space-x-3">
-                        <Video className="w-8 h-8 text-primary" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium truncate">{video.name}</p>
-                          <p className="text-xs text-muted-foreground">Video file</p>
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="destructive"
-                          className="h-6 w-6"
-                          onClick={() => setUploadedVideos(prev => prev.filter(v => v.id !== video.id))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            */}
 
             <div className="space-y-2">
               <Label htmlFor="virtualTour">Virtual Tour URL (Optional)</Label>
@@ -1963,29 +1859,14 @@ const AddProperty = () => {
                     Upgrade Plan
                   </Button>
                 </Link>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
-                    console.log('Manually refreshing subscription limits...');
                     checkSubscriptionLimits();
                   }}
                   disabled={isCheckingSubscription}
                 >
                   {isCheckingSubscription ? "Checking..." : "Refresh Status"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={async () => {
-                    console.log('Cleaning up duplicate subscriptions...');
-                    const result = await vendorService.cleanupSubscriptions();
-                    if (result.success) {
-                      // Refresh the subscription limits after cleanup
-                      checkSubscriptionLimits();
-                    }
-                  }}
-                  disabled={isCheckingSubscription}
-                >
-                  Fix Multiple Subscriptions
                 </Button>
                 <Button variant="outline" onClick={() => navigate("/vendor/properties")}>
                   Back to Properties

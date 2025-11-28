@@ -220,10 +220,7 @@ const VendorProfilePage: React.FC = () => {
           },
         },
       };
-      
-      console.log("Loaded vendor profile:", profileWithDefaults);
-      console.log("Profile address:", profileWithDefaults.profile?.address);
-      
+
       setVendorData(profileWithDefaults);
       setFormData(profileWithDefaults);
       

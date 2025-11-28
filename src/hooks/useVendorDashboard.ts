@@ -208,13 +208,17 @@ export const useVendorDashboard = (
     isConnected,
   ]);
 
-  // Auto refresh setup
+  // Auto refresh setup - Fixed memory leak by removing state.isLoading from dependencies
   useEffect(() => {
     if (autoRefresh && refreshInterval > 0) {
       refreshIntervalRef.current = setInterval(() => {
-        if (!state.isLoading) {
-          refreshData();
-        }
+        // Check loading state inside the callback instead of dependency array
+        setState((prevState) => {
+          if (!prevState.isLoading) {
+            refreshData();
+          }
+          return prevState;
+        });
       }, refreshInterval);
 
       return () => {
@@ -223,12 +227,12 @@ export const useVendorDashboard = (
         }
       };
     }
-  }, [autoRefresh, refreshInterval, refreshData, state.isLoading]);
+  }, [autoRefresh, refreshInterval, refreshData]);
 
-  // Initial data load
+  // Initial data load - Fixed by adding refreshData to dependency array
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [refreshData]);
 
   // Cleanup on unmount
   useEffect(() => {

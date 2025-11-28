@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { authService } from '@/services/authService';
 
 interface VendorProtectedRouteProps {
   children: React.ReactNode;
@@ -20,22 +21,17 @@ const VendorProtectedRoute: React.FC<VendorProtectedRouteProps> = ({ children })
 
   // If not authenticated, redirect to vendor login
   if (!isAuthenticated) {
-    console.log('VendorProtectedRoute: User not authenticated, redirecting to login');
     return <Navigate to="/vendor/login" replace />;
   }
 
   // If authenticated but not a vendor (agent), redirect to vendor login with error
   if (user?.role !== 'agent') {
-    console.log('VendorProtectedRoute: User role is', user?.role, 'expected agent, clearing auth and redirecting');
-    
     // Clear auth data for wrong portal access
-    const { authService } = require('@/services/authService');
     authService.clearAuthData();
-    
+
     return <Navigate to="/vendor/login" state={{ message: 'This is the Vendor Portal. Please use the correct login portal for your account.' }} replace />;
   }
 
-  console.log('VendorProtectedRoute: User authenticated as vendor, rendering protected content');
   // If authenticated and is a vendor, render the protected content
   return <>{children}</>;
 };

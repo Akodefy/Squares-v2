@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { Suspense } from "react";
 import VendorLayout from "@/layout/VendorLayout";
 import VendorProtectedRoute from "@/components/auth/VendorProtectedRoute";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import {
   VendorDashboard,
   VendorProperties,
@@ -11,7 +12,6 @@ import {
   VendorLeads,
   VendorMessages,
   VendorAnalytics,
-  // VendorPackages, // Commented out - will be used in future
   VendorServices,
   VendorSubscriptionPlans,
   VendorSubscriptionManager,
@@ -23,8 +23,9 @@ import {
 
 const VendorRoutes = () => {
   return (
-    <VendorProtectedRoute>
-      <Routes>
+    <ErrorBoundary>
+      <VendorProtectedRoute>
+        <Routes>
         <Route path="/" element={<VendorLayout />}>
           <Route index element={
             <Suspense fallback={<div>Loading...</div>}>
@@ -71,12 +72,6 @@ const VendorRoutes = () => {
               <VendorAnalytics />
             </Suspense>
           } />
-          {/* Commented out packages section - will be used in future */}
-          {/* <Route path="packages" element={
-            <Suspense fallback={<div>Loading...</div>}>
-              <VendorPackages />
-            </Suspense>
-          } /> */}
           <Route path="services" element={
             <Suspense fallback={<div>Loading...</div>}>
               <VendorServices />
@@ -114,7 +109,8 @@ const VendorRoutes = () => {
           } />
         </Route>
       </Routes>
-    </VendorProtectedRoute>
+      </VendorProtectedRoute>
+    </ErrorBoundary>
   );
 };
 
