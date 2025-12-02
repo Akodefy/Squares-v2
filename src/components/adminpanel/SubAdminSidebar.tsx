@@ -15,7 +15,6 @@ const subAdminNavItems = [
   { icon: XCircle, label: "Property Rejection", path: "/subadmin/property-rejections" },
   { icon: UserCheck, label: "Vendor Performance", path: "/subadmin/vendor-performance" },
   { icon: Package, label: "Addon Services", path: "/subadmin/addon-services" },
-  { icon: Shield, label: "Content Moderation", path: "/subadmin/content-moderation" },
   { icon: Headphones, label: "Support Tickets", path: "/subadmin/support-tickets" },
   { icon: Star, label: "Promotions", path: "/subadmin/promotions" },
   { icon: Bell, label: "Notifications", path: "/subadmin/notifications" },

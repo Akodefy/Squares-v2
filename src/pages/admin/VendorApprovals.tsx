@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
   Search,
   Download,
   Mail,
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -27,6 +29,7 @@ import { fetchWithAuth, handleApiResponse } from '@/utils/apiUtils';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -125,10 +128,28 @@ const VendorApprovals: React.FC = () => {
   const [filters, setFilters] = useState({
     status: 'pending',
     search: '',
+    businessType: '',
+    experienceMin: '',
+    experienceMax: '',
     page: 1,
     limit: 10
   });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Approval/Rejection form state
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
+  const [approverName, setApproverName] = useState("");
+  const [checklist, setChecklist] = useState({
+    businessVerified: false,
+    documentsVerified: false,
+    licenseValid: false,
+    experienceConfirmed: false,
+    referencesChecked: false,
+    complianceVerified: false,
+  });
+  const [handwrittenComments, setHandwrittenComments] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
 
   // Fetch applications
   const fetchApplications = async () => {
@@ -138,6 +159,9 @@ const VendorApprovals: React.FC = () => {
         limit: filters.limit.toString(),
         status: filters.status,
         search: filters.search,
+        businessType: filters.businessType,
+        experienceMin: filters.experienceMin,
+        experienceMax: filters.experienceMax,
         sortBy: 'submittedAt',
         sortOrder: 'desc'
       });
@@ -180,18 +204,47 @@ const VendorApprovals: React.FC = () => {
       setLoading(false);
     };
     loadData();
-  }, [filters.status, filters.page, filters.search]);
+  }, [filters.status, filters.page, filters.search, filters.businessType, filters.experienceMin, filters.experienceMax]);
+
+  const resetApprovalForm = () => {
+    setChecklist({
+      businessVerified: false,
+      documentsVerified: false,
+      licenseValid: false,
+      experienceConfirmed: false,
+      referencesChecked: false,
+      complianceVerified: false,
+    });
+    setHandwrittenComments("");
+    setRejectionReason("");
+    setApproverName("");
+  };
+
+  const openApprovalDialog = (application: VendorApplication, type: 'approve' | 'reject') => {
+    setSelectedApplication(application);
+    setActionType(type);
+    resetApprovalForm();
+    setApprovalDialogOpen(true);
+  };
 
   // Handle approval
-  const handleApprove = async (vendorId: string) => {
-    const approvalNotes = prompt('Enter approval notes (optional):');
+  const handleApprove = async () => {
+    if (!selectedApplication || !approverName.trim()) {
+      toast({
+        title: "Error",
+        description: "Approver name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setActionLoading('approve');
-    
+
     try {
-      const response = await fetchWithAuth(`/admin/vendor-approvals/${vendorId}/approve`, {
+      const response = await fetchWithAuth(`/admin/vendor-approvals/${selectedApplication._id}/approve`, {
         method: 'POST',
         body: JSON.stringify({
-          approvalNotes,
+          approvalNotes: handwrittenComments,
           verificationLevel: 'basic'
         })
       });
@@ -209,6 +262,8 @@ const VendorApprovals: React.FC = () => {
       fetchApplications();
       fetchStats();
       setShowDetails(false);
+      setApprovalDialogOpen(false);
+      resetApprovalForm();
     } catch (error) {
       console.error('Error approving vendor:', error);
       toast({
@@ -222,14 +277,20 @@ const VendorApprovals: React.FC = () => {
   };
 
   // Handle rejection
-  const handleReject = async (vendorId: string) => {
-    const rejectionReason = prompt('Enter rejection reason (required):');
-    if (!rejectionReason) return;
+  const handleReject = async () => {
+    if (!selectedApplication || !rejectionReason.trim() || !approverName.trim()) {
+      toast({
+        title: "Error",
+        description: "Approver name and rejection reason are required",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setActionLoading('reject');
-    
+
     try {
-      const response = await fetchWithAuth(`/admin/vendor-approvals/${vendorId}/reject`, {
+      const response = await fetchWithAuth(`/admin/vendor-approvals/${selectedApplication._id}/reject`, {
         method: 'POST',
         body: JSON.stringify({
           rejectionReason,
@@ -250,6 +311,8 @@ const VendorApprovals: React.FC = () => {
       fetchApplications();
       fetchStats();
       setShowDetails(false);
+      setApprovalDialogOpen(false);
+      resetApprovalForm();
     } catch (error) {
       console.error('Error rejecting vendor:', error);
       toast({
@@ -357,28 +420,65 @@ const VendorApprovals: React.FC = () => {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="space-y-4 mb-6">
+        {/* Primary Filters Row */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by company name, email, or license number..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
+              className="pl-10"
+            />
+          </div>
+          <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value, page: 1 })}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="under_review">Under Review</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Advanced Filters Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Select value={filters.businessType || "all"} onValueChange={(value) => setFilters({ ...filters, businessType: value === "all" ? "" : value, page: 1 })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Business Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="Real Estate Agent">Real Estate Agent</SelectItem>
+              <SelectItem value="Property Developer">Property Developer</SelectItem>
+              <SelectItem value="Construction Company">Construction Company</SelectItem>
+              <SelectItem value="Interior Designer">Interior Designer</SelectItem>
+              <SelectItem value="Property Manager">Property Manager</SelectItem>
+              <SelectItem value="Legal Services">Legal Services</SelectItem>
+              <SelectItem value="Financial Services">Financial Services</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Input
-            placeholder="Search by company name, email, or license number..."
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
-            className="pl-10"
+            type="number"
+            placeholder="Min Experience (years)"
+            value={filters.experienceMin}
+            onChange={(e) => setFilters({ ...filters, experienceMin: e.target.value, page: 1 })}
+          />
+
+          <Input
+            type="number"
+            placeholder="Max Experience (years)"
+            value={filters.experienceMax}
+            onChange={(e) => setFilters({ ...filters, experienceMax: e.target.value, page: 1 })}
           />
         </div>
-        <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value, page: 1 })}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="under_review">Under Review</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Applications Table */}
@@ -401,7 +501,7 @@ const VendorApprovals: React.FC = () => {
                               {application.businessInfo.companyName}
                             </h3>
                             <p className="text-sm text-muted-foreground">
-                              {application.user.profile.firstName} {application.user.profile.lastName}
+                              {application.user?.profile?.firstName || 'N/A'} {application.user?.profile?.lastName || ''}
                             </p>
                           </div>
                           <StatusBadge status={application.approval.status} />
@@ -428,11 +528,13 @@ const VendorApprovals: React.FC = () => {
                       </div>
 
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">{application.user.email}</span>
-                        </div>
-                        {application.user.profile.phone && (
+                        {application.user?.email && (
+                          <div className="flex items-center space-x-2">
+                            <Mail className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{application.user.email}</span>
+                          </div>
+                        )}
+                        {application.user?.profile?.phone && (
                           <div className="flex items-center space-x-2">
                             <Phone className="h-4 w-4 flex-shrink-0" />
                             <span>{application.user.profile.phone}</span>
@@ -478,11 +580,11 @@ const VendorApprovals: React.FC = () => {
                     </div>
                     <div className="flex flex-col space-y-1">
                       <span className="font-medium text-muted-foreground">Contact Person:</span>
-                      <span>{selectedApplication.user.profile.firstName} {selectedApplication.user.profile.lastName}</span>
+                      <span>{selectedApplication.user?.profile?.firstName || 'N/A'} {selectedApplication.user?.profile?.lastName || ''}</span>
                     </div>
                     <div className="flex flex-col space-y-1">
                       <span className="font-medium text-muted-foreground">Email:</span>
-                      <span className="break-all">{selectedApplication.user.email}</span>
+                      <span className="break-all">{selectedApplication.user?.email || 'N/A'}</span>
                     </div>
                     {selectedApplication.businessInfo.licenseNumber && (
                       <div className="flex flex-col space-y-1">
@@ -545,22 +647,215 @@ const VendorApprovals: React.FC = () => {
             {selectedApplication?.approval.status === 'pending' && (
               <div className="flex flex-col sm:flex-row gap-2 sm:space-x-4 w-full sm:w-auto">
                 <Button
-                  onClick={() => handleReject(selectedApplication._id)}
+                  onClick={() => {
+                    setShowDetails(false);
+                    openApprovalDialog(selectedApplication, 'reject');
+                  }}
                   disabled={actionLoading === 'reject'}
                   variant="destructive"
                   className="w-full sm:w-auto"
                 >
-                  {actionLoading === 'reject' ? 'Rejecting...' : 'Reject'}
+                  Reject
                 </Button>
                 <Button
-                  onClick={() => handleApprove(selectedApplication._id)}
+                  onClick={() => {
+                    setShowDetails(false);
+                    openApprovalDialog(selectedApplication, 'approve');
+                  }}
                   disabled={actionLoading === 'approve'}
                   variant="default"
                   className="w-full sm:w-auto"
                 >
-                  {actionLoading === 'approve' ? 'Approving...' : 'Approve'}
+                  Approve
                 </Button>
               </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approval/Rejection Form Dialog */}
+      <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {actionType === 'approve' ? 'Approve Vendor Application' : 'Reject Vendor Application'}
+            </DialogTitle>
+            <DialogDescription>
+              {actionType === 'approve'
+                ? `Complete the verification checklist and provide your approval for ${selectedApplication?.businessInfo.companyName}.`
+                : `Complete the form and provide a reason for rejecting ${selectedApplication?.businessInfo.companyName}. The vendor will be notified.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Approver Name */}
+            <div className="space-y-2">
+              <Label htmlFor="approver-name-vendor">Approver Name *</Label>
+              <Input
+                id="approver-name-vendor"
+                placeholder="Enter your full name"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Verification Checklist */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">
+                {actionType === 'approve' ? 'Verification Checklist' : 'Issues Found (Check applicable items)'}
+              </Label>
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="business"
+                    checked={checklist.businessVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, businessVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="business" className="text-sm font-medium cursor-pointer">
+                    {actionType === 'approve'
+                      ? 'Business information is verified and legitimate'
+                      : 'Business information is incomplete or invalid'
+                    }
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="documents-vendor"
+                    checked={checklist.documentsVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, documentsVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="documents-vendor" className="text-sm font-medium cursor-pointer">
+                    {actionType === 'approve'
+                      ? 'All required documents are submitted and verified'
+                      : 'Required documents are missing or invalid'
+                    }
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="license"
+                    checked={checklist.licenseValid}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, licenseValid: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="license" className="text-sm font-medium cursor-pointer">
+                    {actionType === 'approve'
+                      ? 'Business license/registration is valid'
+                      : 'Business license/registration is invalid or expired'
+                    }
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="experience"
+                    checked={checklist.experienceConfirmed}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, experienceConfirmed: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="experience" className="text-sm font-medium cursor-pointer">
+                    {actionType === 'approve'
+                      ? 'Professional experience is confirmed'
+                      : 'Professional experience cannot be verified'
+                    }
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="references"
+                    checked={checklist.referencesChecked}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, referencesChecked: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="references" className="text-sm font-medium cursor-pointer">
+                    {actionType === 'approve'
+                      ? 'References have been checked and validated'
+                      : 'References are insufficient or not verified'
+                    }
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="compliance"
+                    checked={checklist.complianceVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, complianceVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="compliance" className="text-sm font-medium cursor-pointer">
+                    {actionType === 'approve'
+                      ? 'Compliance requirements are met'
+                      : 'Compliance requirements are not met'
+                    }
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Rejection Reason - only for reject */}
+            {actionType === 'reject' && (
+              <div className="space-y-2">
+                <Label htmlFor="rejection-reason-vendor">Rejection Reason *</Label>
+                <Textarea
+                  id="rejection-reason-vendor"
+                  placeholder="Enter the detailed reason for rejection..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="mt-1"
+                  rows={4}
+                />
+              </div>
+            )}
+
+            {/* Handwritten Comments */}
+            <div className="space-y-2">
+              <Label htmlFor="handwritten-comments-vendor">
+                {actionType === 'approve' ? 'Approval Notes & Comments' : 'Additional Feedback'}
+              </Label>
+              <Textarea
+                id="handwritten-comments-vendor"
+                placeholder="Type your handwritten comments or notes here..."
+                value={handwrittenComments}
+                onChange={(e) => setHandwrittenComments(e.target.value)}
+                className="mt-1 min-h-[120px] font-handwriting"
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                {actionType === 'approve'
+                  ? 'Add any additional observations, recommendations, or special notes'
+                  : 'Add any additional feedback or suggestions for the vendor'
+                }
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApprovalDialogOpen(false)}>
+              Cancel
+            </Button>
+            {actionType === 'approve' ? (
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={handleApprove}
+                disabled={!approverName.trim() || actionLoading === 'approve'}
+              >
+                {actionLoading === 'approve' ? 'Approving...' : 'Approve Vendor'}
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={!rejectionReason.trim() || !approverName.trim() || actionLoading === 'reject'}
+              >
+                {actionLoading === 'reject' ? 'Rejecting...' : 'Reject Vendor'}
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>

@@ -3,7 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, CheckCircle, XCircle, Eye, MapPin, Calendar, User } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search, CheckCircle, XCircle, Eye, MapPin, Calendar, User, Bed, Bath, Maximize, IndianRupee, Home } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +20,7 @@ import { useRealtimeEvent } from "@/contexts/RealtimeContext";
 import { DEFAULT_PROPERTY_IMAGE } from "@/utils/imageUtils";
 import { fetchWithAuth, handleApiResponse } from "@/utils/apiUtils";
 import { VirtualTourViewer } from "@/components/property/VirtualTourViewer";
+import { Separator } from "@/components/ui/separator";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.buildhomemartsquares.com/api";
 
@@ -57,10 +60,18 @@ interface Property {
   images: Array<{ url?: string; caption?: string; isPrimary?: boolean } | string>;
   videos?: Array<{ url?: string; caption?: string; thumbnail?: string }>;
   virtualTour?: string;
+  amenities?: string[];
+  featured?: boolean;
+  verified?: boolean;
   owner: {
     _id: string;
     name: string;
     email: string;
+    profile?: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+    };
   };
   address: {
     city: string;
@@ -68,6 +79,7 @@ interface Property {
     state: string;
     street: string;
     zipCode: string;
+    pincode?: string;
   };
   createdAt: string;
   rejectionReason?: string;
@@ -80,11 +92,24 @@ const PropertyReviews = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
   const { toast } = useToast();
+
+  // Approval/Rejection form state
+  const [approverName, setApproverName] = useState("");
+  const [checklist, setChecklist] = useState({
+    documentsVerified: false,
+    locationVerified: false,
+    priceReasonable: false,
+    imagesQuality: false,
+    descriptionComplete: false,
+    ownershipConfirmed: false,
+  });
+  const [handwrittenComments, setHandwrittenComments] = useState("");
 
   useEffect(() => {
     fetchProperties();
@@ -124,19 +149,61 @@ const PropertyReviews = () => {
     fetchProperties();
   });
 
-  const handleApprove = async (propertyId: string) => {
-    try {
-      setActionLoading({ ...actionLoading, [propertyId]: true });
-      const response = await fetchWithAuth(`/subadmin/properties/${propertyId}/approve`, {
-        method: 'POST',
+  const resetApprovalForm = () => {
+    setChecklist({
+      documentsVerified: false,
+      locationVerified: false,
+      priceReasonable: false,
+      imagesQuality: false,
+      descriptionComplete: false,
+      ownershipConfirmed: false,
+    });
+    setHandwrittenComments("");
+    setApproverName("");
+    setRejectionReason("");
+  };
+
+  const openApproveDialog = (property: Property) => {
+    setSelectedProperty(property);
+    resetApprovalForm();
+    setApproveDialogOpen(true);
+  };
+
+  const openRejectDialog = (property: Property) => {
+    setSelectedProperty(property);
+    resetApprovalForm();
+    setRejectDialogOpen(true);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedProperty || !approverName.trim()) {
+      toast({
+        title: "Error",
+        description: "Approver name is required",
+        variant: "destructive",
       });
-      
+      return;
+    }
+
+    try {
+      setActionLoading({ ...actionLoading, [selectedProperty._id]: true });
+      const response = await fetchWithAuth(`/subadmin/properties/${selectedProperty._id}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({
+          approver: approverName,
+          notes: handwrittenComments
+        })
+      });
+
       await handleApiResponse(response);
-      
+
       toast({
         title: "Success",
         description: "Property approved successfully",
       });
+      setApproveDialogOpen(false);
+      resetApprovalForm();
+      setSelectedProperty(null);
       fetchProperties();
     } catch (error: any) {
       console.error('Error approving property:', error);
@@ -146,15 +213,15 @@ const PropertyReviews = () => {
         variant: "destructive",
       });
     } finally {
-      setActionLoading({ ...actionLoading, [propertyId]: false });
+      setActionLoading({ ...actionLoading, [selectedProperty._id]: false });
     }
   };
 
   const handleReject = async () => {
-    if (!selectedProperty || !rejectionReason.trim()) {
+    if (!selectedProperty || !rejectionReason.trim() || !approverName.trim()) {
       toast({
         title: "Error",
-        description: "Please provide a rejection reason",
+        description: "Approver name and rejection reason are required",
         variant: "destructive",
       });
       return;
@@ -164,17 +231,21 @@ const PropertyReviews = () => {
       setActionLoading({ ...actionLoading, [selectedProperty._id]: true });
       const response = await fetchWithAuth(`/subadmin/properties/${selectedProperty._id}/reject`, {
         method: 'POST',
-        body: JSON.stringify({ reason: rejectionReason })
+        body: JSON.stringify({
+          reason: rejectionReason,
+          approver: approverName,
+          notes: handwrittenComments
+        })
       });
-      
+
       await handleApiResponse(response);
-      
+
       toast({
         title: "Success",
         description: "Property rejected successfully",
       });
       setRejectDialogOpen(false);
-      setRejectionReason("");
+      resetApprovalForm();
       setSelectedProperty(null);
       fetchProperties();
     } catch (error: any) {
@@ -318,7 +389,7 @@ const PropertyReviews = () => {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => handleApprove(property._id)}
+                    onClick={() => openApproveDialog(property)}
                     disabled={actionLoading[property._id]}
                     className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700 touch-manipulation"
                   >
@@ -328,10 +399,7 @@ const PropertyReviews = () => {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      setSelectedProperty(property);
-                      setRejectDialogOpen(true);
-                    }}
+                    onClick={() => openRejectDialog(property)}
                     disabled={actionLoading[property._id]}
                     className="flex-1 min-w-[120px] touch-manipulation"
                   >
@@ -368,45 +436,278 @@ const PropertyReviews = () => {
         </div>
       )}
 
-      {/* Reject Dialog */}
+      {/* Approval Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Approve Property</DialogTitle>
+            <DialogDescription>
+              Complete the verification checklist and provide your approval for "{selectedProperty?.title}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Approver Name */}
+            <div className="space-y-2">
+              <Label htmlFor="approver-name-approve">Moderator Name *</Label>
+              <Input
+                id="approver-name-approve"
+                placeholder="Enter your full name"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Verification Checklist */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Verification Checklist</Label>
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="documents-approve"
+                    checked={checklist.documentsVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, documentsVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="documents-approve" className="text-sm font-medium cursor-pointer">
+                    All required documents are verified
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="location-approve"
+                    checked={checklist.locationVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, locationVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="location-approve" className="text-sm font-medium cursor-pointer">
+                    Property location is verified and accurate
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="price-approve"
+                    checked={checklist.priceReasonable}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, priceReasonable: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="price-approve" className="text-sm font-medium cursor-pointer">
+                    Price is reasonable and competitive
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="images-approve"
+                    checked={checklist.imagesQuality}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, imagesQuality: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="images-approve" className="text-sm font-medium cursor-pointer">
+                    Images are of good quality and relevant
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="description-approve"
+                    checked={checklist.descriptionComplete}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, descriptionComplete: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="description-approve" className="text-sm font-medium cursor-pointer">
+                    Description is complete and accurate
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="ownership-approve"
+                    checked={checklist.ownershipConfirmed}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, ownershipConfirmed: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="ownership-approve" className="text-sm font-medium cursor-pointer">
+                    Ownership is confirmed and legitimate
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Handwritten Comments */}
+            <div className="space-y-2">
+              <Label htmlFor="handwritten-comments-approve">Approval Notes & Comments</Label>
+              <Textarea
+                id="handwritten-comments-approve"
+                placeholder="Type your handwritten comments or notes here..."
+                value={handwrittenComments}
+                onChange={(e) => setHandwrittenComments(e.target.value)}
+                className="mt-1 min-h-[120px] font-handwriting"
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add any additional observations, recommendations, or special notes
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleApprove}
+              disabled={!approverName.trim() || actionLoading[selectedProperty?._id || ""]}
+            >
+              {actionLoading[selectedProperty?._id || ""] ? 'Approving...' : 'Approve Property'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Reject Property</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting this property listing.
+              Complete the form and provide a reason for rejecting "{selectedProperty?.title}". The vendor will be notified.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium">{selectedProperty?.title}</h4>
-              <p className="text-sm text-muted-foreground">
-                {selectedProperty?.address.district ? `${selectedProperty?.address.city}, ${selectedProperty?.address.district}, ${selectedProperty?.address.state}` : `${selectedProperty?.address.city}, ${selectedProperty?.address.state}`}
+          <div className="space-y-6 py-4">
+            {/* Approver Name */}
+            <div className="space-y-2">
+              <Label htmlFor="approver-name-reject">Moderator Name *</Label>
+              <Input
+                id="approver-name-reject"
+                placeholder="Enter your full name"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Verification Checklist */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Issues Found (Check applicable items)</Label>
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="documents-reject"
+                    checked={checklist.documentsVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, documentsVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="documents-reject" className="text-sm font-medium cursor-pointer">
+                    Documents are incomplete or invalid
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="location-reject"
+                    checked={checklist.locationVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, locationVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="location-reject" className="text-sm font-medium cursor-pointer">
+                    Property location is incorrect or unclear
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="price-reject"
+                    checked={checklist.priceReasonable}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, priceReasonable: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="price-reject" className="text-sm font-medium cursor-pointer">
+                    Price is unreasonable or suspicious
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="images-reject"
+                    checked={checklist.imagesQuality}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, imagesQuality: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="images-reject" className="text-sm font-medium cursor-pointer">
+                    Images are poor quality or irrelevant
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="description-reject"
+                    checked={checklist.descriptionComplete}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, descriptionComplete: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="description-reject" className="text-sm font-medium cursor-pointer">
+                    Description is incomplete or misleading
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="ownership-reject"
+                    checked={checklist.ownershipConfirmed}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, ownershipConfirmed: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="ownership-reject" className="text-sm font-medium cursor-pointer">
+                    Ownership cannot be confirmed
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Rejection Reason */}
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Rejection Reason *</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Enter the detailed reason for rejection..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="mt-1"
+                rows={4}
+              />
+            </div>
+
+            {/* Handwritten Comments */}
+            <div className="space-y-2">
+              <Label htmlFor="handwritten-comments-reject">Additional Comments</Label>
+              <Textarea
+                id="handwritten-comments-reject"
+                placeholder="Type your handwritten comments or notes here..."
+                value={handwrittenComments}
+                onChange={(e) => setHandwrittenComments(e.target.value)}
+                className="mt-1 min-h-[120px] font-handwriting"
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add any additional feedback or suggestions for the vendor
               </p>
             </div>
-            <Textarea
-              placeholder="Enter rejection reason..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              rows={4}
-            />
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setRejectDialogOpen(false);
-                setRejectionReason("");
-              }}
-            >
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleReject}
-              disabled={!rejectionReason.trim() || actionLoading[selectedProperty?._id || ""]}
+              disabled={!rejectionReason.trim() || !approverName.trim() || actionLoading[selectedProperty?._id || ""]}
             >
-              Reject Property
+              {actionLoading[selectedProperty?._id || ""] ? 'Rejecting...' : 'Reject Property'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -414,99 +715,203 @@ const PropertyReviews = () => {
 
       {/* View Property Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedProperty?.title}</DialogTitle>
+            <DialogTitle className="text-2xl">{selectedProperty?.title}</DialogTitle>
             <DialogDescription>
-              Property details and information
+              <div className="flex items-center gap-2 mt-2">
+                <MapPin className="w-4 h-4" />
+                {selectedProperty?.address.street}, {selectedProperty?.address.city}, {selectedProperty?.address.state} - {selectedProperty?.address.pincode || selectedProperty?.address.zipCode}
+              </div>
             </DialogDescription>
           </DialogHeader>
+
           {selectedProperty && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-semibold">Property Details</h4>
-                  <ul className="text-sm space-y-1">
-                    <li><strong>Type:</strong> {selectedProperty.type}</li>
-                    <li><strong>Listing Type:</strong> {selectedProperty.listingType}</li>
-                    <li><strong>Price:</strong> {formatPrice(selectedProperty.price)}</li>
-                    <li><strong>Area:</strong> {formatArea(selectedProperty.area)}</li>
-                    <li><strong>Bedrooms:</strong> {selectedProperty.bedrooms}</li>
-                    <li><strong>Bathrooms:</strong> {selectedProperty.bathrooms}</li>
-                  </ul>
+            <div className="space-y-6 mt-4">
+              {/* Status and Type Badges */}
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={selectedProperty.status === 'available' ? 'default' : selectedProperty.status === 'pending' ? 'outline' : 'destructive'}>
+                  Status: {selectedProperty.status}
+                </Badge>
+                <Badge variant="secondary" className="capitalize">
+                  {selectedProperty.type ? selectedProperty.type.replace('_', ' ') : 'property'}
+                </Badge>
+                <Badge variant={selectedProperty.listingType === 'sale' ? 'default' : 'outline'}>
+                  For {selectedProperty.listingType === 'sale' ? 'Sale' : 'Rent'}
+                </Badge>
+                {selectedProperty.featured && <Badge variant="default">Featured</Badge>}
+                {selectedProperty.verified && <Badge variant="default">Verified</Badge>}
+              </div>
+
+              {/* Price and Key Details */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <IndianRupee className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Price</p>
+                    <p className="font-semibold">{formatPrice(selectedProperty.price)}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold">Location & Contact</h4>
-                  <ul className="text-sm space-y-1">
-                    <li><strong>Address:</strong> {selectedProperty.address.street}</li>
-                    <li><strong>City:</strong> {selectedProperty.address.city}</li>
-                    <li><strong>State:</strong> {selectedProperty.address.state}</li>
-                    <li><strong>Zip Code:</strong> {selectedProperty.address.zipCode}</li>
-                    <li><strong>Owner:</strong> {selectedProperty.owner.name}</li>
-                    <li><strong>Email:</strong> {selectedProperty.owner.email}</li>
-                  </ul>
+                <div className="flex items-center gap-2">
+                  <Maximize className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Area</p>
+                    <p className="font-semibold">{formatArea(selectedProperty.area)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Bed className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bedrooms</p>
+                    <p className="font-semibold">{selectedProperty.bedrooms || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Bath className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bathrooms</p>
+                    <p className="font-semibold">{selectedProperty.bathrooms || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
-              {selectedProperty.description && (
-                <div>
-                  <h4 className="font-semibold">Description</h4>
-                  <p className="text-sm">{selectedProperty.description}</p>
-                </div>
-              )}
-              {selectedProperty.images && selectedProperty.images.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">Images</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {selectedProperty.images.map((image, index) => (
-                      <img
-                        key={index}
-                        src={getImageUrl(image)}
-                        alt={`Property ${index + 1}`}
-                        className="w-full h-32 object-cover rounded"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = DEFAULT_PROPERTY_IMAGE;
-                        }}
-                      />
-                    ))}
+
+              <Separator />
+
+              {/* Description */}
+              <div>
+                <h3 className="font-semibold mb-2">Description</h3>
+                <p className="text-sm text-muted-foreground">{selectedProperty.description}</p>
+              </div>
+
+              {/* Amenities */}
+              {selectedProperty.amenities && selectedProperty.amenities.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">Amenities</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProperty.amenities.map((amenity, index) => (
+                        <Badge key={index} variant="outline" className="capitalize">
+                          {amenity.replace('_', ' ')}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
+
+              {/* Owner Information */}
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-2">Owner Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Name</p>
+                    <p className="font-medium">
+                      {selectedProperty.owner?.profile?.firstName && selectedProperty.owner?.profile?.lastName
+                        ? `${selectedProperty.owner.profile.firstName} ${selectedProperty.owner.profile.lastName}`
+                        : selectedProperty.owner.name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedProperty.owner?.email}</p>
+                  </div>
+                  {selectedProperty.owner?.profile?.phone && (
+                    <div>
+                      <p className="text-muted-foreground">Phone</p>
+                      <p className="font-medium">{selectedProperty.owner.profile.phone}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Images */}
+              {selectedProperty.images && selectedProperty.images.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">Images</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {selectedProperty.images.map((image, index) => {
+                        const imageObj = typeof image === 'object' ? image : { url: image };
+                        return (
+                          <div key={index} className="relative aspect-video rounded-lg overflow-hidden border">
+                            <img
+                              src={getImageUrl(image)}
+                              alt={imageObj.caption || `Property ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = DEFAULT_PROPERTY_IMAGE;
+                              }}
+                            />
+                            {imageObj.isPrimary && (
+                              <Badge className="absolute top-2 left-2" variant="default">Primary</Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Videos */}
               {selectedProperty.videos && selectedProperty.videos.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">Videos</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedProperty.videos.map((video, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
-                          {video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')) ? (
-                            <iframe
-                              src={video.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                              className="w-full h-full"
-                              allowFullScreen
-                              title={video.caption || `Video ${index + 1}`}
-                            />
-                          ) : (
-                            <video
-                              src={video.url}
-                              controls
-                              className="w-full h-full object-contain"
-                              poster={video.thumbnail}
-                            />
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">Videos</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedProperty.videos.map((video, index) => (
+                        <div key={index} className="space-y-2">
+                          <div className="relative aspect-video rounded-lg overflow-hidden border bg-black">
+                            {video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')) ? (
+                              <iframe
+                                src={video.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                                className="w-full h-full"
+                                allowFullScreen
+                                title={video.caption || `Video ${index + 1}`}
+                              />
+                            ) : (
+                              <video
+                                src={video.url}
+                                controls
+                                className="w-full h-full object-contain"
+                                poster={video.thumbnail}
+                              />
+                            )}
+                          </div>
+                          {video.caption && (
+                            <p className="text-sm text-muted-foreground">{video.caption}</p>
                           )}
                         </div>
-                        {video.caption && (
-                          <p className="text-xs text-muted-foreground">{video.caption}</p>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
+
+              {/* Virtual Tour */}
               {selectedProperty.virtualTour && (
-                <div>
-                  <h4 className="font-semibold mb-2">Virtual Tour</h4>
-                  <VirtualTourViewer url={selectedProperty.virtualTour} />
-                </div>
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">Virtual Tour</h3>
+                    <VirtualTourViewer url={selectedProperty.virtualTour} />
+                  </div>
+                </>
+              )}
+
+              {/* Rejection Reason (if rejected) */}
+              {selectedProperty.status === 'rejected' && selectedProperty.rejectionReason && (
+                <>
+                  <Separator />
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 className="font-semibold text-red-700 mb-2">Rejection Reason</h3>
+                    <p className="text-sm text-red-600">{selectedProperty.rejectionReason}</p>
+                  </div>
+                </>
               )}
             </div>
           )}

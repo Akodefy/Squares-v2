@@ -28,7 +28,7 @@ const EditRole = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
-      
+
       try {
         setLoading(true);
         const roleResponse = await roleService.getRole(id);
@@ -56,7 +56,7 @@ const EditRole = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!role || !id) return;
 
     if (!role.pages || role.pages.length === 0) {
@@ -88,12 +88,12 @@ const EditRole = () => {
   const togglePage = (pageId: string) => {
     if (!role) return;
     if (role.isSystemRole && !isSuperAdmin) return;
-    
+
     const currentPages = role.pages || [];
     const newPages = currentPages.includes(pageId)
       ? currentPages.filter((p) => p !== pageId)
       : [...currentPages, pageId];
-    
+
     setRole({ ...role, pages: newPages });
   };
 
@@ -240,7 +240,7 @@ const EditRole = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Page Access</CardTitle>
             <CardDescription>
@@ -297,7 +297,7 @@ const EditRole = () => {
               })}
             </Tabs>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <div className="flex gap-4">
           <Button type="submit" disabled={saving}>

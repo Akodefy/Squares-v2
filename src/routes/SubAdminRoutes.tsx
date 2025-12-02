@@ -3,15 +3,14 @@ import { Suspense } from "react";
 import DashboardLayout from "@/components/adminpanel/DashboardLayout";
 import SubAdminProtectedRoute from "@/components/auth/SubAdminProtectedRoute";
 import { PageLoader } from "@/components/ui/loader/PageLoader";
-import { 
-  SubAdminDashboard, 
-  PropertyReviews, 
-  PropertyRejections, 
-  ContentModeration, 
-  SupportTickets, 
-  VendorPerformance, 
-  AddonServices, 
-  Notifications, 
+import {
+  SubAdminDashboard,
+  PropertyReviews,
+  PropertyRejections,
+  SupportTickets,
+  VendorPerformance,
+  AddonServices,
+  Notifications,
   Reports,
   Promotions
 } from "@/routes/SubAdminLazyImports";
@@ -28,7 +27,6 @@ const SubAdminRoutes = () => {
             <Route path="/dashboard" element={<SubAdminDashboard />} />
             <Route path="/property-reviews" element={<PropertyReviews />} />
             <Route path="/property-rejections" element={<PropertyRejections />} />
-            <Route path="/content-moderation" element={<ContentModeration />} />
             <Route path="/support-tickets" element={<SupportTickets />} />
             <Route path="/vendor-performance" element={<VendorPerformance />} />
             <Route path="/addon-services" element={<AddonServices />} />

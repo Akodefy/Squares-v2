@@ -3,6 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { Search, RotateCcw, Eye, MapPin, Calendar, User, AlertCircle } from "lucide-react";
 import {
   Dialog,
@@ -65,8 +68,21 @@ const PropertyRejections = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
   const { toast } = useToast();
+
+  // Reactivation approval form state
+  const [approverName, setApproverName] = useState("");
+  const [checklist, setChecklist] = useState({
+    issuesResolved: false,
+    documentsUpdated: false,
+    complianceChecked: false,
+    qualityImproved: false,
+    accuracyVerified: false,
+    readyForReview: false,
+  });
+  const [handwrittenComments, setHandwrittenComments] = useState("");
 
   useEffect(() => {
     fetchRejectedProperties();
@@ -101,18 +117,53 @@ const PropertyRejections = () => {
     fetchRejectedProperties();
   });
 
-  const handleReactivate = async (propertyId: string) => {
-    try {
-      setActionLoading({ ...actionLoading, [propertyId]: true });
-      const response = await fetchWithAuth(`/subadmin/properties/${propertyId}/reactivate`, {
-        method: 'POST'
+  const resetApprovalForm = () => {
+    setChecklist({
+      issuesResolved: false,
+      documentsUpdated: false,
+      complianceChecked: false,
+      qualityImproved: false,
+      accuracyVerified: false,
+      readyForReview: false,
+    });
+    setHandwrittenComments("");
+    setApproverName("");
+  };
+
+  const openReactivateDialog = (property: Property) => {
+    setSelectedProperty(property);
+    resetApprovalForm();
+    setReactivateDialogOpen(true);
+  };
+
+  const handleReactivate = async () => {
+    if (!selectedProperty || !approverName.trim()) {
+      toast({
+        title: "Error",
+        description: "Moderator name is required",
+        variant: "destructive",
       });
-      
+      return;
+    }
+
+    try {
+      setActionLoading({ ...actionLoading, [selectedProperty._id]: true });
+      const response = await fetchWithAuth(`/subadmin/properties/${selectedProperty._id}/reactivate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          approver: approverName,
+          notes: handwrittenComments
+        })
+      });
+
       await handleApiResponse(response);
       toast({
         title: "Success",
         description: "Property reactivated and moved to pending review",
       });
+      setReactivateDialogOpen(false);
+      resetApprovalForm();
+      setSelectedProperty(null);
       fetchRejectedProperties();
     } catch (error: any) {
       toast({
@@ -121,7 +172,7 @@ const PropertyRejections = () => {
         variant: "destructive",
       });
     } finally {
-      setActionLoading({ ...actionLoading, [propertyId]: false });
+      setActionLoading({ ...actionLoading, [selectedProperty._id]: false });
     }
   };
 
@@ -263,7 +314,7 @@ const PropertyRejections = () => {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => handleReactivate(property._id)}
+                      onClick={() => openReactivateDialog(property)}
                       disabled={actionLoading[property._id]}
                       className="flex-1 touch-manipulation min-h-[40px]"
                     >
@@ -424,14 +475,146 @@ const PropertyRejections = () => {
               <Button
                 variant="secondary"
                 onClick={() => {
-                  handleReactivate(selectedProperty._id);
                   setViewDialogOpen(false);
+                  openReactivateDialog(selectedProperty);
                 }}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Reactivate for Review
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reactivation Approval Dialog */}
+      <Dialog open={reactivateDialogOpen} onOpenChange={setReactivateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reactivate Property for Review</DialogTitle>
+            <DialogDescription>
+              Complete the verification checklist to reactivate "{selectedProperty?.title}" for review. The property will move to pending status for approval.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Approver Name */}
+            <div className="space-y-2">
+              <Label htmlFor="approver-name-reactivate">Moderator Name *</Label>
+              <Input
+                id="approver-name-reactivate"
+                placeholder="Enter your full name"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Verification Checklist */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Reactivation Verification Checklist</Label>
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="issues-resolved"
+                    checked={checklist.issuesResolved}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, issuesResolved: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="issues-resolved" className="text-sm font-medium cursor-pointer">
+                    Previous rejection issues have been resolved
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="documents-updated"
+                    checked={checklist.documentsUpdated}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, documentsUpdated: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="documents-updated" className="text-sm font-medium cursor-pointer">
+                    Required documents are updated and complete
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="compliance-checked"
+                    checked={checklist.complianceChecked}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, complianceChecked: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="compliance-checked" className="text-sm font-medium cursor-pointer">
+                    Property meets all compliance requirements
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="quality-improved"
+                    checked={checklist.qualityImproved}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, qualityImproved: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="quality-improved" className="text-sm font-medium cursor-pointer">
+                    Content quality has been improved
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="accuracy-verified"
+                    checked={checklist.accuracyVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, accuracyVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="accuracy-verified" className="text-sm font-medium cursor-pointer">
+                    Information accuracy has been verified
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="ready-review"
+                    checked={checklist.readyForReview}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, readyForReview: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="ready-review" className="text-sm font-medium cursor-pointer">
+                    Property is ready for approval review
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Handwritten Comments */}
+            <div className="space-y-2">
+              <Label htmlFor="handwritten-comments-reactivate">Reactivation Notes & Comments</Label>
+              <Textarea
+                id="handwritten-comments-reactivate"
+                placeholder="Type your handwritten comments or notes here..."
+                value={handwrittenComments}
+                onChange={(e) => setHandwrittenComments(e.target.value)}
+                className="mt-1 min-h-[120px] font-handwriting"
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add any additional observations, changes made, or special notes about the reactivation
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleReactivate}
+              disabled={!approverName.trim() || actionLoading[selectedProperty?._id || ""]}
+            >
+              {actionLoading[selectedProperty?._id || ""] ? 'Reactivating...' : 'Reactivate Property'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Loader2, Eye, XCircle, RefreshCw, Calendar, CreditCard, User, Package, Star, Camera, Megaphone, Laptop, HeadphonesIcon, Users, Circle } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,6 +34,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +44,18 @@ const Clients = () => {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // Debounce search term to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const getAddonIcon = (category: string) => {
     const iconProps = { className: "w-4 h-4" };
-    
+
     switch (category?.toLowerCase()) {
       case 'photography':
         return <Camera {...iconProps} />;
@@ -62,21 +72,21 @@ const Clients = () => {
     }
   };
 
-  const fetchSubscriptions = async () => {
+  const fetchSubscriptions = useCallback(async () => {
     try {
       setLoading(true);
       const filters = {
         page: currentPage,
         limit: 10,
-        search: searchTerm || undefined,
+        search: debouncedSearchTerm || undefined,
         status: statusFilter === "all" ? undefined : statusFilter,
       };
 
       const response = await subscriptionService.getSubscriptions(filters);
       console.log('Admin Clients - API Response:', response.data.subscriptions);
-      
+
       // Validate and clean the data
-      const validSubscriptions = response.data.subscriptions.filter(sub => 
+      const validSubscriptions = response.data.subscriptions.filter(sub =>
         sub && sub.user && (sub.user.name || sub.user.email)
       );
 
@@ -91,7 +101,7 @@ const Clients = () => {
       setTotalPages(response.data.pagination.totalPages);
     } catch (error) {
       console.error("Failed to fetch subscriptions:", error);
-      
+
       // Handle specific error cases
       if (error instanceof Error) {
         if (error.message.includes('Admin access required')) {
@@ -117,22 +127,21 @@ const Clients = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearchTerm, statusFilter]);
 
   useEffect(() => {
     fetchSubscriptions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, searchTerm, statusFilter]);
+  }, [fetchSubscriptions]);
 
-  const handleSearch = (value: string) => {
+  const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
-  };
+  }, []);
 
-  const handleStatusFilter = (value: string) => {
+  const handleStatusFilter = useCallback((value: string) => {
     setStatusFilter(value);
     setCurrentPage(1);
-  };
+  }, []);
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -351,29 +360,17 @@ const Clients = () => {
                         sub.lastPaymentDate || 
                         sub.transactionId;
       
-      if (hasPayment && sub.status === 'active') {
-        // Calculate addon contribution from subscription amount
-        const planBasePrice = typeof sub.plan === 'object' && sub.plan !== null ? (sub.plan.price || 0) : 0;
-        const subscriptionAmount = sub.amount || 0;
-        const addonContribution = subscriptionAmount - planBasePrice;
-        
-        // Only count positive contributions (when subscription amount > plan price)
-        if (addonContribution > 0) {
-          addonAmount = addonContribution;
-          
-          // For cancelled subscriptions, check if cancelled shortly after payment
-          if (sub.status === 'cancelled' && sub.lastPaymentDate && sub.updatedAt) {
-            const paymentDate = new Date(sub.lastPaymentDate);
-            const cancellationDate = new Date(sub.updatedAt);
-            const daysDiff = (cancellationDate.getTime() - paymentDate.getTime()) / (1000 * 3600 * 24);
-            
-            // If cancelled within 1 day, reduce addon revenue
-            if (daysDiff <= 1) {
-              addonAmount *= 0.5;
-            }
-          }
-        }
-      }
+  if (hasPayment && sub.status === 'active') {
+    // Calculate addon contribution from subscription amount
+    const planBasePrice = typeof sub.plan === 'object' && sub.plan !== null ? (sub.plan.price || 0) : 0;
+    const subscriptionAmount = sub.amount || 0;
+    const addonContribution = subscriptionAmount - planBasePrice;
+
+    // Only count positive contributions (when subscription amount > plan price)
+    if (addonContribution > 0) {
+      addonAmount = addonContribution;
+    }
+  }
       
       return sum + addonAmount;
     }, 0);
@@ -924,12 +921,12 @@ const Clients = () => {
           ['Total Active Revenue (Verified)', `₹${processedData.totalActiveRevenue.toLocaleString()}`],
           ['Add-on Revenue (Verified)', `₹${processedData.addonRevenue.toLocaleString()}`],
           ['Grand Total Revenue (All Verified)', `₹${processedData.grandTotalRevenue.toLocaleString()}`],
-        ].map(row => [row[0], row[1]]),
-        columnStyles: {
-          0: { cellWidth: 80, fontStyle: 'bold' },
-          1: { cellWidth: 50, halign: 'right' },
-        },
-        theme: 'striped' as const,
+  ].map(row => [row[0], row[1]]),
+  columnStyles: {
+    0: { cellWidth: 80 },
+    1: { cellWidth: 50, halign: 'right' as const },
+  },
+  theme: 'striped' as const,
         fontSize: 9,
       };
 
@@ -943,10 +940,10 @@ const Clients = () => {
           ['Expired', processedData.expiredSubscriptions.length.toString(), processedData.expiredRevenue.toLocaleString(), totalRevenue > 0 ? `${((processedData.expiredRevenue / totalRevenue) * 100).toFixed(1)}%` : '0%']
         ],
         columnStyles: {
-          0: { cellWidth: 20, halign: 'center' },
-          1: { cellWidth: 15, halign: 'center' },
-          2: { cellWidth: 30, halign: 'right' },
-          3: { cellWidth: 25, halign: 'right' },
+          '0': { cellWidth: 20, halign: 'center' as const },
+          '1': { cellWidth: 15, halign: 'center' as const },
+          '2': { cellWidth: 30, halign: 'right' as const },
+          '3': { cellWidth: 25, halign: 'right' as const },
         },
         theme: 'striped' as const,
         fontSize: 9,
@@ -975,18 +972,18 @@ const Clients = () => {
           ['', 'Total Active Revenue', '', '', '', `₹${processedData.totalActiveRevenue.toLocaleString()}`, '', '', '', '', '', `₹${processedData.addonRevenue.toLocaleString()}`],
         ],
         columnStyles: {
-          0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 40 },
-          3: { cellWidth: 25 },
-          4: { cellWidth: 20, halign: 'right' },
-          5: { cellWidth: 20, halign: 'right' },
-          6: { cellWidth: 15, halign: 'center' },
-          7: { cellWidth: 20, halign: 'center' },
-          8: { cellWidth: 20, halign: 'center' },
-          9: { cellWidth: 15, halign: 'center' },
-          10: { cellWidth: 12, halign: 'center' },
-          11: { cellWidth: 20, halign: 'right' },
+          '0': { cellWidth: 8, halign: 'center' as const },
+          '1': { cellWidth: 35 },
+          '2': { cellWidth: 40 },
+          '3': { cellWidth: 25 },
+          '4': { cellWidth: 20, halign: 'right' as const },
+          '5': { cellWidth: 20, halign: 'right' as const },
+          '6': { cellWidth: 15, halign: 'center' as const },
+          '7': { cellWidth: 20, halign: 'center' as const },
+          '8': { cellWidth: 20, halign: 'center' as const },
+          '9': { cellWidth: 15, halign: 'center' as const },
+          '10': { cellWidth: 12, halign: 'center' as const },
+          '11': { cellWidth: 20, halign: 'right' as const },
         },
         theme: 'striped' as const,
         fontSize: 7,
@@ -1008,12 +1005,12 @@ const Clients = () => {
           ...(addonDetails.length > 0 ? [['Total Add-on Revenue', '', '', `₹${processedData.addonRevenue.toLocaleString()}`, '', '']] : []),
         ],
         columnStyles: {
-          0: { cellWidth: 35, halign: 'left' as const },
-          1: { cellWidth: 35, halign: 'left' as const },
-          2: { cellWidth: 20, halign: 'center' as const },
-          3: { cellWidth: 20, halign: 'right' as const },
-          4: { cellWidth: 25, halign: 'center' as const },
-          5: { cellWidth: 25, halign: 'center' as const },
+          0: { cellWidth: 35, halign: 'center' as const },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 25, halign: 'right' as const },
+          5: { cellWidth: 25, halign: 'right' as const },
         },
         theme: 'striped' as const,
         fontSize: 8,
@@ -1051,8 +1048,8 @@ const Clients = () => {
           ['Total Monthly Recurring Revenue (MRR)', `₹${processedData.totalActiveRevenue.toLocaleString()}`],
         ],
         columnStyles: {
-          0: { cellWidth: 100, fontStyle: 'bold' },
-          1: { cellWidth: 50, halign: 'right' },
+          0: { cellWidth: 100 },
+          1: { cellWidth: 50, halign: 'right' as const },
         },
         theme: 'striped' as const,
         fontSize: 9,

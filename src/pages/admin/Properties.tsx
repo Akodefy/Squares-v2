@@ -44,6 +44,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 import { adminPropertyService } from "@/services/adminPropertyService";
 import { useToast } from "@/hooks/use-toast";
 import { ViewPropertyDialog } from "@/components/adminpanel/ViewPropertyDialog";
@@ -55,19 +58,37 @@ const Properties = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000000]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // Approval/Rejection form state
+  const [approverName, setApproverName] = useState("");
+  const [checklist, setChecklist] = useState({
+    documentsVerified: false,
+    locationVerified: false,
+    priceReasonable: false,
+    imagesQuality: false,
+    descriptionComplete: false,
+    ownershipConfirmed: false,
+  });
+  const [handwrittenComments, setHandwrittenComments] = useState("");
+
   useEffect(() => {
     // Get current user info
     const user = authService.getCurrentUser();
     setCurrentUser(user);
+    // Pre-fill approver name from user profile
+    if (user?.profile) {
+      setApproverName(`${user.profile.firstName || ''} ${user.profile.lastName || ''}`.trim());
+    }
     fetchProperties();
   }, []);
 
@@ -102,9 +123,10 @@ const Properties = () => {
         property.address.state.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = typeFilter === "all" || property.type === typeFilter;
       const matchesStatus = statusFilter === "all" || property.status === statusFilter;
-      return matchesSearch && matchesType && matchesStatus;
+      const matchesPrice = property.price >= priceRange[0] && property.price <= priceRange[1];
+      return matchesSearch && matchesType && matchesStatus && matchesPrice;
     });
-  }, [properties, searchTerm, typeFilter, statusFilter]);
+  }, [properties, searchTerm, typeFilter, statusFilter, priceRange]);
 
   const { paginatedItems, currentPage, totalPages, goToPage, nextPage, previousPage } =
     usePagination(filteredProperties, 10);
@@ -153,13 +175,48 @@ const Properties = () => {
     }
   };
 
-  const handleApproveProperty = async (property: Property) => {
+  const resetApprovalForm = () => {
+    setChecklist({
+      documentsVerified: false,
+      locationVerified: false,
+      priceReasonable: false,
+      imagesQuality: false,
+      descriptionComplete: false,
+      ownershipConfirmed: false,
+    });
+    setHandwrittenComments("");
+    // Re-set approver name from current user
+    if (currentUser?.profile) {
+      setApproverName(`${currentUser.profile.firstName || ''} ${currentUser.profile.lastName || ''}`.trim());
+    }
+  };
+
+  const openApproveDialog = (property: Property) => {
+    setSelectedProperty(property);
+    resetApprovalForm();
+    setApproveDialogOpen(true);
+  };
+
+  const handleApproveProperty = async () => {
+    if (!selectedProperty || !approverName.trim()) {
+      toast({
+        title: "Error",
+        description: "Approver name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      await adminPropertyService.approveProperty(property._id);
+      // You can extend the API to accept these additional fields
+      await adminPropertyService.approveProperty(selectedProperty._id);
       // Realtime update: Update in state
-      setProperties(properties.map(p => 
-        p._id === property._id ? { ...p, status: 'available', verified: true } : p
+      setProperties(properties.map(p =>
+        p._id === selectedProperty._id ? { ...p, status: 'available', verified: true } : p
       ));
+      setApproveDialogOpen(false);
+      setSelectedProperty(null);
+      resetApprovalForm();
       toast({
         title: "Success",
         description: "Property approved and listed successfully!",
@@ -175,17 +232,25 @@ const Properties = () => {
   };
 
   const handleRejectProperty = async () => {
-    if (!selectedProperty || !rejectionReason.trim()) return;
-    
+    if (!selectedProperty || !rejectionReason.trim() || !approverName.trim()) {
+      toast({
+        title: "Error",
+        description: "Approver name and rejection reason are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await adminPropertyService.rejectProperty(selectedProperty._id, rejectionReason);
       // Realtime update: Update in state
-      setProperties(properties.map(p => 
+      setProperties(properties.map(p =>
         p._id === selectedProperty._id ? { ...p, status: 'rejected' } : p
       ));
       setRejectDialogOpen(false);
       setSelectedProperty(null);
       setRejectionReason("");
+      resetApprovalForm();
       toast({
         title: "Property Rejected",
         description: "Property has been rejected and vendor has been notified.",
@@ -207,6 +272,7 @@ const Properties = () => {
 
   const openRejectDialog = (property: Property) => {
     setSelectedProperty(property);
+    resetApprovalForm();
     setRejectDialogOpen(true);
   };
 
@@ -344,15 +410,15 @@ const Properties = () => {
               {!adminCreated && isPending && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => handleApproveProperty(property)}
+                  <DropdownMenuItem
+                    onClick={() => openApproveDialog(property)}
                     className="text-green-600"
                   >
                     <Eye className="w-4 h-4 mr-2" />
                     Approve & Publish
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => openRejectDialog(property)} 
+                  <DropdownMenuItem
+                    onClick={() => openRejectDialog(property)}
                     className="text-red-600"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
@@ -471,43 +537,59 @@ const Properties = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="search-container-responsive">
+          <div className="space-y-2 mb-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <SearchFilter
                   searchTerm={searchTerm}
                   onSearchChange={setSearchTerm}
-                  filterValue={typeFilter}
-                  onFilterChange={setTypeFilter}
-                  filterOptions={[
-                    { label: "Apartment", value: "apartment" },
-                    { label: "Villa", value: "villa" },
-                    { label: "House", value: "house" },
-                    { label: "Commercial", value: "commercial" },
-                    { label: "Plot", value: "plot" },
-                    { label: "Land", value: "land" },
-                    { label: "Office", value: "office" },
-                    { label: "PG (Paying Guest)", value: "pg" },
-                  ]}
-                  filterPlaceholder="Filter by type"
                 />
               </div>
               <div className="w-full sm:w-48">
-                <SearchFilter
-                  searchTerm=""
-                  onSearchChange={() => {}}
-                  filterValue={statusFilter}
-                  onFilterChange={setStatusFilter}
-                  filterOptions={[
-                    { label: "Pending", value: "pending" },
-                    { label: "Active", value: "active" },
-                    { label: "Rejected", value: "rejected" },
-                    { label: "Sold", value: "sold" },
-                    { label: "Rented", value: "rented" },
-                  ]}
-                  filterPlaceholder="Filter by status"
-                  hideSearch
+                <Label htmlFor="type-filter" className="text-sm font-medium">Property Type</Label>
+                <select
+                  id="type-filter"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="w-full p-2 border rounded-md mt-1"
+                >
+                  <option value="all">All Types</option>
+                  <option value="house">House</option>
+                  <option value="apartment">Apartment</option>
+                  <option value="land">Land</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </div>
+              <div className="w-full sm:w-48">
+                <Label htmlFor="status-filter" className="text-sm font-medium">Property Status</Label>
+                <select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full p-2 border rounded-md mt-1"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="available">Available</option>
+                  <option value="pending">Pending</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="sold">Sold</option>
+                  <option value="rented">Rented</option>
+                </select>
+              </div>
+            </div>
+            <div className="w-full">
+              <Label className="text-sm font-medium">Price Range</Label>
+              <div className="flex items-center gap-4 mt-2">
+                <span className="text-sm font-medium">₹{priceRange[0].toLocaleString()}</span>
+                <Slider
+                  min={0}
+                  max={50000000}
+                  step={100000}
+                  value={priceRange}
+                  onValueChange={setPriceRange}
+                  className="flex-1"
                 />
+                <span className="text-sm font-medium">₹{priceRange[1].toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -572,34 +654,276 @@ const Properties = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Approval Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Approve Property</DialogTitle>
+            <DialogDescription>
+              Complete the verification checklist and provide your approval for "{selectedProperty?.title}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Approver Name */}
+            <div className="space-y-2">
+              <Label htmlFor="approver-name">Approver Name *</Label>
+              <Input
+                id="approver-name"
+                placeholder="Enter your full name"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Verification Checklist */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Verification Checklist</Label>
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="documents"
+                    checked={checklist.documentsVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, documentsVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="documents" className="text-sm font-medium cursor-pointer">
+                    All required documents are verified
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="location"
+                    checked={checklist.locationVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, locationVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="location" className="text-sm font-medium cursor-pointer">
+                    Property location is verified and accurate
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="price"
+                    checked={checklist.priceReasonable}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, priceReasonable: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="price" className="text-sm font-medium cursor-pointer">
+                    Price is reasonable and competitive
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="images"
+                    checked={checklist.imagesQuality}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, imagesQuality: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="images" className="text-sm font-medium cursor-pointer">
+                    Images are of good quality and relevant
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="description"
+                    checked={checklist.descriptionComplete}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, descriptionComplete: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="description" className="text-sm font-medium cursor-pointer">
+                    Description is complete and accurate
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="ownership"
+                    checked={checklist.ownershipConfirmed}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, ownershipConfirmed: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="ownership" className="text-sm font-medium cursor-pointer">
+                    Ownership is confirmed and legitimate
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Handwritten Comments */}
+            <div className="space-y-2">
+              <Label htmlFor="handwritten-comments">Additional Comments</Label>
+              <Textarea
+                id="handwritten-comments"
+                placeholder="Type your handwritten comments or notes here..."
+                value={handwrittenComments}
+                onChange={(e) => setHandwrittenComments(e.target.value)}
+                className="mt-1 min-h-[120px] font-handwriting"
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add any additional observations, notes, or special remarks about this property
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleApproveProperty}
+              disabled={!approverName.trim()}
+            >
+              Approve & Publish Property
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Rejection Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Reject Property</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting "{selectedProperty?.title}". The vendor will be notified.
+              Complete the form and provide a reason for rejecting "{selectedProperty?.title}". The vendor will be notified.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="rejection-reason">Rejection Reason</Label>
-            <Textarea
-              id="rejection-reason"
-              placeholder="Enter the reason for rejection..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="mt-2"
-              rows={4}
-            />
+          <div className="space-y-6 py-4">
+            {/* Approver Name */}
+            <div className="space-y-2">
+              <Label htmlFor="approver-name-reject">Approver Name *</Label>
+              <Input
+                id="approver-name-reject"
+                placeholder="Enter your full name"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Verification Checklist */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Issues Found (Check applicable items)</Label>
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="documents-reject"
+                    checked={checklist.documentsVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, documentsVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="documents-reject" className="text-sm font-medium cursor-pointer">
+                    Documents are incomplete or invalid
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="location-reject"
+                    checked={checklist.locationVerified}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, locationVerified: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="location-reject" className="text-sm font-medium cursor-pointer">
+                    Property location is incorrect or unclear
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="price-reject"
+                    checked={checklist.priceReasonable}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, priceReasonable: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="price-reject" className="text-sm font-medium cursor-pointer">
+                    Price is unreasonable or suspicious
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="images-reject"
+                    checked={checklist.imagesQuality}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, imagesQuality: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="images-reject" className="text-sm font-medium cursor-pointer">
+                    Images are poor quality or irrelevant
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="description-reject"
+                    checked={checklist.descriptionComplete}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, descriptionComplete: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="description-reject" className="text-sm font-medium cursor-pointer">
+                    Description is incomplete or misleading
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="ownership-reject"
+                    checked={checklist.ownershipConfirmed}
+                    onCheckedChange={(checked) =>
+                      setChecklist({ ...checklist, ownershipConfirmed: checked as boolean })
+                    }
+                  />
+                  <label htmlFor="ownership-reject" className="text-sm font-medium cursor-pointer">
+                    Ownership cannot be confirmed
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Rejection Reason */}
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Rejection Reason *</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Enter the detailed reason for rejection..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="mt-1"
+                rows={4}
+              />
+            </div>
+
+            {/* Handwritten Comments */}
+            <div className="space-y-2">
+              <Label htmlFor="handwritten-comments-reject">Additional Comments</Label>
+              <Textarea
+                id="handwritten-comments-reject"
+                placeholder="Type your handwritten comments or notes here..."
+                value={handwrittenComments}
+                onChange={(e) => setHandwrittenComments(e.target.value)}
+                className="mt-1 min-h-[120px] font-handwriting"
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add any additional feedback or suggestions for the vendor
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleRejectProperty}
-              disabled={!rejectionReason.trim()}
+              disabled={!rejectionReason.trim() || !approverName.trim()}
             >
               Reject Property
             </Button>
