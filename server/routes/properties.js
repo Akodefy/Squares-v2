@@ -242,9 +242,11 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
     const Vendor = require('../models/Vendor');
     const Subscription = require('../models/Subscription');
     
+    let activeSubscription = null;
+    
     // Check user's subscription limits
     if (req.user.role === 'agent') {
-      const activeSubscription = await Subscription.findOne({
+      activeSubscription = await Subscription.findOne({
         user: req.user.id,
         status: 'active',
         endDate: { $gt: new Date() }
