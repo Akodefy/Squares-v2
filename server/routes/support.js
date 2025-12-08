@@ -225,7 +225,10 @@ router.post('/tickets/:ticketNumber/responses', authenticateToken, asyncHandler(
 
   // Check if user owns this ticket or is admin
   const isAdmin = req.user.role === 'superadmin' || req.user.role === 'subadmin';
-  if (ticket.user._id.toString() !== req.user.id && !isAdmin) {
+  const ticketUserId = ticket.user?._id?.toString() || ticket.user?.toString();
+  const requestUserId = req.user.id?.toString();
+  
+  if (ticketUserId !== requestUserId && !isAdmin) {
     return res.status(403).json({
       success: false,
       message: 'Access denied'
