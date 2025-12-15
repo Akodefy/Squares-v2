@@ -50,6 +50,8 @@ const CreatePlan = () => {
     sortOrder: 0,
   });
 
+  const [isUnlimitedProperties, setIsUnlimitedProperties] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -250,17 +252,43 @@ const CreatePlan = () => {
             <div className="grid gap-6 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="properties">Property Listings</Label>
+                <div className="flex items-center gap-2 mb-2">
+                  <Checkbox
+                    id="unlimitedProperties"
+                    checked={isUnlimitedProperties}
+                    onCheckedChange={(checked) => {
+                      setIsUnlimitedProperties(checked as boolean);
+                      if (checked) {
+                        setPlan({ 
+                          ...plan, 
+                          limits: { ...plan.limits, properties: 0 } 
+                        });
+                      }
+                    }}
+                  />
+                  <Label htmlFor="unlimitedProperties" className="cursor-pointer text-sm font-normal">
+                    Unlimited (∞)
+                  </Label>
+                </div>
                 <Input
                   id="properties"
                   type="number"
                   min="0"
                   value={plan.limits.properties}
-                  onChange={(e) => setPlan({ 
-                    ...plan, 
-                    limits: { ...plan.limits, properties: parseInt(e.target.value) || 0 } 
-                  })}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    setPlan({ 
+                      ...plan, 
+                      limits: { ...plan.limits, properties: value } 
+                    });
+                    setIsUnlimitedProperties(value === 0);
+                  }}
+                  disabled={isUnlimitedProperties}
+                  className={isUnlimitedProperties ? "bg-muted" : ""}
                 />
-                <p className="text-xs text-muted-foreground">0 = unlimited properties</p>
+                <p className="text-xs text-muted-foreground">
+                  {isUnlimitedProperties ? "∞ Unlimited properties enabled" : "Number of properties allowed"}
+                </p>
               </div>
 
               <div className="space-y-2">

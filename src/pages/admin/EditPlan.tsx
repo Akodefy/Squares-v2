@@ -29,6 +29,7 @@ const EditPlan = () => {
   const [saving, setSaving] = useState(false);
   const [newFeature, setNewFeature] = useState({ name: "", description: "" });
   const [impactInfo, setImpactInfo] = useState<{ activeSubscriptions: number; note: string } | null>(null);
+  const [isUnlimitedProperties, setIsUnlimitedProperties] = useState(false);
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -48,11 +49,12 @@ const EditPlan = () => {
         });
         
         // Ensure all required fields have default values
+        const propertiesLimit = fetchedPlan.limits?.properties || 0;
         setPlan({
           ...fetchedPlan,
           features: normalizedFeatures,
           limits: {
-            properties: fetchedPlan.limits?.properties || 0,
+            properties: propertiesLimit,
             featuredListings: fetchedPlan.limits?.featuredListings || 0,
             photos: fetchedPlan.limits?.photos || 10,
             videoTours: fetchedPlan.limits?.videoTours || 0,
@@ -70,6 +72,9 @@ const EditPlan = () => {
           },
           support: fetchedPlan.support || 'email',
         });
+
+        // Set unlimited properties checkbox state
+        setIsUnlimitedProperties(propertiesLimit === 0);
 
         // Set impact info
         setImpactInfo({
@@ -342,17 +347,43 @@ const EditPlan = () => {
             <div className="grid gap-6 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="properties">Property Listings</Label>
+                <div className="flex items-center gap-2 mb-2">
+                  <Checkbox
+                    id="unlimitedProperties"
+                    checked={isUnlimitedProperties}
+                    onCheckedChange={(checked) => {
+                      setIsUnlimitedProperties(checked as boolean);
+                      if (checked) {
+                        setPlan({ 
+                          ...plan, 
+                          limits: { ...plan.limits, properties: 0 } 
+                        });
+                      }
+                    }}
+                  />
+                  <Label htmlFor="unlimitedProperties" className="cursor-pointer text-sm font-normal">
+                    Unlimited (∞)
+                  </Label>
+                </div>
                 <Input
                   id="properties"
                   type="number"
                   min="0"
                   value={plan.limits.properties}
-                  onChange={(e) => setPlan({ 
-                    ...plan, 
-                    limits: { ...plan.limits, properties: parseInt(e.target.value) || 0 } 
-                  })}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    setPlan({ 
+                      ...plan, 
+                      limits: { ...plan.limits, properties: value } 
+                    });
+                    setIsUnlimitedProperties(value === 0);
+                  }}
+                  disabled={isUnlimitedProperties}
+                  className={isUnlimitedProperties ? "bg-muted" : ""}
                 />
-                <p className="text-xs text-muted-foreground">0 = unlimited properties</p>
+                <p className="text-xs text-muted-foreground">
+                  {isUnlimitedProperties ? "∞ Unlimited properties enabled" : "Number of properties allowed"}
+                </p>
               </div>
 
               <div className="space-y-2">

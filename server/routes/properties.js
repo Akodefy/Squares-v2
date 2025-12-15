@@ -246,6 +246,8 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
     
     // Check user's subscription limits
     if (req.user.role === 'agent') {
+      const Plan = require('../models/Plan');
+      
       activeSubscription = await Subscription.findOne({
         user: req.user.id,
         status: 'active',
@@ -262,39 +264,39 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
         ]
       });
 
-      // Check limits using planSnapshot for existing subscriptions or fetch FREE plan from database
-      let maxProperties;
+      let planData;
       if (activeSubscription) {
-        // Use snapshot if available (preserves plan at subscription time)
-        const planData = activeSubscription.planSnapshot || activeSubscription.plan;
-        if (planData && planData.limits && planData.limits.properties !== undefined) {
-          const planLimit = planData.limits.properties;
-          maxProperties = planLimit === 0 ? 999999 : planLimit; // 0 means unlimited
-        } else {
-          return res.status(500).json({
-            success: false,
-            message: 'Invalid subscription data. Please contact support.'
-          });
-        }
+        // Use planSnapshot if available, otherwise use populated plan
+        planData = activeSubscription.planSnapshot || activeSubscription.plan;
       } else {
-        // No subscription - fetch FREE plan from database to use admin-set limits
-        const Plan = require('../models/Plan');
+        // No subscription - fetch free plan configuration from database
         const freePlan = await Plan.findOne({ identifier: 'free', isActive: true });
-        if (!freePlan || freePlan.limits?.properties === undefined) {
+        if (!freePlan) {
           return res.status(500).json({
             success: false,
             message: 'Free plan not configured. Please contact administrator.'
           });
         }
-        const freePlanLimit = freePlan.limits.properties;
-        maxProperties = freePlanLimit === 0 ? 999999 : freePlanLimit;
+        planData = freePlan;
       }
 
-      if (currentProperties >= maxProperties && maxProperties !== 999999) {
+      if (!planData || !planData.limits || planData.limits.properties === undefined) {
+        return res.status(500).json({
+          success: false,
+          message: 'Invalid plan configuration. Please contact support.'
+        });
+      }
+
+      const propertyLimit = planData.limits.properties;
+      const maxProperties = propertyLimit === 0 ? Infinity : propertyLimit;
+
+      if (currentProperties >= maxProperties) {
         return res.status(403).json({
           success: false,
-          message: `Property limit reached. Your current plan allows ${maxProperties} properties.`,
-          code: 'PROPERTY_LIMIT_EXCEEDED'
+          message: `Property limit reached. Your current plan allows ${propertyLimit === 0 ? 'unlimited' : propertyLimit} properties.`,
+          code: 'PROPERTY_LIMIT_EXCEEDED',
+          currentCount: currentProperties,
+          maxLimit: propertyLimit
         });
       }
     }
@@ -527,39 +529,45 @@ router.patch('/:id/featured', authenticateToken, asyncHandler(async (req, res) =
     // For non-admin users, check subscription limits when featuring a property
     if (!isAdmin && featured === true && !property.featured) {
       const Subscription = require('../models/Subscription');
+      const Plan = require('../models/Plan');
       
-      // Check if user has active subscription with featured listing limits
       const activeSubscription = await Subscription.findOne({
         user: property.owner,
         status: 'active',
         endDate: { $gt: new Date() }
       }).populate('plan');
 
-      if (!activeSubscription || !activeSubscription.plan) {
-        return res.status(403).json({
+      let planData;
+      if (activeSubscription) {
+        // Use planSnapshot if available, otherwise use populated plan
+        planData = activeSubscription.planSnapshot || activeSubscription.plan;
+      } else {
+        // No subscription - fetch free plan configuration from database
+        const freePlan = await Plan.findOne({ identifier: 'free', isActive: true });
+        if (!freePlan) {
+          return res.status(500).json({
+            success: false,
+            message: 'Free plan not configured. Please contact administrator.'
+          });
+        }
+        planData = freePlan;
+      }
+
+      if (!planData || !planData.limits || planData.limits.featuredListings === undefined) {
+        return res.status(500).json({
           success: false,
-          message: 'No active subscription found. Please subscribe to a plan to feature properties.'
+          message: 'Invalid plan configuration. Please contact support.'
         });
       }
 
-      const plan = activeSubscription.plan;
-      const featuredLimit = plan.limits?.featuredListings || 0;
+      const featuredLimit = planData.limits.featuredListings;
 
-      // Check if plan allows featured listings
-      if (featuredLimit === 0 && plan.identifier !== 'enterprise' && plan.identifier !== 'premium') {
-        return res.status(403).json({
-          success: false,
-          message: `Your current plan (${plan.name}) does not include featured listings. Please upgrade to feature properties.`,
-          upgradeRequired: true
-        });
-      }
-
-      // For plans with limited featured listings, check current count
+      // 0 means unlimited featured listings
       if (featuredLimit > 0) {
         const currentFeaturedCount = await Property.countDocuments({
           owner: property.owner,
           featured: true,
-          _id: { $ne: id } // Exclude current property
+          _id: { $ne: id }
         });
 
         if (currentFeaturedCount >= featuredLimit) {
@@ -571,6 +579,13 @@ router.patch('/:id/featured', authenticateToken, asyncHandler(async (req, res) =
             maxLimit: featuredLimit
           });
         }
+      } else if (featuredLimit === 0 && !activeSubscription) {
+        // Free plan with no featured listings allowed
+        return res.status(403).json({
+          success: false,
+          message: 'Featured listings are not available on the free plan. Please subscribe to feature properties.',
+          upgradeRequired: true
+        });
       }
     }
 
